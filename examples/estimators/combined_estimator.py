@@ -17,10 +17,15 @@ class Estimator(BaseEstimator):
     simple and explicit: use covariance propagation when budget >= 30 * width,
     otherwise use mean propagation.
 
-    The low-budget branch uses first-moment closure:
-    m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s.
+    The low-budget branch uses mean propagation closure:
+
+        m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s
+
     The high-budget branch tracks both m = E[x] and C = Cov[x], with
-    E[x_f x_s] ~= m_f * m_s + C_fs and decomposed covariance updates
+
+        E[x_f * x_s] ~= m_f * m_s + C_fs
+
+    and decomposed covariance updates
     (linear-linear, 1v2 cross, and 2v2 bilinear terms).
 
     A useful mental model is: (circuit, budget) -> threshold policy ->
@@ -49,7 +54,7 @@ class Estimator(BaseEstimator):
         return budget >= cls._COVARIANCE_BUDGET_MULTIPLIER * width
 
     def _mean_propagation(self, circuit: Circuit) -> NDArray[np.float32]:
-        """Fast first-moment path used for low budgets."""
+        """Fast mean-propagation path used for low budgets."""
         # Same state and update style as the standalone mean tutorial.
         x_mean: NDArray[np.float32] = np.zeros(circuit.n, dtype=np.float32)
         outputs = np.zeros((circuit.d, circuit.n), dtype=np.float32)
@@ -60,7 +65,7 @@ class Estimator(BaseEstimator):
 
     @staticmethod
     def _propagate_layer_mean(layer: Layer, x_mean: NDArray[np.float32]) -> NDArray[np.float32]:
-        """Propagate one layer of means under first-moment closure."""
+        """Propagate one layer of means under mean-propagation closure."""
         first_mean = np.take(x_mean, layer.first)
         second_mean = np.take(x_mean, layer.second)
         return (

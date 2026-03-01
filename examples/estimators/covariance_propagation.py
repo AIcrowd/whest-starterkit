@@ -16,11 +16,21 @@ class Estimator(BaseEstimator):
     interactions between wires. It extends the state from just means to both
     means and covariance, which improves accuracy when product terms dominate.
 
-    At each depth we track m = E[x] (shape n) and C = Cov[x] (shape n x n).
-    For y_i = a_i * x_f + b_i * x_s + c_i + p_i * x_f * x_s, the mean update is
-    E[y_i] = a_i * m_f + b_i * m_s + c_i + p_i * (m_f * m_s + C_fs). Covariance
-    is updated via pairwise closure by combining linear-linear, linear-bilinear,
-    and bilinear-bilinear contributions.
+    At each depth we track:
+
+        m = E[x]      (shape n)
+        C = Cov[x]    (shape n x n)
+
+    For
+
+        y_i = a_i * x_f + b_i * x_s + c_i + p_i * x_f * x_s
+
+    the mean update is
+
+        E[y_i] = a_i * m_f + b_i * m_s + c_i + p_i * (m_f * m_s + C_fs)
+
+    and covariance is updated via pairwise closure by combining linear-linear,
+    linear-bilinear, and bilinear-bilinear contributions.
 
     A useful mental model is a layered state machine:
     (m, C) at depth l -> decomposed covariance update blocks -> (m', C') at l+1.
