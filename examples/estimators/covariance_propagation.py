@@ -29,7 +29,10 @@ class Estimator(BaseEstimator):
 
     Mean update:
 
-        E[y_i] = a_i * m_f + b_i * m_s + c_i + p_i * (m_f * m_s + C_fs)
+        E[y_i] = a_i * m_f
+                 + b_i * m_s
+                 + c_i
+                 + p_i * (m_f * m_s + C_fs)
 
     Covariance update is done with pairwise moment closure in three blocks:
     linear-linear, linear-bilinear (1v2), and bilinear-bilinear (2v2). The

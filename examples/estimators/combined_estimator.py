@@ -20,7 +20,10 @@ class Estimator(BaseEstimator):
 
     Mean propagation (fast path) uses:
 
-        m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s
+        m_i^(l+1) = a_i * m_f
+                    + b_i * m_s
+                    + c_i
+                    + p_i * m_f * m_s
 
     Covariance propagation (accurate path) adds second-order state and uses:
 
