@@ -10,15 +10,33 @@ from circuit_estimation.domain import Circuit, Layer
 
 
 class Estimator(BaseEstimator):
-    """Covariance propagation starter estimator.
+    """Pairwise moment closure tutorial estimator (mean + covariance).
 
-    Maintains mean and covariance state per depth and applies pairwise moment
-    closure for bilinear terms.
+    This is the natural upgrade from mean propagation. In addition to per-wire
+    means, it tracks covariance between wires. That extra state helps when
+    product gates depend on wire relationships.
+
+    State per depth:
+
+        m = E[x]      (shape n)
+        C = Cov[x]    (shape n x n)
+
+    Mean update:
+
+        E[y_i] = a_i * m_f
+                 + b_i * m_s
+                 + c_i
+                 + p_i * (m_f * m_s + C_fs)
+
+    Covariance update uses three blocks:
+    linear-linear, linear-bilinear (1v2), and bilinear-bilinear (2v2).
     """
 
     def predict(self, circuit: Circuit, budget: int) -> Iterator[NDArray[np.float32]]:
+        """Yield one prediction row per depth while propagating covariance."""
         _ = budget
         n = circuit.n
+        # Initialize moments for random {-1,+1} input wires.
         x_mean: NDArray[np.float32] = np.zeros(n, dtype=np.float32)
         x_cov: NDArray[np.float32] = np.eye(n, dtype=np.float32)
 
@@ -32,11 +50,13 @@ class Estimator(BaseEstimator):
         x_mean: NDArray[np.float32],
         x_cov: NDArray[np.float32],
     ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Return ``(new_mean, new_cov)`` for one layer under pairwise closure."""
         n = x_mean.shape[0]
         first_mean = x_mean[layer.first]
         second_mean = x_mean[layer.second]
         pair_cov = x_cov[layer.first, layer.second]
 
+        # Step 1: mean update with covariance-aware product expectation.
         new_mean: NDArray[np.float32] = (
             layer.first_coeff * first_mean
             + layer.second_coeff * second_mean
@@ -45,8 +65,10 @@ class Estimator(BaseEstimator):
             + layer.product_coeff * pair_cov
         ).astype(np.float32)
 
+        # Step 2: linear-linear covariance terms.
         new_cov: NDArray[np.float32] = self._linear_linear_covariance(layer, x_cov, n)
 
+        # Step 3: linear-bilinear cross terms (1v2).
         result_1v2_first = np.outer(
             layer.first_coeff, layer.product_coeff
         ) * self._one_v_two_covariance(
@@ -64,6 +86,7 @@ class Estimator(BaseEstimator):
         ) * self._one_v_two_covariance(layer.second, layer.first, layer.second, x_cov, x_mean)
         new_cov += result_1v2_second + result_1v2_second.T
 
+        # Step 4: bilinear-bilinear term (2v2).
         new_cov += np.outer(layer.product_coeff, layer.product_coeff) * self._two_v_two_covariance(
             layer.first,
             layer.second,
@@ -73,6 +96,7 @@ class Estimator(BaseEstimator):
             x_mean,
         )
 
+        # Step 5: clip moments back to a feasible/stable range.
         self._clip_moments(new_mean, new_cov)
         return new_mean, new_cov
 
@@ -82,6 +106,7 @@ class Estimator(BaseEstimator):
         x_cov: NDArray[np.float32],
         n: int,
     ) -> NDArray[np.float32]:
+        """Compute covariance contribution from linear terms only."""
         new_cov = np.zeros((n, n), dtype=np.float32)
         new_cov += (
             np.outer(layer.first_coeff, layer.first_coeff) * x_cov[np.ix_(layer.first, layer.first)]
@@ -108,6 +133,7 @@ class Estimator(BaseEstimator):
         x_cov: NDArray[np.float32],
         x_mean: NDArray[np.float32],
     ) -> NDArray[np.float32]:
+        """Approximate ``Cov(x[a], x[b] * x[c])`` under pairwise closure."""
         return (
             x_mean[b][None, :] * x_cov[np.ix_(a, c)] + x_mean[c][None, :] * x_cov[np.ix_(a, b)]
         ).astype(np.float32)
@@ -121,6 +147,7 @@ class Estimator(BaseEstimator):
         cov: NDArray[np.float32],
         mean: NDArray[np.float32],
     ) -> NDArray[np.float32]:
+        """Approximate ``Cov(x[a]x[b], x[c]x[d])`` under pairwise closure."""
         cov_ac = cov[np.ix_(a, c)]
         cov_ad = cov[np.ix_(a, d)]
         cov_bc = cov[np.ix_(b, c)]
@@ -140,6 +167,7 @@ class Estimator(BaseEstimator):
 
     @staticmethod
     def _clip_moments(mean: NDArray[np.float32], cov: NDArray[np.float32]) -> None:
+        """Project moments to a numerically stable feasible region."""
         n = len(mean)
         np.clip(mean, -1.0, 1.0, out=mean)
         var = 1.0 - mean * mean
