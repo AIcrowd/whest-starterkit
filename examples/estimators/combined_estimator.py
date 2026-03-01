@@ -12,70 +12,33 @@ from circuit_estimation.domain import Circuit, Layer
 class Estimator(BaseEstimator):
     """Budget-aware hybrid tutorial estimator.
 
-    Overview:
-        This class demonstrates a practical pattern used in competitions:
-        choose a cheaper estimator at low budget and a more accurate estimator
-        at high budget. Here we switch between:
-        - first-moment mean propagation
-        - pairwise moment closure with covariance tracking
+    This file demonstrates a practical policy pattern: use a cheaper estimator
+    at low budget and a more accurate estimator at high budget. The switch is
+    simple and explicit: use covariance propagation when budget >= 30 * width,
+    otherwise use mean propagation.
 
-        The switch rule is:
-            use covariance when budget >= 30 * circuit.n
-            else use mean propagation
+    The low-budget branch uses first-moment closure:
+    m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s.
+    The high-budget branch tracks both m = E[x] and C = Cov[x], with
+    E[x_f x_s] ~= m_f * m_s + C_fs and decomposed covariance updates
+    (linear-linear, 1v2 cross, and 2v2 bilinear terms).
 
-    Math:
-        Mean branch:
-            m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s
+    A useful mental model is: (circuit, budget) -> threshold policy ->
+    choose mean or covariance engine -> return predictions with shape
+    `(depth, width)`. This keeps the decision logic clear while reusing
+    the same propagation internals as the standalone estimator examples.
 
-        Covariance branch:
-            tracks both:
-                m = E[x]
-                C = Cov[x]
-            and adds second-order closure terms:
-                E[x_f x_s] ~= m_f * m_s + C_fs
-
-        The covariance branch decomposes new covariance into:
-            1) linear-linear
-            2) 1v2 cross terms
-            3) 2v2 bilinear terms
-
-    ASCII:
-        Input: (circuit, budget)
-                   |
-                   v
-             +-----------------+
-             | budget threshold|
-             | 30 * width      |
-             +-----------------+
-               /            \\
-              /              \\
-     low budget                high budget
-      (fast path)               (accurate path)
-         |                           |
-         v                           v
-       mean                     covariance
-    propagation                 propagation
-         \\                           /
-          \\                         /
-           +-----------------------+
-           | predictions (d x n)   |
-           +-----------------------+
-
-    Complexity:
-        Mean branch:       O(depth * n)
-        Covariance branch: O(depth * n^2)
-        This estimator acts as a policy over those two cost profiles.
-
-    Pitfall:
-        A hard threshold can be suboptimal around the decision boundary.
-        In production, consider calibrating threshold(s) with offline sweeps.
-        This implementation keeps a fixed simple rule for clarity.
+    Runtime reflects the selected branch:
+    mean is O(depth * n), covariance is O(depth * n^2). A fixed threshold is
+    intentionally easy to understand, but in production you would usually tune
+    this boundary on held-out circuits for better speed/accuracy tradeoffs.
     """
 
     _COVARIANCE_BUDGET_MULTIPLIER = 30
 
     def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
         typed_circuit = cast(Circuit, circuit)
+        # Policy layer: choose estimator variant based on budget envelope.
         if self._should_use_covariance(typed_circuit.n, budget):
             return self._covariance_propagation(typed_circuit)
         return self._mean_propagation(typed_circuit)
@@ -87,6 +50,7 @@ class Estimator(BaseEstimator):
 
     def _mean_propagation(self, circuit: Circuit) -> NDArray[np.float32]:
         """Fast first-moment path used for low budgets."""
+        # Same state and update style as the standalone mean tutorial.
         x_mean: NDArray[np.float32] = np.zeros(circuit.n, dtype=np.float32)
         outputs = np.zeros((circuit.d, circuit.n), dtype=np.float32)
         for i, layer in enumerate(circuit.gates):
@@ -109,6 +73,7 @@ class Estimator(BaseEstimator):
     def _covariance_propagation(self, circuit: Circuit) -> NDArray[np.float32]:
         """Accurate second-order path used for sufficiently high budgets."""
         n = circuit.n
+        # Same state and update style as the standalone covariance tutorial.
         x_mean: NDArray[np.float32] = np.zeros(n, dtype=np.float32)
         x_cov: NDArray[np.float32] = np.eye(n, dtype=np.float32)
         outputs = np.zeros((circuit.d, n), dtype=np.float32)
@@ -131,6 +96,7 @@ class Estimator(BaseEstimator):
         second_mean = x_mean[layer.second]
         pair_cov = x_cov[layer.first, layer.second]
 
+        # Step 1: mean update with covariance-aware product expectation.
         new_mean: NDArray[np.float32] = (
             layer.first_coeff * first_mean
             + layer.second_coeff * second_mean
@@ -139,8 +105,10 @@ class Estimator(BaseEstimator):
             + layer.product_coeff * pair_cov
         ).astype(np.float32)
 
+        # Step 2: linear-linear covariance contribution.
         new_cov: NDArray[np.float32] = self._linear_linear_covariance(layer, x_cov, n)
 
+        # Step 3: 1v2 linear-bilinear cross terms.
         result_1v2_first = np.outer(
             layer.first_coeff,
             layer.product_coeff,
@@ -153,10 +121,12 @@ class Estimator(BaseEstimator):
         ) * self._one_v_two_covariance(layer.second, layer.first, layer.second, x_cov, x_mean)
         new_cov += result_1v2_second + result_1v2_second.T
 
+        # Step 4: 2v2 bilinear-bilinear term.
         new_cov += np.outer(layer.product_coeff, layer.product_coeff) * self._two_v_two_covariance(
             layer.first, layer.second, layer.first, layer.second, x_cov, x_mean
         )
 
+        # Step 5: stabilize and enforce feasible moment bounds.
         self._clip_moments(new_mean, new_cov)
         return new_mean, new_cov
 
