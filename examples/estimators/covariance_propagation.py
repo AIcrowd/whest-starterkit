@@ -21,6 +21,10 @@ class Estimator(BaseEstimator):
         m = E[x]      (shape n)
         C = Cov[x]    (shape n x n)
 
+    Intuition: product gates depend on ``x_f * x_s``. If ``x_f`` and ``x_s``
+    are often aligned, the product tends positive; if anti-aligned, negative.
+    Mean-only propagation cannot represent that effect, but covariance can.
+
     Mean update:
 
         E[y_i] = a_i * m_f

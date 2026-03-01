@@ -33,6 +33,9 @@ class Estimator(BaseEstimator):
                     + p_i * m_f * m_s
 
     where ``m_f = E[x_f]`` and ``m_s = E[x_s]``.
+
+    Intuition: we model average behavior only. If dependencies between wires
+    become strong, this approximation can drift because covariance is ignored.
     """
 
     def predict(self, circuit: Circuit, budget: int) -> Iterator[NDArray[np.float32]]:

@@ -32,6 +32,9 @@ class Estimator(BaseEstimator):
         E[x_f * x_s] ~= m_f * m_s + C_fs
 
     plus decomposed covariance terms (linear-linear, 1v2, 2v2).
+
+    Intuition: budget controls how much structure we can afford to model. Low
+    budget favors speed, high budget can afford covariance for better accuracy.
     """
 
     _COVARIANCE_BUDGET_MULTIPLIER = 30
