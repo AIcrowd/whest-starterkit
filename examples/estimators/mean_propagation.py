@@ -8,35 +8,34 @@ from circuit_estimation.domain import Circuit, Layer
 
 
 class Estimator(BaseEstimator):
-    """Mean propagation estimator.
+    """Mean propagation tutorial estimator.
 
-    This is the simplest baseline and usually the best place to start when
-    learning the estimator API. It tracks only the mean of each wire after
-    each layer and demonstrates the minimum `Estimator.predict(...)` contract.
+    This is the simplest baseline and usually the best estimator to read first.
+    We keep one value per wire, its expected value E[x], and update those means
+    layer by layer. That gives a strong speed baseline with minimal machinery.
 
-    Let x_j^(l) in {-1, +1} be wire j at layer l and define one gate output:
+    For one output wire i, the gate equation is:
 
         y_i = a_i * x_f + b_i * x_s + c_i + p_i * x_f * x_s
 
-    The propagated mean is:
-
-        m_i^(l+1) = E[y_i]
-                  = a_i * E[x_f]
-                    + b_i * E[x_s]
-                    + c_i
-                    + p_i * E[x_f] * E[x_s]
-
-    where we use the mean-propagation closure:
+    Mean propagation uses the approximation:
 
         E[x_f * x_s] ~= E[x_f] * E[x_s]
 
-    A quick mental model is: layer means -> gate map -> next-layer means, then
-    repeat and stack each layer's mean vector into a `(depth, width)` output.
+    so the update is:
 
-    Runtime is O(depth * width) with O(width) rolling state (plus output storage).
-    Because covariance is ignored, this method can underperform when product
-    terms induce strong dependencies. The `budget` argument is accepted for API
-    compatibility but not used.
+        m_i^(l+1) = E[y_i]
+                  = a_i * m_f
+                    + b_i * m_s
+                    + c_i
+                    + p_i * m_f * m_s
+
+    where m_f = E[x_f] and m_s = E[x_s].
+
+    Intuition: we model average behavior only. If dependencies between wires
+    become strong, this approximation can drift because covariance is ignored.
+    Runtime is O(depth * width), with O(width) rolling state plus output storage.
+    The `budget` argument is accepted for API compatibility but is not used.
     """
 
     def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:

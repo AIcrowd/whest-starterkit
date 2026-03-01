@@ -10,34 +10,34 @@ from circuit_estimation.domain import Circuit, Layer
 class Estimator(BaseEstimator):
     """Pairwise moment closure tutorial estimator (mean + covariance).
 
-    This is the "next step" after mean propagation when you want to model
-    interactions between wires. It extends the state from just means to both
-    means and covariance, which improves accuracy when product terms dominate.
+    This estimator is the natural upgrade from mean propagation. In addition to
+    per-wire means, it tracks covariance between wires, which captures whether
+    two wires tend to move together or in opposite directions.
 
-    At each depth we track:
+    Why this helps: product gates depend on x_f * x_s. If x_f and x_s are often
+    aligned, the product tends positive; if anti-aligned, negative. Mean-only
+    propagation cannot represent that effect, but covariance can.
+
+    State per layer:
 
         m = E[x]      (shape n)
         C = Cov[x]    (shape n x n)
 
-    For
+    Gate model:
 
         y_i = a_i * x_f + b_i * x_s + c_i + p_i * x_f * x_s
 
-    the mean update is
+    Mean update:
 
         E[y_i] = a_i * m_f + b_i * m_s + c_i + p_i * (m_f * m_s + C_fs)
 
-    and covariance is updated via pairwise closure by combining linear-linear,
-    linear-bilinear, and bilinear-bilinear contributions.
+    Covariance update is done with pairwise moment closure in three blocks:
+    linear-linear, linear-bilinear (1v2), and bilinear-bilinear (2v2). The
+    helper methods mirror those blocks so each code path maps to one equation.
 
-    A useful mental model is a layered state machine:
-    (m, C) at depth l -> decomposed covariance update blocks -> (m', C') at l+1.
-    The helper methods map directly to those blocks so the code is easy to read.
-
-    Runtime is O(depth * n^2) with O(n^2) rolling state (plus output storage).
-    Pairwise closure is still approximate, so strongly non-Gaussian regimes can
-    leak higher moments; `_clip_moments` keeps values in a numerically stable,
-    feasible region after each layer.
+    Runtime is O(depth * n^2), with O(n^2) rolling state plus output storage.
+    This is usually more accurate than mean propagation, but more expensive.
+    `_clip_moments` keeps the updated moments numerically stable and feasible.
     """
 
     def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:

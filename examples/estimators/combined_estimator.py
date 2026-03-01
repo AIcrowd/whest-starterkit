@@ -10,31 +10,32 @@ from circuit_estimation.domain import Circuit, Layer
 class Estimator(BaseEstimator):
     """Budget-aware hybrid tutorial estimator.
 
-    This file demonstrates a practical policy pattern: use a cheaper estimator
-    at low budget and a more accurate estimator at high budget. The switch is
-    simple and explicit: use covariance propagation when budget >= 30 * width,
-    otherwise use mean propagation.
+    This estimator demonstrates a practical contest pattern: pick a fast method
+    for small budgets and a richer method for larger budgets.
 
-    The low-budget branch uses mean propagation closure:
+    Routing rule:
+
+        if budget >= 30 * width: use covariance propagation
+        else:                    use mean propagation
+
+    Mean propagation (fast path) uses:
 
         m_i^(l+1) = a_i * m_f + b_i * m_s + c_i + p_i * m_f * m_s
 
-    The high-budget branch tracks both m = E[x] and C = Cov[x], with
+    Covariance propagation (accurate path) adds second-order state and uses:
 
         E[x_f * x_s] ~= m_f * m_s + C_fs
 
-    and decomposed covariance updates
-    (linear-linear, 1v2 cross, and 2v2 bilinear terms).
+    plus decomposed covariance terms (linear-linear, 1v2, 2v2).
 
-    A useful mental model is: (circuit, budget) -> threshold policy ->
-    choose mean or covariance engine -> return predictions with shape
-    `(depth, width)`. This keeps the decision logic clear while reusing
-    the same propagation internals as the standalone estimator examples.
+    Intuition: budget controls how much structure we can afford to model. Low
+    budget favors speed, high budget can afford covariance for better accuracy.
+    Output shape is always `(depth, width)` regardless of chosen path.
 
-    Runtime reflects the selected branch:
-    mean is O(depth * n), covariance is O(depth * n^2). A fixed threshold is
-    intentionally easy to understand, but in production you would usually tune
-    this boundary on held-out circuits for better speed/accuracy tradeoffs.
+    Cost profile:
+    mean path is O(depth * n), covariance path is O(depth * n^2). The threshold
+    is intentionally simple here; in production you would tune it on held-out
+    circuits to get the best speed/accuracy frontier.
     """
 
     _COVARIANCE_BUDGET_MULTIPLIER = 30
