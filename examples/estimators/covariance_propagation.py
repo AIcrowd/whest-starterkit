@@ -58,7 +58,7 @@ def _clip(mean: NDArray[np.float32], cov: NDArray[np.float32]) -> None:
 
 
 class Estimator(BaseEstimator):
-    """Starter estimator that tracks means and covariance moments."""
+    """Starter estimator with pairwise moment closure for covariance tracking."""
 
     def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
         typed_circuit = cast(Circuit, circuit)
