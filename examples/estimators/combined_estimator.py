@@ -45,14 +45,9 @@ class Estimator(BaseEstimator):
 
     def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
         # Policy layer: choose estimator variant based on budget envelope.
-        if self._should_use_covariance(circuit.n, budget):
+        if budget >= self._COVARIANCE_BUDGET_MULTIPLIER * circuit.n:
             return self._covariance_propagation(circuit)
         return self._mean_propagation(circuit)
-
-    @classmethod
-    def _should_use_covariance(cls, width: int, budget: int) -> bool:
-        """Return whether this input should use covariance propagation."""
-        return budget >= cls._COVARIANCE_BUDGET_MULTIPLIER * width
 
     def _mean_propagation(self, circuit: Circuit) -> NDArray[np.float32]:
         """Fast mean-propagation path used for low budgets."""
