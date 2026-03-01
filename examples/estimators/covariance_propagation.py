@@ -113,7 +113,9 @@ class Estimator(BaseEstimator):
             new_cov += np.outer(
                 layer.product_coeff,
                 layer.product_coeff,
-            ) * _two_v_two_covariance(layer.first, layer.second, layer.first, layer.second, x_cov, x_mean)
+            ) * _two_v_two_covariance(
+                layer.first, layer.second, layer.first, layer.second, x_cov, x_mean
+            )
 
             _clip(new_mean, new_cov)
             x_mean, x_cov = new_mean, new_cov

@@ -93,18 +93,21 @@ def _covariance_propagation(circuit: Circuit) -> NDArray[np.float32]:
         ).astype(np.float32)
 
         new_cov: NDArray[np.float32] = np.zeros((n, n), dtype=np.float32)
-        new_cov += np.outer(layer.first_coeff, layer.first_coeff) * x_cov[
-            np.ix_(layer.first, layer.first)
-        ]
-        new_cov += np.outer(layer.second_coeff, layer.second_coeff) * x_cov[
-            np.ix_(layer.second, layer.second)
-        ]
-        new_cov += np.outer(layer.first_coeff, layer.second_coeff) * x_cov[
-            np.ix_(layer.first, layer.second)
-        ]
-        new_cov += np.outer(layer.second_coeff, layer.first_coeff) * x_cov[
-            np.ix_(layer.second, layer.first)
-        ]
+        new_cov += (
+            np.outer(layer.first_coeff, layer.first_coeff) * x_cov[np.ix_(layer.first, layer.first)]
+        )
+        new_cov += (
+            np.outer(layer.second_coeff, layer.second_coeff)
+            * x_cov[np.ix_(layer.second, layer.second)]
+        )
+        new_cov += (
+            np.outer(layer.first_coeff, layer.second_coeff)
+            * x_cov[np.ix_(layer.first, layer.second)]
+        )
+        new_cov += (
+            np.outer(layer.second_coeff, layer.first_coeff)
+            * x_cov[np.ix_(layer.second, layer.first)]
+        )
 
         result_1v2_first = np.outer(
             layer.first_coeff,
