@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -42,16 +40,15 @@ class Estimator(BaseEstimator):
     feasible region after each layer.
     """
 
-    def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
-        typed_circuit = cast(Circuit, circuit)
+    def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
         _ = budget
-        n = typed_circuit.n
+        n = circuit.n
         # Initialize the moment state for random {-1,+1} inputs.
         x_mean: NDArray[np.float32] = np.zeros(n, dtype=np.float32)
         x_cov: NDArray[np.float32] = np.eye(n, dtype=np.float32)
-        outputs = np.zeros((typed_circuit.d, n), dtype=np.float32)
+        outputs = np.zeros((circuit.d, n), dtype=np.float32)
 
-        for i, layer in enumerate(typed_circuit.gates):
+        for i, layer in enumerate(circuit.gates):
             x_mean, x_cov = self._propagate_layer(layer, x_mean, x_cov)
             outputs[i] = x_mean
 

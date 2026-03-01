@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -41,12 +39,11 @@ class Estimator(BaseEstimator):
 
     _COVARIANCE_BUDGET_MULTIPLIER = 30
 
-    def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
-        typed_circuit = cast(Circuit, circuit)
+    def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
         # Policy layer: choose estimator variant based on budget envelope.
-        if self._should_use_covariance(typed_circuit.n, budget):
-            return self._covariance_propagation(typed_circuit)
-        return self._mean_propagation(typed_circuit)
+        if self._should_use_covariance(circuit.n, budget):
+            return self._covariance_propagation(circuit)
+        return self._mean_propagation(circuit)
 
     @classmethod
     def _should_use_covariance(cls, width: int, budget: int) -> bool:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -10,7 +8,7 @@ from circuit_estimation.domain import Circuit, Layer
 
 
 class Estimator(BaseEstimator):
-    """Mean propagation tutorial estimator.
+    """Mean propagation estimator.
 
     This is the simplest baseline and usually the best place to start when
     learning the estimator API. It tracks only the mean of each wire after
@@ -41,13 +39,12 @@ class Estimator(BaseEstimator):
     compatibility but not used.
     """
 
-    def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
-        typed_circuit = cast(Circuit, circuit)
+    def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
         _ = budget
         # Start from unbiased wire means E[x] = 0 at depth 0.
-        x_mean: NDArray[np.float32] = np.zeros(typed_circuit.n, dtype=np.float32)
-        outputs = np.zeros((typed_circuit.d, typed_circuit.n), dtype=np.float32)
-        for i, layer in enumerate(typed_circuit.gates):
+        x_mean: NDArray[np.float32] = np.zeros(circuit.n, dtype=np.float32)
+        outputs = np.zeros((circuit.d, circuit.n), dtype=np.float32)
+        for i, layer in enumerate(circuit.gates):
             # Push means through this layer's affine+bivariate gate map.
             x_mean = self._propagate_layer_mean(layer, x_mean)
             outputs[i] = x_mean
