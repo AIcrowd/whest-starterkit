@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -130,7 +132,8 @@ def _covariance_propagation(circuit: Circuit) -> NDArray[np.float32]:
 class Estimator(BaseEstimator):
     """Starter estimator that switches between mean and covariance modes by budget."""
 
-    def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
-        if budget >= 30 * circuit.n:
-            return _covariance_propagation(circuit)
-        return _mean_propagation(circuit)
+    def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
+        typed_circuit = cast(Circuit, circuit)
+        if budget >= 30 * typed_circuit.n:
+            return _covariance_propagation(typed_circuit)
+        return _mean_propagation(typed_circuit)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -58,13 +60,14 @@ def _clip(mean: NDArray[np.float32], cov: NDArray[np.float32]) -> None:
 class Estimator(BaseEstimator):
     """Starter estimator that tracks means and covariance moments."""
 
-    def predict(self, circuit: Circuit, budget: int) -> NDArray[np.float32]:
-        n = circuit.n
+    def predict(self, circuit: object, budget: int) -> NDArray[np.float32]:
+        typed_circuit = cast(Circuit, circuit)
+        n = typed_circuit.n
         x_mean: NDArray[np.float32] = np.zeros(n, dtype=np.float32)
         x_cov: NDArray[np.float32] = np.eye(n, dtype=np.float32)
-        outputs = np.zeros((circuit.d, n), dtype=np.float32)
+        outputs = np.zeros((typed_circuit.d, n), dtype=np.float32)
 
-        for i, layer in enumerate(circuit.gates):
+        for i, layer in enumerate(typed_circuit.gates):
             first_mean = x_mean[layer.first]
             second_mean = x_mean[layer.second]
             pair_cov = x_cov[layer.first, layer.second]
