@@ -23,9 +23,9 @@ If your estimator produces the same accuracy as sampling but uses less compute, 
 For each configured budget:
 
 1. **Baseline measurement.** The evaluator runs the sampling forward pass at that budget to establish a reference runtime.
-2. **Your estimator runs.** Your `predict(circuit, budget)` is called, and the total runtime is measured.
+2. **Your estimator runs.** Your `predict(circuit, budget)` is called. Predictions are streamed one depth row at a time, and the **cumulative wall time at each depth** is measured.
 3. **Accuracy is measured.** Per-depth mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed.
-4. **Compute is compared.** Your runtime is compared to the sampling baseline. Using more time than sampling incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
+4. **Compute is compared per depth.** At each depth, your cumulative runtime is compared to the sampling baseline for that depth. Using more time incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
 5. **Score combines both.** Your accuracy is adjusted by your relative compute usage: better accuracy *and* lower compute both push your score down.
 
 Final score is the average adjusted error across all budgets.
@@ -45,9 +45,9 @@ The best solutions dynamically allocate their compute across these regimes.
 
 The scoring model uses the sampling baseline as a reference clock:
 
-- **Timeout.** If your estimator's total runtime significantly exceeds the sampling baseline (above a tolerance threshold), results incur maximum error.
-- **Floor.** If your estimator finishes much faster than sampling, you receive partial but bounded credit — the effective time is clamped to a minimum so that trivially fast (but inaccurate) methods don't game the time ratio.
-- **Normal range.** Within the tolerance band around the sampling baseline, your actual runtime is used directly.
+- **Timeout (per depth).** If your estimator's cumulative runtime at a given depth significantly exceeds the sampling baseline for that depth (above a tolerance threshold), the prediction at that depth is zeroed.
+- **Floor (per depth).** If your estimator's cumulative runtime at a given depth is much faster than the sampling baseline, the effective time for that depth is clamped to a minimum so that trivially fast (but inaccurate) methods don't game the time ratio.
+- **Normal range.** Within the tolerance band, your actual cumulative runtime at each depth is used directly.
 
 The tolerance is configured per evaluation run (typically ±10%).
 
