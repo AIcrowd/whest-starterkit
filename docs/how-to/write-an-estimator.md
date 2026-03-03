@@ -6,7 +6,7 @@ Use this page when implementing your custom participant estimator.
 
 ## Do this now
 
-Start from `examples/estimators/random_estimator.py`, then replace the prediction logic.
+Start from [`examples/estimators/random_estimator.py`](../../examples/estimators/random_estimator.py), then replace the prediction logic.
 
 Minimal structure:
 
@@ -48,10 +48,10 @@ If you need exact `Circuit` / `Layer` field semantics or packed tensors from `ci
 
 ## Recommended learning path
 
-1. `examples/estimators/random_estimator.py`
-2. `examples/estimators/mean_propagation.py`
-3. `examples/estimators/covariance_propagation.py`
-4. `examples/estimators/combined_estimator.py`
+1. [`examples/estimators/random_estimator.py`](../../examples/estimators/random_estimator.py)
+2. [`examples/estimators/mean_propagation.py`](../../examples/estimators/mean_propagation.py)
+3. [`examples/estimators/covariance_propagation.py`](../../examples/estimators/covariance_propagation.py)
+4. [`examples/estimators/combined_estimator.py`](../../examples/estimators/combined_estimator.py)
 
 ## 🛠 Common first failure
 
