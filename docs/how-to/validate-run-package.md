@@ -15,8 +15,10 @@ cestim validate --estimator ./my-estimator/estimator.py
 Run local scoring (recommended default runner):
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner subprocess
+cestim run --estimator ./my-estimator/estimator.py
 ```
+
+`cestim run` defaults to `--runner subprocess`.
 
 Run faster local debug path:
 
@@ -57,7 +59,38 @@ cestim package \
 
 Symptom: `run` fails after `validate` passed.
 
-Fix: run again with `--json --debug` to inspect structured error stage/code, then check row shape/count and non-finite values first.
+Use this escalation flow:
+
+1. Retry with debug info in default subprocess mode:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py --debug
+```
+
+2. If traceback still feels opaque, rerun in-process:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+```
+
+Runner tradeoff:
+
+- `subprocess` (default): realistic isolation, safer runtime boundary.
+- `inprocess`: better local traceback fidelity while debugging estimator code.
+
+Concrete example:
+
+```text
+Error [predict:PREDICT_ERROR]: Estimator predict failed.
+Use --debug to include a traceback.
+Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
+```
+
+Next command to run:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+```
 
 ## ➡️ Next step
 

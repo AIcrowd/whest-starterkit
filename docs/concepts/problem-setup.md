@@ -2,7 +2,7 @@
 
 ## 🧠 When to use this page
 
-Use this page when you want the technical framing of what is being estimated and why this benchmark uses streamed outputs.
+Use this page when you want to bet a better understanding of the technical framing of the problem.
 
 ## TL;DR
 
@@ -25,7 +25,7 @@ Row `i` is your estimate of expected wire values after layer `i`.
 
 This challenge is designed as a controlled setting for a broader research question: when can structure-aware estimation compete with or beat pure sampling under fixed compute?
 
-ARC has publicly framed this direction as a key milestone for mechanistic estimation:
+We believe this is a key milestone for mechanistic estimation:
 
 - [Competing with sampling](https://www.alignment.org/blog/competing-with-sampling/)
 - [AlgZoo: uninterpreted models with fewer than 1,500 parameters](https://www.alignment.org/blog/algzoo-uninterpreted-models-with-fewer-than-1-500-parameters/)
@@ -36,12 +36,6 @@ This repository instantiates that question in random circuit families with expli
 
 Ground truth is approximated by Monte Carlo simulation over random inputs.
 The evaluator computes empirical means by depth and wire.
-
-## Why streaming matters
-
-The evaluator checks both output validity and runtime behavior at each depth, not only at the end.
-
-That is why your method must stream depth rows incrementally with `yield`.
 
 ## ➡️ Next step
 

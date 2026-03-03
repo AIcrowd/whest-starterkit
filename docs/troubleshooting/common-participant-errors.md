@@ -2,6 +2,35 @@
 
 Use this page when `validate` or `run` fails.
 
+## 🧭 Understand runner modes first
+
+`cestim run --estimator ...` uses `--runner subprocess` by default.
+
+- `subprocess`: realistic isolation and safer runtime boundary.
+- `inprocess`: best local traceback fidelity while debugging your estimator.
+
+Fast debug ladder:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py
+cestim run --estimator ./my-estimator/estimator.py --debug
+cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+```
+
+Sample subprocess-style failure:
+
+```text
+Error [setup:SETUP_ERROR]: Estimator setup failed.
+Use --debug to include a traceback.
+Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
+```
+
+Exact follow-up:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+```
+
 ## 🛠 Estimator emitted wrong shape
 
 Symptom: error mentions expected shape `(width,)`.
