@@ -1,6 +1,6 @@
 # Install and CLI Quickstart
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page when setting up the starter kit from a fresh clone.
 

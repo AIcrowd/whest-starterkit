@@ -31,7 +31,7 @@ Exact follow-up:
 cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
-## 🛠 Estimator emitted wrong shape
+## Estimator emitted wrong shape
 
 Symptom: error mentions expected shape `(width,)`.
 
@@ -45,7 +45,7 @@ Verify:
 cestim validate --estimator ./my-estimator/estimator.py
 ```
 
-## 🛠 Too few or too many rows
+## Too few or too many rows
 
 Symptom: error mentions row count or `max_depth` mismatch.
 
@@ -59,7 +59,7 @@ Verify:
 cestim validate --estimator ./my-estimator/estimator.py
 ```
 
-## 🛠 Non-finite values (`nan` or `inf`)
+## Non-finite values (`nan` or `inf`)
 
 Symptom: error mentions finite values.
 
@@ -73,7 +73,7 @@ Verify:
 cestim validate --estimator ./my-estimator/estimator.py
 ```
 
-## 🛠 Non-iterable `predict` output
+## Non-iterable `predict` output
 
 Symptom: error indicates estimator output is not an iterator.
 
@@ -87,7 +87,7 @@ Verify:
 cestim validate --estimator ./my-estimator/estimator.py
 ```
 
-## 🛠 Runtime envelope penalties
+## Runtime envelope penalties
 
 Symptom: unexpectedly poor `adjusted_mse` despite reasonable `mse_mean`.
 

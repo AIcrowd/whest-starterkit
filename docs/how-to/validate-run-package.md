@@ -1,6 +1,6 @@
 # Validate, Run, and Package
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page for the standard local participant loop.
 

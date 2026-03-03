@@ -1,6 +1,6 @@
 # Use Circuit Explorer
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page when you want visual intuition about circuit behavior and estimator error patterns.
 

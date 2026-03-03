@@ -1,6 +1,6 @@
 # Inspect and Traverse Circuit Structure
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page when implementing estimator logic that depends on circuit topology or layer coefficients.
 

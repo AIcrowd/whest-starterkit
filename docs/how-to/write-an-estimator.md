@@ -1,6 +1,6 @@
 # Write an Estimator
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page when implementing your custom participant estimator.
 

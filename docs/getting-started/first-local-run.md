@@ -1,6 +1,6 @@
 # First Local Run
 
-## 🚀 When to use this page
+## When to use this page
 
 Use this page for your first end-to-end participant loop.
 
