@@ -23,7 +23,7 @@ If your estimator produces the same accuracy as sampling but uses less compute, 
 For each configured budget:
 
 1. **Baseline measurement.** The evaluator runs the sampling forward pass at that budget to establish a reference runtime.
-2. **Your estimator runs.** Your `predict(circuit, budget)` is called, and each streamed depth row is timed.
+2. **Your estimator runs.** Your `predict(circuit, budget)` is called, and the total runtime is measured.
 3. **Accuracy is measured.** Per-depth mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed.
 4. **Compute is compared.** Your runtime is compared to the sampling baseline. Using more time than sampling incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
 5. **Score combines both.** Your accuracy is adjusted by your relative compute usage: better accuracy *and* lower compute both push your score down.
@@ -45,7 +45,7 @@ The best solutions dynamically allocate their compute across these regimes.
 
 The scoring model uses the sampling baseline as a reference clock:
 
-- **Timeout.** If your estimator takes significantly longer than sampling would have (above a tolerance threshold), the depth row is treated as a failure — predictions are zeroed out, incurring maximum error for that depth.
+- **Timeout.** If your estimator's total runtime significantly exceeds the sampling baseline (above a tolerance threshold), results incur maximum error.
 - **Floor.** If your estimator finishes much faster than sampling, you receive partial but bounded credit — the effective time is clamped to a minimum so that trivially fast (but inaccurate) methods don't game the time ratio.
 - **Normal range.** Within the tolerance band around the sampling baseline, your actual runtime is used directly.
 

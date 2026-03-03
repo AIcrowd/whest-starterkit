@@ -12,7 +12,7 @@ Create starter estimator files:
 cestim init ./my-estimator
 ```
 
-Validate stream contract:
+Validate stream contract (fast sanity check — small fixed circuit, not a full evaluation):
 
 ```bash
 cestim validate --estimator ./my-estimator/estimator.py

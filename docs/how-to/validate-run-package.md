@@ -8,6 +8,8 @@ Use this page for the standard local participant loop.
 
 Validate estimator loading and stream contract:
 
+> `cestim validate` is a fast sanity check using a small fixed circuit (width=4, depth=1). It verifies loading, stream shape, and value finiteness — not full behavioral or performance correctness. Always follow with `cestim run` for realistic tests.
+
 ```bash
 cestim validate --estimator ./my-estimator/estimator.py
 ```

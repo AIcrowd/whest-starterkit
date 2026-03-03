@@ -6,9 +6,10 @@ Use this page when you want a better understanding of the technical framing of t
 
 ## TL;DR
 
-- Input: one random layered Boolean-circuit-style `Circuit` and one `budget`.
+- Input: one random layered `Circuit` and one `budget`.
 - Output: one `(n,)` prediction row per depth, for exactly `d` depths.
 - Goal: estimate expected wire values under uniformly random inputs.
+- Predictions are real-valued expected wire states, not probabilities.
 - Scoring rewards accuracy under compute constraints comparable to sampling.
 
 ## The research question
