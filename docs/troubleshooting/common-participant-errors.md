@@ -1,78 +1,82 @@
 # Common Participant Errors
 
-## Estimator emitted wrong shape
+Use this page when `validate` or `run` fails.
 
-Symptom:
+## 🛠 Estimator emitted wrong shape
 
-- error mentions expected shape `(width,)`.
+Symptom: error mentions expected shape `(width,)`.
 
-Likely cause:
+Why it happens: emitted `(1, width)` or `(width, 1)` instead of a 1D vector.
 
-- emitted `(1, width)` or `(width, 1)` instead of a 1D vector.
+Fix now: ensure each yielded row is `np.ndarray` with shape `(circuit.n,)`.
 
-Fix:
+Verify:
 
-- ensure each yielded row is exactly `np.ndarray` with shape `(circuit.n,)`.
+```bash
+cestim validate --estimator ./my-estimator/estimator.py
+```
 
-## Too few or too many rows
+## 🛠 Too few or too many rows
 
-Symptom:
+Symptom: error mentions row count or `max_depth` mismatch.
 
-- error mentions row count or `max_depth` mismatch.
+Why it happens: stopping early or yielding extra rows.
 
-Likely cause:
+Fix now: yield exactly one row per layer, no more and no less.
 
-- stopping early or yielding extra rows.
+Verify:
 
-Fix:
+```bash
+cestim validate --estimator ./my-estimator/estimator.py
+```
 
-- yield exactly one row per layer, no more and no less.
+## 🛠 Non-finite values (`nan` or `inf`)
 
-## Non-finite values (`nan` or `inf`)
+Symptom: error mentions finite values.
 
-Symptom:
+Why it happens: unstable numeric operations.
 
-- error mentions finite values.
+Fix now: add guards/clipping/checks before yielding rows.
 
-Likely cause:
+Verify:
 
-- unstable numeric operations.
+```bash
+cestim validate --estimator ./my-estimator/estimator.py
+```
 
-Fix:
+## 🛠 Non-iterable `predict` output
 
-- add guards/clipping/checks before yielding rows.
+Symptom: error indicates estimator output is not an iterator.
 
-## Non-iterable `predict` output
+Why it happens: returning a scalar/tensor instead of yielding rows.
 
-Symptom:
+Fix now: implement `predict` as a generator and `yield` each depth row.
 
-- error indicates estimator output is not an iterator.
+Verify:
 
-Likely cause:
+```bash
+cestim validate --estimator ./my-estimator/estimator.py
+```
 
-- returning a scalar/tensor instead of yielding rows.
+## 🛠 Runtime envelope penalties
 
-Fix:
+Symptom: unexpectedly poor `adjusted_mse` despite reasonable `mse_mean`.
 
-- implement `predict` as a generator and `yield` each depth row.
+Why it happens: depth rows timing outside tolerance bounds.
 
-## Runtime envelope penalties
-
-Symptom:
-
-- unexpectedly poor `adjusted_mse` despite reasonable `mse_mean`.
-
-Likely cause:
-
-- depth rows timing outside tolerance bounds.
-
-Fix:
+Fix now:
 
 - simplify compute for smaller budgets,
 - keep per-depth runtime stable,
 - compare `mse_mean` vs `adjusted_mse` to diagnose timing penalties.
 
-## Next
+Verify:
+
+```bash
+cestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
+```
+
+## ➡️ Next step
 
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Scoring Model](../concepts/scoring-model.md)

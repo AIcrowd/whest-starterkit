@@ -1,12 +1,14 @@
 # Write an Estimator
 
-## When To Use This Page
+## 🚀 When to use this page
 
 Use this page when implementing your custom participant estimator.
 
-## Minimal Structure
+## Do this now
 
-Your estimator should subclass `BaseEstimator` and implement `predict`.
+Start from `examples/estimators/random_estimator.py`, then replace the prediction logic.
+
+Minimal structure:
 
 ```python
 from __future__ import annotations
@@ -27,22 +29,39 @@ class Estimator(BaseEstimator):
             yield x_mean
 ```
 
-## Contract Checklist
+## ✅ Expected outcome
+
+Your estimator implements `predict(circuit, budget)` and yields one valid depth row at a time.
+
+## Circuit traversal starter
+
+If you need exact `Circuit` / `Layer` field semantics or packed tensors from `circuit.to_vectorized()`, use:
+
+- [Inspect and Traverse Circuit Structure](./inspect-circuit-structure.md)
+
+## 📌 Contract checklist
 
 - emit exactly `circuit.d` rows,
 - each row must be shape `(circuit.n,)`,
-- rows must contain finite values,
+- all values must be finite,
 - stream with `yield` (do not return one final tensor).
 
-## Recommended Learning Path
+## Recommended learning path
 
 1. `examples/estimators/random_estimator.py`
 2. `examples/estimators/mean_propagation.py`
 3. `examples/estimators/covariance_propagation.py`
 4. `examples/estimators/combined_estimator.py`
 
-## Next
+## 🛠 Common first failure
 
+Symptom: estimator returns a full `(depth, width)` array at the end.
+
+Fix: make `predict` a generator and `yield` one `(width,)` row per layer.
+
+## ➡️ Next step
+
+- [Inspect and Traverse Circuit Structure](./inspect-circuit-structure.md)
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Validate, Run, and Package](./validate-run-package.md)
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)

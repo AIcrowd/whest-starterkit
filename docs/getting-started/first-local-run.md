@@ -1,10 +1,10 @@
 # First Local Run
 
-## When To Use This Page
+## 🚀 When to use this page
 
 Use this page for your first end-to-end participant loop.
 
-## Steps
+## Do this now
 
 Create starter estimator files:
 
@@ -30,13 +30,19 @@ Package a submission artifact:
 cestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
 ```
 
-## Expected Outcome
+## ✅ Expected outcome
 
 - validation succeeds,
 - local run returns a report with `final_score`,
 - package command produces a `.tar.gz` artifact.
 
-## Next
+## 🛠 Common first failure
+
+Symptom: validation fails because output shape or row count is wrong.
+
+Fix: ensure `predict(circuit, budget)` yields exactly `circuit.d` rows and each row is shape `(circuit.n,)`.
+
+## ➡️ Next step
 
 - [Write an Estimator](../how-to/write-an-estimator.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)

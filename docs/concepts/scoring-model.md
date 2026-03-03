@@ -1,39 +1,48 @@
 # Scoring Model
 
-## When To Use This Page
+## 🧠 When to use this page
 
-Use this page to understand the leaderboard objective and runtime-aware adjustments.
+Use this page to understand how leaderboard score combines estimation quality and compute behavior.
 
-## High-Level Flow
+## TL;DR
 
-For each budget in the configured budget list:
+- Lower score is better.
+- Score is based on prediction error plus runtime-aware adjustment.
+- You are rewarded for quality under budget, not for unconstrained oversampling.
+
+## High-level flow
+
+For each configured budget:
 
 1. Baseline runtime by depth is measured from sampling.
 2. Your estimator streams one depth row at a time.
 3. Runtime is checked at each depth against tolerance bounds.
-4. Per-depth error is adjusted by runtime behavior.
-5. Per-budget adjusted error is aggregated.
+4. Per-depth error is runtime-adjusted.
+5. Per-budget adjusted errors are aggregated.
 
 Final score is the mean adjusted error across budgets.
-Lower is better.
 
-## Runtime Rules
+## Runtime rules at depth `i`
 
-At depth `i`:
+- If runtime is above upper bound, that depth row is zeroed.
+- If runtime is below lower bound, effective runtime is floored.
+- Otherwise measured runtime is used.
 
-- if runtime is above upper bound, that row is zeroed,
-- if runtime is below lower bound, effective runtime is floored,
-- otherwise measured runtime is used.
+This makes budget adaptivity part of the optimization target.
 
-This makes timing behavior part of the optimization problem.
+## Why compute-aware scoring
 
-## Practical Tuning Intuition
+A raw-MSE-only objective can favor strategies that simply spend much more compute on sampling.
 
-- start with a safe baseline that never violates depth-wise timing,
-- add richer logic for larger budgets,
-- tune switching behavior empirically with local reports.
+This benchmark instead asks a stricter question: can your algorithm produce strong estimates while staying within per-budget runtime expectations?
 
-## Next
+## Practical tuning intuition
+
+- Start with a safe method that consistently emits valid rows.
+- Add richer logic for larger budgets.
+- Tune switching behavior using local reports across budgets.
+
+## ➡️ Next step
 
 - [Score Report Fields](../reference/score-report-fields.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)
