@@ -1,5 +1,7 @@
 # Use Circuit Explorer
 
+![Circuit Explorer – a small circuit with 4 wires and 5 layers, after running Ground Truth estimation](../../assets/circuit-explorer-visualization.svg)
+
 ## When to use this page
 
 Use this page when you want visual intuition about circuit behavior and estimator error patterns.
