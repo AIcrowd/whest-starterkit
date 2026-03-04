@@ -35,7 +35,7 @@ cestim package --estimator ./my-estimator/estimator.py --output ./submission.tar
 ## ✅ Expected outcome
 
 - validation succeeds,
-- local run returns a report with `final_score`,
+- local run returns a report with `adjusted_mse`,
 - package command produces a `.tar.gz` artifact.
 
 ## 🛠 Common first failure
@@ -87,4 +87,5 @@ cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 
 - [Write an Estimator](../how-to/write-an-estimator.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)
+- [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — skip repeated sampling when iterating
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)

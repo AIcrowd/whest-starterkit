@@ -63,6 +63,7 @@ Scores well below 1.0 mean your structural approach is genuinely beating brute-f
 - Add richer logic for larger budgets.
 - Tune switching behavior using local reports across budgets.
 - Compare `mse_mean` vs `adjusted_mse` in your reports to diagnose whether runtime or accuracy is the bottleneck.
+- Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix circuits and ground truth across runs — this makes score comparisons meaningful and skips repeated sampling.
 
 ## ➡️ Next step
 
