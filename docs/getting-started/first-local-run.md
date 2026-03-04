@@ -35,7 +35,7 @@ cestim package --estimator ./my-estimator/estimator.py --output ./submission.tar
 ## ✅ Expected outcome
 
 - validation succeeds,
-- local run returns a report with `final_score`,
+- local run returns a report with `adjusted_mse`,
 - package command produces a `.tar.gz` artifact.
 
 ## 🛠 Common first failure
