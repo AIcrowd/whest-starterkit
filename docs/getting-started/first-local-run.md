@@ -87,4 +87,5 @@ cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 
 - [Write an Estimator](../how-to/write-an-estimator.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)
+- [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — skip repeated sampling when iterating
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)

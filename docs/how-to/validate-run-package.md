@@ -22,6 +22,15 @@ cestim run --estimator ./my-estimator/estimator.py
 
 `cestim run` defaults to `--runner subprocess`.
 
+Run against a pre-created dataset (skips sampling — much faster for repeated runs):
+
+```bash
+cestim create-dataset -o my_dataset.npz
+cestim run --estimator ./my-estimator/estimator.py --dataset my_dataset.npz
+```
+
+See [Use Evaluation Datasets](./use-evaluation-datasets.md) for details.
+
 Run faster local debug path:
 
 ```bash
@@ -96,5 +105,6 @@ cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 
 ## ➡️ Next step
 
+- [Use Evaluation Datasets](./use-evaluation-datasets.md)
 - [CLI Reference](../reference/cli-reference.md)
 - [Score Report Fields](../reference/score-report-fields.md)
