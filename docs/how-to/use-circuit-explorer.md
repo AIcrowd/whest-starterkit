@@ -11,8 +11,27 @@ Circuit Explorer is optional and is not the submission interface.
 ## Do this now
 
 ```bash
+cestim visualizer
+```
+
+This checks for Node.js, installs dependencies if needed, and opens the explorer in your browser.
+
+### Options
+
+```bash
+cestim visualizer --host 0.0.0.0 --port 8080   # bind to all interfaces on port 8080
+cestim visualizer --no-open                       # don't auto-open browser
+```
+
+On SSH/headless environments, the browser won't auto-open — just follow the printed URL.
+
+### Manual setup (fallback)
+
+If `cestim visualizer` doesn't work for your environment:
+
+```bash
 cd tools/circuit-explorer
-npm install
+npm ci
 npm run dev
 ```
 
@@ -40,7 +59,7 @@ cestim run --estimator <path> --runner subprocess
 
 Symptom: app does not start due to missing Node dependencies.
 
-Fix: run `npm install` in `tools/circuit-explorer` and retry `npm run dev`.
+Fix: `cestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/circuit-explorer` and retry `npm run dev`.
 
 ## ➡️ Next step
 
