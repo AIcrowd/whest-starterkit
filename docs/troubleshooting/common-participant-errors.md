@@ -2,9 +2,9 @@
 
 Use this page when `validate` or `run` fails.
 
-## 🧭 Understand runner modes first
+## Understand runner modes first
 
-`cestim run --estimator ...` uses `--runner subprocess` by default.
+`nestim run --estimator ...` uses `--runner subprocess` by default.
 
 - `subprocess`: realistic isolation and safer runtime boundary.
 - `inprocess`: best local traceback fidelity while debugging your estimator.
@@ -12,9 +12,9 @@ Use this page when `validate` or `run` fails.
 Fast debug ladder:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py
-cestim run --estimator ./my-estimator/estimator.py --debug
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py
+nestim run --estimator ./my-estimator/estimator.py --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
 Sample subprocess-style failure:
@@ -28,35 +28,21 @@ Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
 Exact follow-up:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
-## Estimator emitted wrong shape
+## Estimator returned wrong shape
 
-Symptom: error mentions expected shape `(width,)`.
+Symptom: error mentions expected shape `(depth, width)`.
 
-Why it happens: emitted `(1, width)` or `(width, 1)` instead of a 1D vector.
+Why it happens: returned wrong dimensions or a 1D array.
 
-Fix now: ensure each yielded row is `np.ndarray` with shape `(circuit.n,)`.
+Fix now: ensure `predict` returns an `np.ndarray` with shape `(mlp.depth, mlp.width)`.
 
 Verify:
 
 ```bash
-cestim validate --estimator ./my-estimator/estimator.py
-```
-
-## Too few or too many rows
-
-Symptom: error mentions row count or `max_depth` mismatch.
-
-Why it happens: stopping early or yielding extra rows.
-
-Fix now: yield exactly one row per layer, no more and no less.
-
-Verify:
-
-```bash
-cestim validate --estimator ./my-estimator/estimator.py
+nestim validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Non-finite values (`nan` or `inf`)
@@ -65,26 +51,12 @@ Symptom: error mentions finite values.
 
 Why it happens: unstable numeric operations.
 
-Fix now: add guards/clipping/checks before yielding rows.
+Fix now: add guards/clipping/checks in your prediction logic.
 
 Verify:
 
 ```bash
-cestim validate --estimator ./my-estimator/estimator.py
-```
-
-## Non-iterable `predict` output
-
-Symptom: error indicates estimator output is not an iterator.
-
-Why it happens: returning a scalar/tensor instead of yielding rows.
-
-Fix now: implement `predict` as a generator and `yield` each depth row.
-
-Verify:
-
-```bash
-cestim validate --estimator ./my-estimator/estimator.py
+nestim validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Runtime envelope penalties
@@ -102,10 +74,10 @@ Fix now:
 Verify:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
+nestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
 ```
 
-## ➡️ Next step
+## Next step
 
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Scoring Model](../concepts/scoring-model.md)

@@ -1,17 +1,17 @@
-# Use Circuit Explorer
+# Use Network Explorer
 
-![Circuit Explorer – a small circuit with 4 wires and 5 layers, after running Ground Truth estimation](../../assets/circuit-explorer-visualization.svg)
+![Network Explorer -- a small network with 4 neurons and 5 layers, after running Ground Truth estimation](../../assets/circuit-explorer-visualization.svg)
 
 ## When to use this page
 
-Use this page when you want visual intuition about circuit behavior and estimator error patterns.
+Use this page when you want visual intuition about network behavior and estimator error patterns.
 
-Circuit Explorer is optional and is not the submission interface.
+Network Explorer is optional and is not the submission interface.
 
 ## Do this now
 
 ```bash
-cestim visualizer
+nestim visualizer
 ```
 
 This checks for Node.js, installs dependencies if needed, and opens the explorer in your browser.
@@ -19,15 +19,15 @@ This checks for Node.js, installs dependencies if needed, and opens the explorer
 ### Options
 
 ```bash
-cestim visualizer --host 0.0.0.0 --port 8080   # bind to all interfaces on port 8080
-cestim visualizer --no-open                       # don't auto-open browser
+nestim visualizer --host 0.0.0.0 --port 8080   # bind to all interfaces on port 8080
+nestim visualizer --no-open                       # don't auto-open browser
 ```
 
-On SSH/headless environments, the browser won't auto-open — just follow the printed URL.
+On SSH/headless environments, the browser won't auto-open -- just follow the printed URL.
 
 ### Manual setup (fallback)
 
-If `cestim visualizer` doesn't work for your environment:
+If `nestim visualizer` doesn't work for your environment:
 
 ```bash
 cd tools/circuit-explorer
@@ -37,9 +37,9 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-## ✅ Expected outcome
+## Expected outcome
 
-You can interactively inspect circuit structure, layer behavior, and estimator comparisons.
+You can interactively inspect network structure, layer behavior, and estimator comparisons.
 
 ## Suggested workflow
 
@@ -52,16 +52,16 @@ You can interactively inspect circuit structure, layer behavior, and estimator c
 Official score semantics still come from:
 
 ```bash
-cestim run --estimator <path> --runner subprocess
+nestim run --estimator <path> --runner subprocess
 ```
 
-## 🛠 Common first failure
+## Common first failure
 
 Symptom: app does not start due to missing Node dependencies.
 
-Fix: `cestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/circuit-explorer` and retry `npm run dev`.
+Fix: `nestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/circuit-explorer` and retry `npm run dev`.
 
-## ➡️ Next step
+## Next step
 
 - [Validate, Run, and Package](./validate-run-package.md)
 - [Problem Setup](../concepts/problem-setup.md)
