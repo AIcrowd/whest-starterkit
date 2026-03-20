@@ -33,7 +33,7 @@ Your estimator implements `predict(mlp, budget)` and returns a `(depth, width)` 
 
 If you need exact `MLP` field semantics or weight matrices, use:
 
-- [Inspect and Traverse MLP Structure](./inspect-circuit-structure.md)
+- [Inspect and Traverse MLP Structure](./inspect-mlp-structure.md)
 
 ## Contract checklist
 
@@ -55,7 +55,7 @@ Fix: ensure `predict` returns a 2D array with shape `(mlp.depth, mlp.width)` and
 
 ## Next step
 
-- [Inspect and Traverse MLP Structure](./inspect-circuit-structure.md)
+- [Inspect and Traverse MLP Structure](./inspect-mlp-structure.md)
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Validate, Run, and Package](./validate-run-package.md)
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)

@@ -84,5 +84,5 @@ The evaluator computes empirical means by depth and neuron.
 ## ➡️ Next step
 
 - [Scoring Model](./scoring-model.md)
-- [Inspect and Traverse MLP Structure](../how-to/inspect-circuit-structure.md)
+- [Inspect and Traverse MLP Structure](../how-to/inspect-mlp-structure.md)
 - [Estimator Contract](../reference/estimator-contract.md)
