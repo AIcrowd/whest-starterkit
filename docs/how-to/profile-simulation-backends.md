@@ -177,7 +177,7 @@ If the build succeeded, you should see `cython` in the correctness check and tim
 
 ## Controlling thread count
 
-By default, backends use multiple CPU threads (PyTorch caps at 4; NumPy/SciPy follow the system BLAS default). Use `--max-threads` to override this for any command that runs simulations:
+By default, backends use multiple CPU threads (following the system BLAS defaults). Use `--max-threads` to override this for any command that runs simulations:
 
 ```bash
 # Single-threaded profiling — useful for per-core comparisons

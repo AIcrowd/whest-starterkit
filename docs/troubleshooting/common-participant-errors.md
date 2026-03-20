@@ -61,15 +61,15 @@ nestim validate --estimator ./my-estimator/estimator.py
 
 ## Runtime envelope penalties
 
-Symptom: unexpectedly poor `adjusted_mse` despite reasonable `mse_mean`.
+Symptom: unexpectedly poor `primary_score` despite reasonable `final_mse`.
 
-Why it happens: depth rows timing outside tolerance bounds.
+Why it happens: estimator exceeding the time budget, causing predictions to be zeroed.
 
 Fix now:
 
 - simplify compute for smaller budgets,
-- keep per-depth runtime stable,
-- compare `mse_mean` vs `adjusted_mse` to diagnose timing penalties.
+- keep total runtime under the sampling baseline,
+- compare `final_mse` vs `primary_score` to diagnose timing penalties.
 
 Verify:
 
