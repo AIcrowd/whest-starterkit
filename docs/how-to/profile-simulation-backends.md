@@ -175,6 +175,27 @@ If the build succeeded, you should see `cython` in the correctness check and tim
 > - **"numpy/arrayobject.h: No such file"** — NumPy headers are missing. Re-install numpy: `pip install --force-reinstall numpy`.
 > - **"cannot import name '_cython_kernels'"** — The `.so`/`.pyd` file wasn't placed correctly. Make sure you run the build command from the project root (where `setup_cython.py` lives).
 
+## Controlling thread count
+
+By default, backends use multiple CPU threads (PyTorch caps at 4; NumPy/SciPy follow the system BLAS default). Use `--max-threads` to override this for any command that runs simulations:
+
+```bash
+# Single-threaded profiling — useful for per-core comparisons
+nestim profile-simulation --max-threads 1 --preset quick
+
+# Cap at 2 threads during scoring
+nestim run --estimator ./my-estimator/estimator.py --max-threads 2
+```
+
+Alternatively, set the `NESTIM_MAX_THREADS` environment variable (the CLI flag takes precedence):
+
+```bash
+export NESTIM_MAX_THREADS=2
+nestim profile-simulation
+```
+
+This sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `VECLIB_MAXIMUM_THREADS`, `NUMBA_NUM_THREADS`, `NUMEXPR_NUM_THREADS`, and `torch.set_num_threads()` — covering all backends in a single knob. See [Thread limiting](../reference/cli-reference.md#thread-limiting) for the full reference.
+
 ## Selecting a backend for scoring
 
 Once you've identified the fastest backend, set the `NESTIM_BACKEND` environment variable so that `nestim run` and `nestim create-dataset` use it:
