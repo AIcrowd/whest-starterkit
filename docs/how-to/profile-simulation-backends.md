@@ -12,7 +12,19 @@ Use this page when you want to:
 
 ## Do this now
 
-### 1. Run a quick benchmark
+### 1. Install backends
+
+By default, only NumPy and SciPy are available. **You must install optional backends before the profiler can use them.** The fastest way is the `all-backends` dependency group:
+
+```bash
+uv sync --group all-backends
+```
+
+This installs PyTorch, Numba, JAX, and Cython. See [Installing optional backends](#installing-optional-backends) below for per-backend instructions and the extra build step required for Cython.
+
+> **Why do I only see numpy and scipy?** You probably haven't run `uv sync --group all-backends` yet. The profiler can only benchmark backends that are installed in your environment.
+
+### 2. Run a quick benchmark
 
 ```bash
 nestim profile-simulation --preset quick
@@ -20,7 +32,7 @@ nestim profile-simulation --preset quick
 
 This finishes in seconds and gives you a first look at which backends are available, which pass correctness, and rough speedup numbers.
 
-### 2. Run the standard benchmark
+### 3. Run the standard benchmark
 
 ```bash
 nestim profile-simulation
@@ -28,7 +40,7 @@ nestim profile-simulation
 
 The default `standard` preset tests two widths (64, 256), five depths (4–128), and three sample counts (10k–1M). It takes a few minutes and gives a reliable picture of relative performance.
 
-### 3. Save results for comparison
+### 4. Save results for comparison
 
 ```bash
 nestim profile-simulation --output results.json
@@ -98,29 +110,70 @@ Valid backend names: `numpy`, `pytorch`, `numba`, `scipy`, `jax`, `cython`.
 
 ## Installing optional backends
 
-Only NumPy and SciPy are installed by default. The profiler will skip missing backends and show install hints:
+Only NumPy and SciPy are installed by default. **The profiler will skip any backend that isn't installed** and show install hints in the output:
 
 ```text
 Skipped backends:
   pytorch: not installed. Install: pip install torch>=2.0
   numba: not installed. Install: pip install numba>=0.58
   jax: not installed. Install: pip install 'jax[cpu]>=0.4'
+  cython: not installed. Install: pip install cython>=3.0 && python setup_cython.py build_ext --inplace
 ```
 
-Install individual backends:
+### Install all backends at once (recommended)
+
+```bash
+uv sync --group all-backends
+```
+
+This installs PyTorch, Numba, JAX, and Cython via the `all-backends` dependency group defined in `pyproject.toml`. Note that **Cython also requires a build step** — see [Building the Cython backend](#building-the-cython-backend) below.
+
+### Install individual backends
 
 ```bash
 pip install torch>=2.0          # PyTorch
 pip install numba>=0.58         # Numba
 pip install 'jax[cpu]>=0.4'     # JAX
-pip install cython>=3.0         # Cython (also requires build step)
+pip install cython>=3.0         # Cython (step 1 of 2 — also needs build step)
 ```
 
-Or install all at once using the dependency group:
+### Building the Cython backend
+
+The Cython backend uses compiled C extensions with direct BLAS calls for maximum speed. Unlike other backends, installing the `cython` package alone is **not enough** — you must also compile the extension module.
+
+**Step 1: Install Cython**
 
 ```bash
-uv sync --group all-backends
+uv sync --group cython
+# or: pip install cython>=3.0
 ```
+
+**Step 2: Build the extension**
+
+From the project root directory:
+
+```bash
+python setup_cython.py build_ext --inplace
+```
+
+This compiles `src/network_estimation/_cython_kernels.pyx` into a shared library that Python can import. The build requires:
+
+- A C compiler (gcc, clang, or MSVC)
+- NumPy headers (included automatically via the installed numpy package)
+- SciPy (for BLAS function declarations used by the Cython code)
+
+**Verify it works:**
+
+```bash
+nestim profile-simulation --preset super-quick --backends cython
+```
+
+If the build succeeded, you should see `cython` in the correctness check and timing results. If it shows as skipped, re-run the build step and check for compiler errors.
+
+> **Troubleshooting Cython build failures:**
+> - **"command 'gcc' not found"** — Install a C compiler. On macOS: `xcode-select --install`. On Ubuntu: `apt install build-essential`.
+> - **"numpy/arrayobject.h: No such file"** — NumPy headers are missing. Re-install numpy: `pip install --force-reinstall numpy`.
+> - **"cannot import name '_cython_kernels'"** — The `.so`/`.pyd` file wasn't placed correctly. Make sure you run the build command from the project root (where `setup_cython.py` lives).
 
 ## Selecting a backend for scoring
 
