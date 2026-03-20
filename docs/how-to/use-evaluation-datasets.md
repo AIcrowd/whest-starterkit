@@ -28,9 +28,9 @@ Common options:
 | `--n-samples` | 10000 | Samples per MLP for ground truth estimation |
 | `--seed` | auto | RNG seed (auto-generated if omitted, always recorded) |
 | `-o, --output` | `eval_dataset.npz` | Output file path |
-| `--width` | 100 | Neuron count per MLP |
-| `--max-depth` | 30 | Layers per MLP |
-| `--budgets` | `10,100,1000,10000` | Comma-separated budget list |
+| `--width` | (contest default) | Neuron count per MLP |
+| `--depth` | (contest default) | Layers per MLP |
+| `--estimator-budget` | (contest default) | Sampling budget for the estimator |
 
 ### 2. Run against it (every time)
 
@@ -54,27 +54,6 @@ The dataset file also stores *sampling baseline times* — measurements of how l
 
 **Baselines are hardware-dependent.** A forward pass on a fast workstation takes less time than the same pass on a laptop. If you create a dataset on one machine and run it on another, the stored baselines would not reflect the actual performance characteristics of the current hardware, leading to incorrect time-ratio scoring.
 
-### Default behavior: auto-recompute
-
-When `nestim run --dataset` detects that the current machine differs from the one that created the dataset, it automatically recomputes the baselines:
-
-```text
-⚠ Dataset baselines computed on workstation-01 (Apple M2 Max, 12 cores, 32GB).
-  Current hardware differs. Recomputing baselines...
-```
-
-The MLPs and ground truth are still loaded from the file — only the baselines are measured fresh. This adds a small one-time cost but ensures scores are accurate for your hardware.
-
-### Strict mode
-
-If you want to ensure that no one accidentally uses stale baselines (for example, in a CI pipeline or a formal evaluation), pass `--strict-baselines`:
-
-```bash
-nestim run --estimator ./estimator.py --dataset my_dataset.npz --strict-baselines
-```
-
-With `--strict-baselines`, the CLI refuses to run if the current hardware does not match the dataset's recorded hardware. This is useful when you need guaranteed consistency — for example, if the same machine that created the dataset must also run all evaluations.
-
 ## Dataset traceability
 
 When using `--dataset`, the results JSON includes a `dataset` reference under `run_config` so you can always trace exactly which dataset produced a given score:
@@ -86,9 +65,7 @@ When using `--dataset`, the results JSON includes a `dataset` reference under `r
       "path": "/path/to/my_dataset.npz",
       "sha256": "a1b2c3...",
       "seed": 42,
-      "n_mlps": 10,
-      "n_samples": 10000,
-      "baselines_recomputed": false
+      "n_mlps": 10
     }
   }
 }

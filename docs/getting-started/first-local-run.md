@@ -35,14 +35,14 @@ nestim package --estimator ./my-estimator/estimator.py --output ./submission.tar
 ## ✅ Expected outcome
 
 - validation succeeds,
-- local run returns a report with `adjusted_mse`,
+- local run returns a report with `primary_score`,
 - package command produces a `.tar.gz` artifact.
 
 ## 🛠 Common first failure
 
 Symptom: validation fails because output shape or row count is wrong.
 
-Fix: ensure `predict(mlp, budget)` returns exactly `mlp.d` rows and each row is shape `(mlp.n,)`.
+Fix: ensure `predict(mlp, budget)` returns exactly `mlp.depth` rows and each row is shape `(mlp.width,)`.
 
 ## 🧭 Debug runner flow (copy/paste)
 

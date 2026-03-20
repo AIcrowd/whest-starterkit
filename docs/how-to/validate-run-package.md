@@ -8,7 +8,7 @@ Use this page for the standard local participant loop.
 
 Validate estimator loading and output contract:
 
-> `nestim validate` is a fast sanity check using a small fixed MLP (width=4, depth=1). It verifies loading, output shape, and value finiteness — not full behavioral or performance correctness. Always follow with `nestim run` for realistic tests.
+> `nestim validate` is a fast sanity check using a small fixed MLP (width=4, depth=2). It verifies loading, output shape, and value finiteness — not full behavioral or performance correctness. Always follow with `nestim run` for realistic tests.
 
 ```bash
 nestim validate --estimator ./my-estimator/estimator.py

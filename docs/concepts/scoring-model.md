@@ -43,24 +43,26 @@ The best solutions dynamically allocate their compute based on budget.
 
 The scoring model uses the sampling baseline as a reference clock:
 
-- **Timeout (per depth).** If your estimator's cumulative runtime at a given depth significantly exceeds the sampling baseline for that depth (above a tolerance threshold), the prediction at that depth is zeroed.
-- **Floor (per depth).** If your estimator's cumulative runtime at a given depth is much faster than the sampling baseline, the effective time for that depth is clamped to a minimum so that trivially fast (but inaccurate) methods don't game the time ratio.
-- **Normal range.** Within the tolerance band, your actual cumulative runtime at each depth is used directly.
+- **Timeout.** If your estimator's total wall time exceeds the sampling baseline time for that MLP, **all** predictions for that MLP are replaced with zeros. This is a hard cutoff, not per-depth.
+- **Floor.** If your estimator is much faster than the baseline, the time fraction is clamped to a minimum of 50%. This prevents trivially fast (but inaccurate) methods from gaming the time ratio.
+- **Normal range.** Between the floor and timeout, your actual time fraction (`time_spent / time_budget`) is used directly.
 
-The tolerance is configured per evaluation run (typically ±10%).
+The time fraction is computed as `max(time_spent / time_budget, 0.5)`.
 
 ## What a good score looks like
 
-A score around 1.0 means your estimator performs roughly like sampling — similar accuracy at similar compute. Lower is better.
+The score formula for each MLP is: `final_mse / sampling_mse`, where `sampling_mse = avg_variance / (budget × fraction_spent)`.
 
-Scores well below 1.0 mean your structural approach is genuinely beating brute-force sampling: you are getting better predictions per unit of compute. That is exactly the research milestone this challenge targets.
+A score around 1.0 means your estimator's accuracy is comparable to what sampling would achieve at that budget. Lower is better.
+
+Scores well below 1.0 mean your structural approach is genuinely beating brute-force sampling: you are getting better predictions per unit of compute. That is the research milestone this challenge targets.
 
 ## Practical tuning intuition
 
 - Start with a safe method that consistently emits valid rows.
 - Add richer logic for larger budgets.
 - Tune switching behavior using local reports across budgets.
-- Compare `mse_mean` vs `adjusted_mse` in your reports to diagnose whether runtime or accuracy is the bottleneck.
+- Compare `final_mse` vs `primary_score` in your reports to diagnose whether runtime or accuracy is the bottleneck.
 - Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix networks and ground truth across runs — this makes score comparisons meaningful and skips repeated sampling.
 
 ## ➡️ Next step
