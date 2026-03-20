@@ -1,6 +1,6 @@
 # Use Network Explorer
 
-![Network Explorer -- a small network with 4 neurons and 5 layers, after running Ground Truth estimation](../../assets/circuit-explorer-visualization.svg)
+![Network Explorer -- a small network with 4 neurons and 5 layers, after running Ground Truth estimation](../../assets/network-explorer-visualization.svg)
 
 ## When to use this page
 
@@ -30,7 +30,7 @@ On SSH/headless environments, the browser won't auto-open -- just follow the pri
 If `nestim visualizer` doesn't work for your environment:
 
 ```bash
-cd tools/circuit-explorer
+cd tools/network-explorer
 npm ci
 npm run dev
 ```
@@ -59,7 +59,7 @@ nestim run --estimator <path> --runner subprocess
 
 Symptom: app does not start due to missing Node dependencies.
 
-Fix: `nestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/circuit-explorer` and retry `npm run dev`.
+Fix: `nestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/network-explorer` and retry `npm run dev`.
 
 ## Next step
 
