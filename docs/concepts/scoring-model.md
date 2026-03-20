@@ -14,32 +14,30 @@ Use this page to understand how the leaderboard score combines estimation qualit
 
 The scoring model answers a specific question: **is your estimator better than just sampling?**
 
-For each compute budget, the evaluator measures how long plain sampling (running random inputs through the circuit) would take. Then it runs your estimator and compares both the accuracy of its predictions and how much time it used.
+For each compute budget, the evaluator measures how long plain sampling (running random inputs through the network) would take. Then it runs your estimator and compares both the accuracy of its predictions and how much time it used.
 
 If your estimator produces the same accuracy as sampling but uses less compute, that's a win. If it produces better accuracy in the same compute, that's also a win. The score captures both dimensions.
 
 ## How scoring works
 
-For each configured budget:
+For the configured budget:
 
 1. **Baseline measurement.** The evaluator runs the sampling forward pass at that budget to establish a reference runtime.
-2. **Your estimator runs.** Your `predict(circuit, budget)` is called. Predictions are streamed one depth row at a time, and the **cumulative wall time at each depth** is measured.
+2. **Your estimator runs.** Your `predict(mlp, budget)` is called. Predictions are collected and the **wall time** is measured.
 3. **Accuracy is measured.** Per-depth mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed.
-4. **Compute is compared per depth.** At each depth, your cumulative runtime is compared to the sampling baseline for that depth. Using more time incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
+4. **Compute is compared.** Your runtime is compared to the sampling baseline. Using more time incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
 5. **Score combines both.** Your accuracy is adjusted by your relative compute usage: better accuracy *and* lower compute both push your score down.
 
-Final score is the average adjusted error across all budgets.
+Final score is the adjusted error for the budget.
 
-## Budget-adaptivity
+## Budget behavior
 
-Your estimator is called at **multiple budgets** (by default: 100, 1,000, 10,000, and 100,000). The same code must handle all of them.
-
-The `budget` argument tells your estimator roughly how many sampling trials would be "allowed" at this level. Smart estimators adapt their strategy:
+Your estimator is called with a `budget` argument. The `budget` tells your estimator roughly how many sampling trials would be "allowed" at this level. Smart estimators adapt their strategy:
 
 - At **small budgets** (e.g., 100), sampling is cheap and fast. To compete, your estimator needs to be lightweight too — perhaps just mean propagation.
 - At **large budgets** (e.g., 100,000), sampling takes real time. You have room for more sophisticated structural analysis — covariance tracking, iterative refinement, or hybrid methods — because the runtime bar is higher.
 
-The best solutions dynamically allocate their compute across these regimes.
+The best solutions dynamically allocate their compute based on budget.
 
 ## Runtime rules
 
@@ -63,7 +61,7 @@ Scores well below 1.0 mean your structural approach is genuinely beating brute-f
 - Add richer logic for larger budgets.
 - Tune switching behavior using local reports across budgets.
 - Compare `mse_mean` vs `adjusted_mse` in your reports to diagnose whether runtime or accuracy is the bottleneck.
-- Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix circuits and ground truth across runs — this makes score comparisons meaningful and skips repeated sampling.
+- Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix networks and ground truth across runs — this makes score comparisons meaningful and skips repeated sampling.
 
 ## ➡️ Next step
 

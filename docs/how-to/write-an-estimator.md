@@ -13,38 +13,32 @@ Minimal structure:
 ```python
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 import numpy as np
 from numpy.typing import NDArray
 
-from circuit_estimation import BaseEstimator
-from circuit_estimation.domain import Circuit
+from network_estimation import BaseEstimator
+from network_estimation.domain import MLP
 
 
 class Estimator(BaseEstimator):
-    def predict(self, circuit: Circuit, budget: int) -> Iterator[NDArray[np.float32]]:
-        x_mean = np.zeros(circuit.n, dtype=np.float32)
-        for _layer in circuit.gates:
-            yield x_mean
+    def predict(self, mlp: MLP, budget: int) -> NDArray[np.float32]:
+        return np.zeros((mlp.depth, mlp.width), dtype=np.float32)
 ```
 
-## ✅ Expected outcome
+## Expected outcome
 
-Your estimator implements `predict(circuit, budget)` and yields one valid depth row at a time.
+Your estimator implements `predict(mlp, budget)` and returns a `(depth, width)` array of predicted neuron values.
 
-## Circuit traversal starter
+## MLP traversal starter
 
-If you need exact `Circuit` / `Layer` field semantics or packed tensors from `circuit.to_vectorized()`, use:
+If you need exact `MLP` field semantics or weight matrices, use:
 
-- [Inspect and Traverse Circuit Structure](./inspect-circuit-structure.md)
+- [Inspect and Traverse MLP Structure](./inspect-mlp-structure.md)
 
-## 📌 Contract checklist
+## Contract checklist
 
-- emit exactly `circuit.d` rows,
-- each row must be shape `(circuit.n,)`,
-- all values must be finite,
-- stream with `yield` (do not return one final tensor).
+- return a `(mlp.depth, mlp.width)` array,
+- all values must be finite.
 
 ## Recommended learning path
 
@@ -53,15 +47,15 @@ If you need exact `Circuit` / `Layer` field semantics or packed tensors from `ci
 3. [`examples/estimators/covariance_propagation.py`](../../examples/estimators/covariance_propagation.py)
 4. [`examples/estimators/combined_estimator.py`](../../examples/estimators/combined_estimator.py)
 
-## 🛠 Common first failure
+## Common first failure
 
-Symptom: estimator returns a full `(depth, width)` array at the end.
+Symptom: estimator returns wrong shape.
 
-Fix: make `predict` a generator and `yield` one `(width,)` row per layer.
+Fix: ensure `predict` returns a 2D array with shape `(mlp.depth, mlp.width)` and all finite values.
 
-## ➡️ Next step
+## Next step
 
-- [Inspect and Traverse Circuit Structure](./inspect-circuit-structure.md)
+- [Inspect and Traverse MLP Structure](./inspect-mlp-structure.md)
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Validate, Run, and Package](./validate-run-package.md)
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)
