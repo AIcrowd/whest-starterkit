@@ -75,6 +75,7 @@ The JSON file contains everything needed to compare runs across machines:
 
 | Preset | Widths | Depths | Sample counts | Typical time |
 |--------|--------|--------|---------------|--------------|
+| `super-quick` | 64 | 4 | 1k | Sub-second |
 | `quick` | 256 | 4, 32 | 10k, 100k | Seconds |
 | `standard` | 64, 256 | 4, 16, 32, 64, 128 | 10k, 100k, 1M | Minutes |
 | `exhaustive` | 64, 128, 256 | 4, 16, 32, 64, 128 | 10k–16.7M | Long |
