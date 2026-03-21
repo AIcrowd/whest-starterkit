@@ -78,6 +78,17 @@ The JSON file contains everything needed to compare runs across machines:
       "times": [0.1234, 0.1201, 0.1215],
       "median_time": 0.1215,
       "speedup_vs_numpy": 2.45
+    },
+    {
+      "backend": "cython",
+      "operation": "run_mlp",
+      "width": 256,
+      "depth": 128,
+      "n_samples": 16700000,
+      "times": [],
+      "median_time": -1.0,
+      "speedup_vs_numpy": 0.0,
+      "error": "MemoryError: Unable to allocate 32.0 GiB ..."
     }
   ]
 }
