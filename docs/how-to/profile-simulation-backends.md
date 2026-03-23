@@ -98,12 +98,12 @@ The JSON file contains everything needed to compare runs across machines:
 
 | Preset | Widths | Depths | Sample counts | Typical time |
 |--------|--------|--------|---------------|--------------|
-| `super-quick` | 64 | 4 | 1k | Sub-second |
-| `quick` | 256 | 4, 32 | 10k, 100k | Seconds |
-| `standard` | 64, 256 | 4, 16, 32, 64, 128 | 10k, 100k, 1M | Minutes |
-| `exhaustive` | 64, 128, 256 | 4, 16, 32, 64, 128 | 10k–16.7M | Long |
+| `super-quick` | 256 | 4 | 10k | Sub-second |
+| `quick` | 256 | 4, 128 | 10k, 100k | Seconds |
+| `standard` | 64, 256 | 4, 32, 128 | 10k, 100k | Under a minute |
+| `exhaustive` | 64, 256 | 4, 32, 128 | 10k, 100k, 1M | Minutes |
 
-Use `quick` for a fast sanity check, `standard` for development decisions, and `exhaustive` when you need thorough data (e.g. before choosing a backend for production scoring).
+Use `quick` for a fast sanity check, `standard` for development decisions, and `exhaustive` when you need thorough data (e.g. before choosing a backend for production scoring). Beyond ~1M samples, backend rankings stabilize — larger counts add runtime without changing the outcome.
 
 ## Filtering backends
 
