@@ -6,27 +6,27 @@ Use this page for the standard local participant loop.
 
 ## Do this now
 
-Validate estimator loading and stream contract:
+Validate estimator loading and output contract:
 
-> `cestim validate` is a fast sanity check using a small fixed circuit (width=4, depth=1). It verifies loading, stream shape, and value finiteness — not full behavioral or performance correctness. Always follow with `cestim run` for realistic tests.
+> `nestim validate` is a fast sanity check using a small fixed MLP (width=4, depth=2). It verifies loading, output shape, and value finiteness — not full behavioral or performance correctness. Always follow with `nestim run` for realistic tests.
 
 ```bash
-cestim validate --estimator ./my-estimator/estimator.py
+nestim validate --estimator ./my-estimator/estimator.py
 ```
 
 Run local scoring (recommended default runner):
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py
+nestim run --estimator ./my-estimator/estimator.py
 ```
 
-`cestim run` defaults to `--runner subprocess`.
+`nestim run` defaults to `--runner subprocess`.
 
 Run against a pre-created dataset (skips sampling — much faster for repeated runs):
 
 ```bash
-cestim create-dataset -o my_dataset.npz
-cestim run --estimator ./my-estimator/estimator.py --dataset my_dataset.npz
+nestim create-dataset -o my_dataset.npz
+nestim run --estimator ./my-estimator/estimator.py --dataset my_dataset.npz
 ```
 
 See [Use Evaluation Datasets](./use-evaluation-datasets.md) for details.
@@ -34,25 +34,25 @@ See [Use Evaluation Datasets](./use-evaluation-datasets.md) for details.
 Run faster local debug path:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess
 ```
 
 Run with machine-readable output:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
+nestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
 ```
 
 Package submission artifact:
 
 ```bash
-cestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
+nestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
 ```
 
 Optional files during packaging:
 
 ```bash
-cestim package \
+nestim package \
   --estimator ./my-estimator/estimator.py \
   --requirements ./my-estimator/requirements.txt \
   --submission-metadata ./my-estimator/submission.yaml \
@@ -75,13 +75,13 @@ Use this escalation flow:
 1. Retry with debug info in default subprocess mode:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --debug
+nestim run --estimator ./my-estimator/estimator.py --debug
 ```
 
 2. If traceback still feels opaque, rerun in-process:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
 Runner tradeoff:
@@ -100,7 +100,7 @@ Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
 Next command to run:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
 ## ➡️ Next step

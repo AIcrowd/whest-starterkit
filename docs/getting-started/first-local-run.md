@@ -9,40 +9,40 @@ Use this page for your first end-to-end participant loop.
 Create starter estimator files:
 
 ```bash
-cestim init ./my-estimator
+nestim init ./my-estimator
 ```
 
-Validate stream contract (fast sanity check — small fixed circuit, not a full evaluation):
+Validate contract (fast sanity check — small fixed MLP, not a full evaluation):
 
 ```bash
-cestim validate --estimator ./my-estimator/estimator.py
+nestim validate --estimator ./my-estimator/estimator.py
 ```
 
 Run local evaluation:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py
+nestim run --estimator ./my-estimator/estimator.py
 ```
 
-Note: `cestim run --estimator ...` defaults to `--runner subprocess`.
+Note: `nestim run --estimator ...` defaults to `--runner subprocess`.
 
 Package a submission artifact:
 
 ```bash
-cestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
+nestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
 ```
 
 ## ✅ Expected outcome
 
 - validation succeeds,
-- local run returns a report with `adjusted_mse`,
+- local run returns a report with `primary_score`,
 - package command produces a `.tar.gz` artifact.
 
 ## 🛠 Common first failure
 
 Symptom: validation fails because output shape or row count is wrong.
 
-Fix: ensure `predict(circuit, budget)` yields exactly `circuit.d` rows and each row is shape `(circuit.n,)`.
+Fix: ensure `predict(mlp, budget)` returns exactly `mlp.depth` rows and each row is shape `(mlp.width,)`.
 
 ## 🧭 Debug runner flow (copy/paste)
 
@@ -51,19 +51,19 @@ When `run` fails, use this sequence:
 1. Normal run (default subprocess isolation):
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py
+nestim run --estimator ./my-estimator/estimator.py
 ```
 
 2. Add traceback/debug fields:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --debug
+nestim run --estimator ./my-estimator/estimator.py --debug
 ```
 
 3. If still unclear, switch to in-process traceback fidelity:
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
 Why two runners:
@@ -80,7 +80,7 @@ Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
 ```
 
 ```bash
-cestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
 ```
 
 ## ➡️ Next step

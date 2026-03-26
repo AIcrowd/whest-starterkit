@@ -1,209 +1,62 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 import numpy as np
 from numpy.typing import NDArray
 
-from circuit_estimation import BaseEstimator
-from circuit_estimation.domain import Circuit, Layer
+from network_estimation import BaseEstimator
+from network_estimation.domain import MLP
 
 
 class Estimator(BaseEstimator):
-    """Budget-aware hybrid tutorial estimator.
-
-    This estimator demonstrates a practical contest pattern: use a fast method
-    for small budgets and a richer method for larger budgets.
-
-    Routing rule:
-
-        if budget >= 30 * width: use covariance propagation
-        else:                    use mean propagation
-
-    Mean propagation (fast path) uses:
-
-        m_i^(l+1) = a_i * m_f
-                    + b_i * m_s
-                    + c_i
-                    + p_i * m_f * m_s
-
-    Covariance propagation (accurate path) adds second-order state and uses:
-
-        E[x_f * x_s] ~= m_f * m_s + C_fs
-
-    plus decomposed covariance terms (linear-linear, 1v2, 2v2).
-
-    Intuition: budget controls how much structure we can afford to model. Low
-    budget favors speed, high budget can afford covariance for better accuracy.
-    """
+    """Budget-aware hybrid estimator: routes between mean and covariance propagation."""
 
     _COVARIANCE_BUDGET_MULTIPLIER = 30
 
-    def predict(self, circuit: Circuit, budget: int) -> Iterator[NDArray[np.float32]]:
-        """Yield one prediction row per depth from a budget-selected path."""
-        # Keep condition inline to show budget-regime policy branching explicitly.
-        if budget >= self._COVARIANCE_BUDGET_MULTIPLIER * circuit.n:
-            yield from self._covariance_propagation(circuit)
-            return
-        yield from self._mean_propagation(circuit)
+    def predict(self, mlp: MLP, budget: int) -> NDArray[np.float32]:
+        if budget >= self._COVARIANCE_BUDGET_MULTIPLIER * mlp.width:
+            return self._covariance_path(mlp)
+        return self._mean_path(mlp)
 
-    def _mean_propagation(self, circuit: Circuit) -> Iterator[NDArray[np.float32]]:
-        """Fast mean-propagation path for low budgets."""
-        x_mean: NDArray[np.float32] = np.zeros(circuit.n, dtype=np.float32)
-        for layer in circuit.gates:
-            x_mean = self._propagate_layer_mean(layer, x_mean)
-            yield x_mean
+    def _mean_path(self, mlp: MLP) -> NDArray[np.float32]:
+        from scipy.stats import norm  # type: ignore[import-untyped]
 
-    @staticmethod
-    def _propagate_layer_mean(layer: Layer, x_mean: NDArray[np.float32]) -> NDArray[np.float32]:
-        """Propagate one layer of means under mean propagation closure."""
-        first_mean = np.take(x_mean, layer.first)
-        second_mean = np.take(x_mean, layer.second)
-        return (
-            layer.first_coeff * first_mean
-            + layer.second_coeff * second_mean
-            + layer.const
-            + layer.product_coeff * first_mean * second_mean
-        ).astype(np.float32)
+        width = mlp.width
+        mu = np.zeros(width, dtype=np.float64)
+        var = np.ones(width, dtype=np.float64)
+        rows = []
+        for w in mlp.weights:
+            W = w.astype(np.float64)
+            mu_pre = W.T @ mu
+            var_pre = np.maximum((W ** 2).T @ var, 1e-12)
+            sigma_pre = np.sqrt(var_pre)
+            alpha = mu_pre / sigma_pre
+            mu = mu_pre * norm.cdf(alpha) + sigma_pre * norm.pdf(alpha)
+            ez2 = (mu_pre ** 2 + var_pre) * norm.cdf(alpha) + mu_pre * sigma_pre * norm.pdf(alpha)
+            var = np.maximum(ez2 - mu ** 2, 0.0)
+            rows.append(mu.astype(np.float32))
+        return np.stack(rows, axis=0)
 
-    def _covariance_propagation(self, circuit: Circuit) -> Iterator[NDArray[np.float32]]:
-        """Second-order covariance path for higher budgets."""
-        n = circuit.n
-        x_mean: NDArray[np.float32] = np.zeros(n, dtype=np.float32)
-        x_cov: NDArray[np.float32] = np.eye(n, dtype=np.float32)
+    def _covariance_path(self, mlp: MLP) -> NDArray[np.float32]:
+        from scipy.stats import norm  # type: ignore[import-untyped]
 
-        for layer in circuit.gates:
-            x_mean, x_cov = self._propagate_layer_covariance(layer, x_mean, x_cov)
-            yield x_mean
-
-    def _propagate_layer_covariance(
-        self,
-        layer: Layer,
-        x_mean: NDArray[np.float32],
-        x_cov: NDArray[np.float32],
-    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
-        """Return ``(new_mean, new_cov)`` for one layer under pairwise closure."""
-        n = x_mean.shape[0]
-        first_mean = x_mean[layer.first]
-        second_mean = x_mean[layer.second]
-        pair_cov = x_cov[layer.first, layer.second]
-
-        # Step 1: mean update with covariance-aware product expectation.
-        new_mean: NDArray[np.float32] = (
-            layer.first_coeff * first_mean
-            + layer.second_coeff * second_mean
-            + layer.const
-            + layer.product_coeff * first_mean * second_mean
-            + layer.product_coeff * pair_cov
-        ).astype(np.float32)
-
-        # Step 2: linear-linear covariance contribution.
-        new_cov: NDArray[np.float32] = self._linear_linear_covariance(layer, x_cov, n)
-
-        # Step 3: 1v2 linear-bilinear cross terms.
-        result_1v2_first = np.outer(
-            layer.first_coeff, layer.product_coeff
-        ) * self._one_v_two_covariance(
-            layer.first,
-            layer.first,
-            layer.second,
-            x_cov,
-            x_mean,
-        )
-        new_cov += result_1v2_first + result_1v2_first.T
-
-        result_1v2_second = np.outer(
-            layer.second_coeff,
-            layer.product_coeff,
-        ) * self._one_v_two_covariance(layer.second, layer.first, layer.second, x_cov, x_mean)
-        new_cov += result_1v2_second + result_1v2_second.T
-
-        # Step 4: 2v2 bilinear-bilinear term.
-        new_cov += np.outer(layer.product_coeff, layer.product_coeff) * self._two_v_two_covariance(
-            layer.first,
-            layer.second,
-            layer.first,
-            layer.second,
-            x_cov,
-            x_mean,
-        )
-
-        # Step 5: stabilize and enforce feasible moment bounds.
-        self._clip_moments(new_mean, new_cov)
-        return new_mean, new_cov
-
-    @staticmethod
-    def _linear_linear_covariance(
-        layer: Layer,
-        x_cov: NDArray[np.float32],
-        n: int,
-    ) -> NDArray[np.float32]:
-        """Compute covariance contribution from linear terms only."""
-        new_cov = np.zeros((n, n), dtype=np.float32)
-        new_cov += (
-            np.outer(layer.first_coeff, layer.first_coeff) * x_cov[np.ix_(layer.first, layer.first)]
-        )
-        new_cov += (
-            np.outer(layer.second_coeff, layer.second_coeff)
-            * x_cov[np.ix_(layer.second, layer.second)]
-        )
-        new_cov += (
-            np.outer(layer.first_coeff, layer.second_coeff)
-            * x_cov[np.ix_(layer.first, layer.second)]
-        )
-        new_cov += (
-            np.outer(layer.second_coeff, layer.first_coeff)
-            * x_cov[np.ix_(layer.second, layer.first)]
-        )
-        return new_cov
-
-    @staticmethod
-    def _one_v_two_covariance(
-        a: NDArray[np.int32],
-        b: NDArray[np.int32],
-        c: NDArray[np.int32],
-        x_cov: NDArray[np.float32],
-        x_mean: NDArray[np.float32],
-    ) -> NDArray[np.float32]:
-        """Approximate ``Cov(x[a], x[b] * x[c])`` under pairwise closure."""
-        return (
-            x_mean[b][None, :] * x_cov[np.ix_(a, c)] + x_mean[c][None, :] * x_cov[np.ix_(a, b)]
-        ).astype(np.float32)
-
-    @staticmethod
-    def _two_v_two_covariance(
-        a: NDArray[np.int32],
-        b: NDArray[np.int32],
-        c: NDArray[np.int32],
-        d: NDArray[np.int32],
-        cov: NDArray[np.float32],
-        mean: NDArray[np.float32],
-    ) -> NDArray[np.float32]:
-        """Approximate ``Cov(x[a]x[b], x[c]x[d])`` under pairwise closure."""
-        cov_ac = cov[np.ix_(a, c)]
-        cov_ad = cov[np.ix_(a, d)]
-        cov_bc = cov[np.ix_(b, c)]
-        cov_bd = cov[np.ix_(b, d)]
-
-        mu_a = mean[a][:, None]
-        mu_b = mean[b][:, None]
-        mu_c = mean[c][None, :]
-        mu_d = mean[d][None, :]
-
-        return (
-            (mu_a * mu_c) * cov_bd
-            + (mu_a * mu_d) * cov_bc
-            + (mu_b * mu_c) * cov_ad
-            + (mu_b * mu_d) * cov_ac
-        ).astype(np.float32)
-
-    @staticmethod
-    def _clip_moments(mean: NDArray[np.float32], cov: NDArray[np.float32]) -> None:
-        """Project moments to a numerically stable feasible region."""
-        n = len(mean)
-        np.clip(mean, -1.0, 1.0, out=mean)
-        var = 1.0 - mean * mean
-        cov[np.arange(n), np.arange(n)] = var
-        std = np.sqrt(np.clip(var, 0.0, None))
-        max_cov = np.outer(std, std)
-        np.clip(cov, -max_cov, max_cov, out=cov)
+        width = mlp.width
+        mu = np.zeros(width, dtype=np.float64)
+        cov = np.eye(width, dtype=np.float64)
+        rows = []
+        for w in mlp.weights:
+            W = w.astype(np.float64)
+            mu_pre = W.T @ mu
+            cov_pre = W.T @ cov @ W
+            var_pre = np.maximum(np.diag(cov_pre), 1e-12)
+            sigma_pre = np.sqrt(var_pre)
+            alpha = mu_pre / sigma_pre
+            phi = norm.pdf(alpha)
+            Phi = norm.cdf(alpha)
+            mu = mu_pre * Phi + sigma_pre * phi
+            ez2 = (mu_pre ** 2 + var_pre) * Phi + mu_pre * sigma_pre * phi
+            var_post = np.maximum(ez2 - mu ** 2, 0.0)
+            gain = np.where(sigma_pre > 1e-12, Phi, 0.0)
+            cov = np.outer(gain, gain) * cov_pre
+            np.fill_diagonal(cov, var_post)
+            rows.append(mu.astype(np.float32))
+        return np.stack(rows, axis=0)
