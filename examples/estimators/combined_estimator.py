@@ -27,12 +27,12 @@ class Estimator(BaseEstimator):
         for w in mlp.weights:
             W = w.astype(np.float64)
             mu_pre = W.T @ mu
-            var_pre = np.maximum((W ** 2).T @ var, 1e-12)
+            var_pre = np.maximum((W**2).T @ var, 1e-12)
             sigma_pre = np.sqrt(var_pre)
             alpha = mu_pre / sigma_pre
             mu = mu_pre * norm.cdf(alpha) + sigma_pre * norm.pdf(alpha)
-            ez2 = (mu_pre ** 2 + var_pre) * norm.cdf(alpha) + mu_pre * sigma_pre * norm.pdf(alpha)
-            var = np.maximum(ez2 - mu ** 2, 0.0)
+            ez2 = (mu_pre**2 + var_pre) * norm.cdf(alpha) + mu_pre * sigma_pre * norm.pdf(alpha)
+            var = np.maximum(ez2 - mu**2, 0.0)
             rows.append(mu.astype(np.float32))
         return np.stack(rows, axis=0)
 
@@ -53,8 +53,8 @@ class Estimator(BaseEstimator):
             phi = norm.pdf(alpha)
             Phi = norm.cdf(alpha)
             mu = mu_pre * Phi + sigma_pre * phi
-            ez2 = (mu_pre ** 2 + var_pre) * Phi + mu_pre * sigma_pre * phi
-            var_post = np.maximum(ez2 - mu ** 2, 0.0)
+            ez2 = (mu_pre**2 + var_pre) * Phi + mu_pre * sigma_pre * phi
+            var_post = np.maximum(ez2 - mu**2, 0.0)
             gain = np.where(sigma_pre > 1e-12, Phi, 0.0)
             cov = np.outer(gain, gain) * cov_pre
             np.fill_diagonal(cov, var_post)

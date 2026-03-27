@@ -30,8 +30,8 @@ class Estimator(BaseEstimator):
             Phi = norm.cdf(alpha)
 
             mu = mu_pre * Phi + sigma_pre * phi
-            ez2 = (mu_pre ** 2 + var_pre) * Phi + mu_pre * sigma_pre * phi
-            var_post = np.maximum(ez2 - mu ** 2, 0.0)
+            ez2 = (mu_pre**2 + var_pre) * Phi + mu_pre * sigma_pre * phi
+            var_post = np.maximum(ez2 - mu**2, 0.0)
             gain = np.where(sigma_pre > 1e-12, Phi, 0.0)
             cov = np.outer(gain, gain) * cov_pre
             np.fill_diagonal(cov, var_post)
