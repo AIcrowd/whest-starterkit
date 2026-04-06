@@ -31,6 +31,7 @@ from network_estimation.domain import MLP
 # Helpers: standard normal PDF and CDF
 # ---------------------------------------------------------------------------
 
+
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
@@ -53,6 +54,7 @@ def _norm_cdf(x: me.ndarray) -> me.ndarray:
 # Estimator
 # ---------------------------------------------------------------------------
 
+
 class Estimator(BaseEstimator):
     """Mean propagation estimator for ReLU MLPs.
 
@@ -71,12 +73,11 @@ class Estimator(BaseEstimator):
 
         # --- Step 1: initialise the input distribution ---
         # Treat the network input as standard normal: mu=0, var=1 per dimension.
-        mu = me.zeros(width)    # shape (width,)
-        var = me.ones(width)    # shape (width,)  — diagonal of the covariance
+        mu = me.zeros(width)  # shape (width,)
+        var = me.ones(width)  # shape (width,)  — diagonal of the covariance
 
         rows = []
         for w in mlp.weights:  # w has shape (width, width)
-
             # --- Step 2: propagate through the linear layer ---
             # Pre-activation mean:  mu_pre = W^T mu
             mu_pre = me.matmul(me.transpose(w), mu)
@@ -88,14 +89,14 @@ class Estimator(BaseEstimator):
 
             # Clamp to avoid division by zero or negative values from rounding.
             var_pre = me.maximum(var_pre, 1e-12)
-            sigma_pre = me.sqrt(var_pre)   # shape (width,)
+            sigma_pre = me.sqrt(var_pre)  # shape (width,)
 
             # --- Step 3: compute the standardised ratio alpha = mu / sigma ---
             alpha = me.divide(mu_pre, sigma_pre)
 
             # Evaluate the PDF and CDF at alpha
-            phi_alpha = _norm_pdf(alpha)   # phi(alpha)
-            Phi_alpha = _norm_cdf(alpha)   # Phi(alpha)
+            phi_alpha = _norm_pdf(alpha)  # phi(alpha)
+            Phi_alpha = _norm_cdf(alpha)  # Phi(alpha)
 
             # --- Step 4: ReLU expectation ---
             # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)

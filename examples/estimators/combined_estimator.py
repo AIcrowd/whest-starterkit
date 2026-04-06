@@ -41,6 +41,7 @@ from network_estimation.domain import MLP
 # Helpers: standard normal PDF and CDF
 # ---------------------------------------------------------------------------
 
+
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
@@ -63,6 +64,7 @@ def _norm_cdf(x: me.ndarray) -> me.ndarray:
 # Mean propagation path  (diagonal variance only)
 # ---------------------------------------------------------------------------
 
+
 def _mean_path(mlp: MLP) -> me.ndarray:
     """Propagate means with a diagonal variance approximation.
 
@@ -73,22 +75,21 @@ def _mean_path(mlp: MLP) -> me.ndarray:
     width = mlp.width
 
     # Initialise input distribution as standard normal
-    mu  = me.zeros(width)   # mean vector
-    var = me.ones(width)    # per-neuron variance (diagonal of covariance)
+    mu = me.zeros(width)  # mean vector
+    var = me.ones(width)  # per-neuron variance (diagonal of covariance)
 
     rows = []
     for w in mlp.weights:
-
         # -- Linear layer --
         # Pre-activation mean:      mu_pre = W^T mu
-        mu_pre  = me.matmul(me.transpose(w), mu)
+        mu_pre = me.matmul(me.transpose(w), mu)
         # Pre-activation variance:  var_pre[i] = sum_j W[j,i]^2 * var[j]
         var_pre = me.matmul(me.transpose(me.multiply(w, w)), var)
         var_pre = me.maximum(var_pre, 1e-12)
         sigma_pre = me.sqrt(var_pre)
 
         # -- ReLU layer --
-        alpha     = me.divide(mu_pre, sigma_pre)
+        alpha = me.divide(mu_pre, sigma_pre)
         phi_alpha = _norm_pdf(alpha)
         Phi_alpha = _norm_cdf(alpha)
 
@@ -128,34 +129,33 @@ def _covariance_path(mlp: MLP) -> me.ndarray:
     width = mlp.width
 
     # Initialise input as standard multivariate normal
-    mu        = me.zeros(width)   # mean vector
-    cov       = me.eye(width)     # full covariance matrix
-    log_scale = 0.0               # accumulated log of rescaling factor
+    mu = me.zeros(width)  # mean vector
+    cov = me.eye(width)  # full covariance matrix
+    log_scale = 0.0  # accumulated log of rescaling factor
 
     rows = []
     for w in mlp.weights:
-
         # -- Overflow prevention --
         # Rescale (mu, cov) if the covariance has grown too large
-        cov_diag    = me.diag(cov)
-        max_var_np  = float(np.max(np.asarray(cov_diag)))
+        cov_diag = me.diag(cov)
+        max_var_np = float(np.max(np.asarray(cov_diag)))
         if max_var_np > _COV_RESCALE_THRESHOLD:
-            s          = np.sqrt(max_var_np)
-            mu         = me.divide(mu, s)
-            cov        = me.divide(cov, s * s)
+            s = np.sqrt(max_var_np)
+            mu = me.divide(mu, s)
+            cov = me.divide(cov, s * s)
             log_scale += np.log(s)
 
         # -- Linear layer --
         # Pre-activation mean:         mu_pre  = W^T mu
         # Pre-activation covariance:   cov_pre = W^T cov W
-        mu_pre  = me.matmul(me.transpose(w), mu)
+        mu_pre = me.matmul(me.transpose(w), mu)
         cov_pre = me.matmul(me.matmul(me.transpose(w), cov), w)
 
-        var_pre   = me.maximum(me.diag(cov_pre), 1e-12)
+        var_pre = me.maximum(me.diag(cov_pre), 1e-12)
         sigma_pre = me.sqrt(var_pre)
 
         # -- ReLU layer --
-        alpha     = me.divide(mu_pre, sigma_pre)
+        alpha = me.divide(mu_pre, sigma_pre)
         phi_alpha = _norm_pdf(alpha)
         Phi_alpha = _norm_cdf(alpha)
 
@@ -174,12 +174,12 @@ def _covariance_path(mlp: MLP) -> me.ndarray:
 
         # Approximate post-ReLU off-diagonal covariance via gain scaling
         sigma_np = np.asarray(sigma_pre, dtype=np.float64)
-        Phi_np   = np.asarray(Phi_alpha,  dtype=np.float64)
-        gain_np  = np.where(sigma_np > 1e-12, Phi_np, 0.0)
-        gain     = me.array(gain_np.astype(np.float32))
+        Phi_np = np.asarray(Phi_alpha, dtype=np.float64)
+        gain_np = np.where(sigma_np > 1e-12, Phi_np, 0.0)
+        gain = me.array(gain_np.astype(np.float32))
 
         cov = me.multiply(me.outer(gain, gain), cov_pre)
-        me.fill_diagonal(cov, var_post)   # exact diagonal
+        me.fill_diagonal(cov, var_post)  # exact diagonal
 
         # Record mean in original (unscaled) coordinates
         scale_factor = float(np.exp(log_scale))

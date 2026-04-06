@@ -44,6 +44,7 @@ from network_estimation.domain import MLP
 # Helpers: standard normal PDF and CDF
 # ---------------------------------------------------------------------------
 
+
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
@@ -90,13 +91,12 @@ class Estimator(BaseEstimator):
 
         # --- Step 1: initialise the input distribution ---
         # Input is modelled as standard multivariate normal: mu=0, cov=I.
-        mu = me.zeros(width)         # shape (width,)
-        cov = me.eye(width)          # shape (width, width)
-        log_scale = 0.0              # tracks accumulated log of rescaling factor
+        mu = me.zeros(width)  # shape (width,)
+        cov = me.eye(width)  # shape (width, width)
+        log_scale = 0.0  # tracks accumulated log of rescaling factor
 
         rows = []
-        for w in mlp.weights:        # w has shape (width, width)
-
+        for w in mlp.weights:  # w has shape (width, width)
             # --- Step 2: overflow prevention ---
             # If the covariance has grown very large, rescale (mu, cov) by the
             # square root of the largest variance so that downstream matmuls
@@ -112,16 +112,16 @@ class Estimator(BaseEstimator):
             # --- Step 3: propagate through the linear layer ---
             # Pre-activation mean:         mu_pre  = W^T mu
             # Pre-activation covariance:   cov_pre = W^T cov W
-            mu_pre  = me.matmul(me.transpose(w), mu)
+            mu_pre = me.matmul(me.transpose(w), mu)
             cov_pre = me.matmul(me.matmul(me.transpose(w), cov), w)
 
             # Extract per-neuron pre-activation standard deviations from the
             # diagonal of cov_pre.
-            var_pre   = me.maximum(me.diag(cov_pre), 1e-12)
+            var_pre = me.maximum(me.diag(cov_pre), 1e-12)
             sigma_pre = me.sqrt(var_pre)
 
             # --- Step 4: compute alpha = mu / sigma for each neuron ---
-            alpha     = me.divide(mu_pre, sigma_pre)
+            alpha = me.divide(mu_pre, sigma_pre)
             phi_alpha = _norm_pdf(alpha)
             Phi_alpha = _norm_cdf(alpha)
 
@@ -146,9 +146,9 @@ class Estimator(BaseEstimator):
             # --- Step 7: approximate post-ReLU covariance ---
             # gain[i] = Phi(alpha[i])  when sigma_pre[i] > 0, else 0
             sigma_np = np.asarray(sigma_pre, dtype=np.float64)
-            Phi_np   = np.asarray(Phi_alpha,  dtype=np.float64)
-            gain_np  = np.where(sigma_np > 1e-12, Phi_np, 0.0)
-            gain     = me.array(gain_np.astype(np.float32))
+            Phi_np = np.asarray(Phi_alpha, dtype=np.float64)
+            gain_np = np.where(sigma_np > 1e-12, Phi_np, 0.0)
+            gain = me.array(gain_np.astype(np.float32))
 
             # Off-diagonal approximation:  cov_post[i,j] ≈ gain[i]*gain[j]*cov_pre[i,j]
             cov = me.multiply(me.outer(gain, gain), cov_pre)
