@@ -15,29 +15,28 @@ Use this page when implementing estimator logic that depends on MLP topology or 
 Use this traversal pattern inside `predict`:
 
 ```python
-def predict(self, mlp: MLP, budget: int) -> NDArray[np.float32]:
-    mu = np.zeros(mlp.width, dtype=np.float64)
-    var = np.ones(mlp.width, dtype=np.float64)
+import mechestim as me
+
+def predict(self, mlp: MLP, budget: int) -> me.ndarray:
+    mu = me.zeros(mlp.width)
+    var = me.ones(mlp.width)
 
     rows = []
     for w in mlp.weights:
-        W = w.astype(np.float64)
-        mu_pre = W.T @ mu
-        var_pre = (W ** 2).T @ var
-        var_pre = np.maximum(var_pre, 1e-12)
-        sigma_pre = np.sqrt(var_pre)
+        # w has shape (width, width)
+        mu_pre = me.matmul(me.transpose(w), mu)
+        var_pre = me.matmul(me.transpose(me.multiply(w, w)), var)
+        var_pre = me.maximum(var_pre, 1e-12)
+        sigma_pre = me.sqrt(var_pre)
 
-        alpha = mu_pre / sigma_pre
-        phi_alpha = norm.pdf(alpha)
-        Phi_alpha = norm.cdf(alpha)
+        alpha = me.divide(mu_pre, sigma_pre)
+        # Compute phi(alpha) and Phi(alpha) for the ReLU expectation
+        # (see examples/estimators/mean_propagation.py for full helpers)
+        # ...
 
-        mu = mu_pre * Phi_alpha + sigma_pre * phi_alpha
-        ez2 = (mu_pre ** 2 + var_pre) * Phi_alpha + mu_pre * sigma_pre * phi_alpha
-        var = np.maximum(ez2 - mu ** 2, 0.0)
+        rows.append(mu)
 
-        rows.append(mu.astype(np.float32))
-
-    return np.stack(rows, axis=0)
+    return me.stack(rows, axis=0)
 ```
 
 ## MLP fields

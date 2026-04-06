@@ -2,70 +2,64 @@
 
 ## When to use this page
 
-Use this page to understand how the leaderboard score combines estimation quality and compute behavior.
+Use this page to understand how the leaderboard score is computed from your estimator's predictions.
 
 ## TL;DR
 
 - Lower score is better.
-- Score reflects prediction accuracy weighted by how much compute you used relative to sampling.
-- You are rewarded for quality under budget, not for unconstrained oversampling.
+- Score is pure MSE under a FLOP budget constraint.
+- If your estimator exceeds the FLOP budget, all predictions for that MLP are zeroed.
+- No time normalization, no fraction_spent, no sampling_mse baseline comparison.
 
 ## The core idea
 
-The scoring model answers a specific question: **is your estimator better than just sampling?**
+The scoring model answers a specific question: **how accurately can your estimator predict expected neuron values within a fixed analytical compute budget?**
 
-For each compute budget, the evaluator measures how long plain sampling (running random inputs through the network) would take. Then it runs your estimator and compares both the accuracy of its predictions and how much time it used.
-
-If your estimator produces the same accuracy as sampling but uses less compute, that's a win. If it produces better accuracy in the same compute, that's also a win. The score captures both dimensions.
+Each estimator call is given a `flop_budget` — a cap on the number of floating-point operations it may perform, tracked analytically by mechestim. If the estimator stays within budget, its predictions are scored by MSE against Monte Carlo ground truth. If it exceeds the budget, all predictions for that MLP are replaced with zeros.
 
 ## How scoring works
 
-For the configured budget:
+For the configured FLOP budget:
 
-1. **Baseline measurement.** The evaluator runs the sampling forward pass at that budget to establish a reference runtime.
-2. **Your estimator runs.** Your `predict(mlp, budget)` is called. Predictions are collected and the **wall time** is measured.
+1. **Your estimator runs.** Your `predict(mlp, budget)` is called. mechestim tracks all FLOP usage analytically — no wall-clock measurement.
+2. **Budget is checked.** If the total FLOPs used exceed `flop_budget`, all predictions for this MLP are replaced with zero vectors.
 3. **Accuracy is measured.** Per-depth mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed.
-4. **Compute is compared.** Your runtime is compared to the sampling baseline. Using more time incurs a proportional penalty. Using significantly less time does not give unbounded credit — there is a floor.
-5. **Score combines both.** Your accuracy is adjusted by your relative compute usage: better accuracy *and* lower compute both push your score down.
+4. **Score is MSE.** There is no time normalization, no sampling baseline comparison, and no fraction_spent penalty. Your score is the raw MSE of your predictions under budget.
 
-Final score is the adjusted error for the budget.
+Final score is the MSE averaged across MLPs (zeroed where budget was exceeded).
 
 ## Budget behavior
 
-Your estimator is called with a `budget` argument. The `budget` tells your estimator roughly how many sampling trials would be "allowed" at this level. Smart estimators adapt their strategy:
+Your estimator receives a `budget` argument (the FLOP budget). It tells your estimator how many FLOPs it may spend in total. Smart estimators adapt their strategy:
 
-- At **small budgets** (e.g., 100), sampling is cheap and fast. To compete, your estimator needs to be lightweight too — perhaps just mean propagation.
-- At **large budgets** (e.g., 100,000), sampling takes real time. You have room for more sophisticated structural analysis — covariance tracking, iterative refinement, or hybrid methods — because the runtime bar is higher.
+- At **small budgets**, only lightweight methods (e.g., mean propagation) fit within the cap. Heavy matrix operations will exceed the budget and zero your predictions.
+- At **large budgets**, you have room for more sophisticated structural analysis — covariance tracking, iterative refinement, or hybrid sampling — because the FLOP cap is higher.
 
-The best solutions dynamically allocate their compute based on budget.
+The best solutions dynamically allocate their FLOP budget based on the budget value.
 
-## Runtime rules
+## Budget enforcement rules
 
-The scoring model uses the sampling baseline as a reference clock:
+mechestim enforces the FLOP budget analytically:
 
-- **Timeout.** If your estimator's total wall time exceeds the sampling baseline time for that MLP, **all** predictions for that MLP are replaced with zeros. This is a hard cutoff, not per-depth.
-- **Floor.** If your estimator is much faster than the baseline, the time fraction is clamped to a minimum of 50%. This prevents trivially fast (but inaccurate) methods from gaming the time ratio.
-- **Normal range.** Between the floor and timeout, your actual time fraction (`time_spent / time_budget`) is used directly.
-
-The time fraction is computed as `max(time_spent / time_budget, 0.5)`.
+- **Exceeded budget.** If your estimator's total FLOPs exceed `flop_budget`, **all** predictions for that MLP are replaced with zeros. This is a hard cutoff, not per-depth.
+- **Under budget.** Predictions are used as-is. There is no bonus for using fewer FLOPs than the cap — accuracy is what matters.
+- **No floor or clamping.** Unlike the old time-based model, there is no minimum fraction or time floor.
 
 ## What a good score looks like
 
-The score formula for each MLP is: `final_mse / sampling_mse`, where `sampling_mse = avg_variance / (budget × fraction_spent)`.
+A score near zero means your predictions are highly accurate for those MLPs. A score well above zero means prediction error is high — either because your method is inaccurate, or because it exceeded the FLOP cap and was zeroed.
 
-A score around 1.0 means your estimator's accuracy is comparable to what sampling would achieve at that budget. Lower is better.
-
-Scores well below 1.0 mean your structural approach is genuinely beating brute-force sampling: you are getting better predictions per unit of compute. That is the research milestone this challenge targets.
+Scores below what sampling would achieve at that budget indicate your structural approach is genuinely better than brute-force Monte Carlo. That is the research milestone this challenge targets.
 
 ## Practical tuning intuition
 
-- Start with a safe method that consistently emits valid rows.
-- Add richer logic for larger budgets.
+- Start with a safe method that consistently emits valid rows and stays within budget.
+- Use `flop_budget` to gate whether to run more expensive methods.
 - Tune switching behavior using local reports across budgets.
-- Compare `final_mse` vs `primary_score` in your reports to diagnose whether runtime or accuracy is the bottleneck.
+- Compare `final_mse` and `all_layer_mse` in your reports to diagnose which depths are hurting your score.
 - Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix networks and ground truth across runs — this makes score comparisons meaningful and skips repeated sampling.
 
-## ➡️ Next step
+## Next step
 
 - [Score Report Fields](../reference/score-report-fields.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)

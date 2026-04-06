@@ -6,11 +6,11 @@ Use this page when you want a better understanding of the technical framing of t
 
 ## TL;DR
 
-- Input: one random layered `MLP` and one `budget`.
+- Input: one random layered `MLP` and one `flop_budget`.
 - Output: one `(n,)` prediction row per depth, for exactly `d` depths.
 - Goal: estimate expected neuron values under uniformly random inputs.
 - Predictions are real-valued expected neuron states, not probabilities.
-- Scoring rewards accuracy under compute constraints comparable to sampling.
+- Scoring is pure MSE under an analytical FLOP budget constraint — predictions are zeroed if the budget is exceeded.
 
 ## The research question
 
@@ -70,16 +70,20 @@ This is unbiased and converges as `k → ∞`, but the error decreases slowly (`
 Each evaluation call provides:
 
 - one `MLP` with `n` neurons and `d` layers,
-- one integer `budget`.
+- one integer `flop_budget` — the maximum number of floating-point operations your estimator may use, tracked analytically by mechestim.
 
 Your estimator must emit exactly `d` vectors, each with shape `(n,)`.
 
 Row `i` is your estimate of expected neuron values after layer `i`.
 
+## Computational model
+
+All FLOP usage is tracked analytically by mechestim — there is no wall-clock timing. Your estimator imports mechestim (`import mechestim as me`) and uses its primitives, which report exact FLOP counts. If the total exceeds `flop_budget`, all predictions for that MLP are zeroed.
+
 ## Ground truth
 
 Ground truth is approximated by Monte Carlo simulation over random inputs.
-The evaluator computes empirical means by depth and neuron.
+The evaluator computes empirical means by depth and neuron, stored as `ground_truth_samples`.
 
 ## ➡️ Next step
 

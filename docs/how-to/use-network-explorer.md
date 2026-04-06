@@ -52,7 +52,7 @@ You can interactively inspect network structure, layer behavior, and estimator c
 Official score semantics still come from:
 
 ```bash
-nestim run --estimator <path> --runner subprocess
+nestim run --estimator <path> --runner server
 ```
 
 ## Common first failure
