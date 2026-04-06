@@ -13,16 +13,15 @@ Minimal structure:
 ```python
 from __future__ import annotations
 
-import numpy as np
-from numpy.typing import NDArray
+import mechestim as me
 
 from network_estimation import BaseEstimator
 from network_estimation.domain import MLP
 
 
 class Estimator(BaseEstimator):
-    def predict(self, mlp: MLP, budget: int) -> NDArray[np.float32]:
-        return np.zeros((mlp.depth, mlp.width), dtype=np.float32)
+    def predict(self, mlp: MLP, budget: int) -> me.ndarray:
+        return me.zeros((mlp.depth, mlp.width))
 ```
 
 ## Expected outcome
