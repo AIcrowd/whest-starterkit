@@ -76,7 +76,7 @@ def predict(self, mlp: MLP, budget: int) -> me.ndarray:
 |---|---|---|---|
 | `MLP` | `width` | Number of neurons per layer | `int` |
 | `MLP` | `depth` | Number of weight matrices (layers) | `int` |
-| `MLP` | `weights` | Ordered weight matrices from layer 0 to `depth-1` | `list[NDArray[float32]]` |
+| `MLP` | `weights` | Ordered weight matrices from layer 0 to `depth-1` | `list[me.ndarray]` |
 
 Each weight matrix has shape `(width, width)`. The pre-activation for layer `l` is computed as `W_l^T @ x` where `x` is the post-activation output of the previous layer.
 

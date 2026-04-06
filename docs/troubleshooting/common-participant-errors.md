@@ -234,7 +234,7 @@ Fix now: keep `setup()` lightweight. Move estimation logic to `predict()`.
 
 ## Next step
 
-- [Debugging Checklist](./debugging-checklist.md)
+- [Debugging Checklist](../how-to/debugging-checklist.md)
 - [FAQ](./faq.md)
 - [Estimator Contract](../reference/estimator-contract.md)
 - [Scoring Model](../concepts/scoring-model.md)
