@@ -85,6 +85,7 @@ nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 
 ## ➡️ Next step
 
+- [From Problem to Code](./from-problem-to-code.md) — complete walkthrough to build your first real estimator
 - [Write an Estimator](../how-to/write-an-estimator.md)
 - [Validate, Run, and Package](../how-to/validate-run-package.md)
 - [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — skip repeated sampling when iterating
