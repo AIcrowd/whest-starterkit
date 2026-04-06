@@ -37,7 +37,6 @@ from scipy.special import ndtr  # type: ignore[import-untyped]
 from network_estimation import BaseEstimator
 from network_estimation.domain import MLP
 
-
 # ---------------------------------------------------------------------------
 # Helpers: standard normal PDF and CDF
 # ---------------------------------------------------------------------------
