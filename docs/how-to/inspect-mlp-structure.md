@@ -16,6 +16,22 @@ Use this traversal pattern inside `predict`:
 
 ```python
 import mechestim as me
+import numpy as np
+from scipy.special import ndtr
+
+
+def _norm_pdf(x: me.ndarray) -> me.ndarray:
+    """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
+    return me.multiply(
+        me.exp(me.multiply(-0.5, me.multiply(x, x))),
+        1.0 / float(np.sqrt(2.0 * np.pi)),
+    )
+
+
+def _norm_cdf(x: me.ndarray) -> me.ndarray:
+    """Standard normal CDF via scipy's ndtr."""
+    return me.array(ndtr(np.asarray(x, dtype=np.float64)).astype(np.float32))
+
 
 def predict(self, mlp: MLP, budget: int) -> me.ndarray:
     mu = me.zeros(mlp.width)
@@ -30,9 +46,24 @@ def predict(self, mlp: MLP, budget: int) -> me.ndarray:
         sigma_pre = me.sqrt(var_pre)
 
         alpha = me.divide(mu_pre, sigma_pre)
+
         # Compute phi(alpha) and Phi(alpha) for the ReLU expectation
-        # (see examples/estimators/mean_propagation.py for full helpers)
-        # ...
+        phi_alpha = _norm_pdf(alpha)
+        Phi_alpha = _norm_cdf(alpha)
+
+        # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
+        mu = me.add(
+            me.multiply(mu_pre, Phi_alpha),
+            me.multiply(sigma_pre, phi_alpha),
+        )
+
+        # E[z^2] = (mu_pre^2 + var_pre) * Phi(alpha) + mu_pre * sigma_pre * phi(alpha)
+        ez2 = me.add(
+            me.multiply(me.add(me.multiply(mu_pre, mu_pre), var_pre), Phi_alpha),
+            me.multiply(me.multiply(mu_pre, sigma_pre), phi_alpha),
+        )
+        # Var[ReLU] = E[z^2] - E[z]^2
+        var = me.maximum(me.subtract(ez2, me.multiply(mu, mu)), 0.0)
 
         rows.append(mu)
 

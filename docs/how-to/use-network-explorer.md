@@ -61,6 +61,19 @@ Symptom: app does not start due to missing Node dependencies.
 
 Fix: `nestim visualizer` handles this automatically. For manual setup, run `npm ci` in `tools/network-explorer` and retry `npm run dev`.
 
+## Interpreting the visualization
+
+The Network Explorer shows neuron activations across layers:
+
+- **Rows:** layers (top = first layer, bottom = output)
+- **Columns:** neurons within each layer
+- **Color intensity:** mean activation value
+
+Patterns to look for:
+- **Error at deep layers:** your method loses accuracy as correlations accumulate through layers
+- **Sudden drops to zero:** ReLU is killing neuron groups — your variance estimates may be too narrow
+- **Uniform predictions:** your estimator may not be using the weight structure
+
 ## Next step
 
 - [Validate, Run, and Package](./validate-run-package.md)
