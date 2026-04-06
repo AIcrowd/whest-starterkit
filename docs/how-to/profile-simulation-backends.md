@@ -4,7 +4,7 @@
 
 The starter kit uses mechestim as its single simulation backend — analytical FLOP counting replaces wall-clock timing across multiple backends. The `profile-simulation` command lets you verify FLOP accounting correctness and explore how FLOP costs scale with network size.
 
-> This page covers the `nestim profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](./manage-flop-budget.md).
+For a practical guide to managing your FLOP budget during development, see [Manage Your FLOP Budget](./manage-flop-budget.md).
 
 Use this page when you want to:
 

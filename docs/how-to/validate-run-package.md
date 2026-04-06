@@ -84,7 +84,10 @@ nestim run --estimator ./my-estimator/estimator.py --debug
 nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
-For runner modes and the debug escalation ladder, see [First Local Run — Debug Runner Flow](../getting-started/first-local-run.md#-debug-runner-flow-copypaste).
+Runner tradeoff:
+
+- `server` (default): realistic isolation — your estimator runs against the mechestim server.
+- `local`: in-process execution with better traceback fidelity while debugging.
 
 Concrete example:
 
