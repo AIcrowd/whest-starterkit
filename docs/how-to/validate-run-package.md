@@ -20,7 +20,7 @@ Run local scoring (recommended default runner):
 nestim run --estimator ./my-estimator/estimator.py
 ```
 
-`nestim run` defaults to `--runner subprocess`.
+`nestim run` defaults to `--runner server`.
 
 Run against a pre-created dataset (skips sampling — much faster for repeated runs):
 
@@ -34,13 +34,13 @@ See [Use Evaluation Datasets](./use-evaluation-datasets.md) for details.
 Run faster local debug path:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess
+nestim run --estimator ./my-estimator/estimator.py --runner local
 ```
 
 Run with machine-readable output:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
+nestim run --estimator ./my-estimator/estimator.py --runner server --json
 ```
 
 Package submission artifact:
@@ -72,7 +72,7 @@ Symptom: `run` fails after `validate` passed.
 
 Use this escalation flow:
 
-1. Retry with debug info in default subprocess mode:
+1. Retry with debug info in default server mode:
 
 ```bash
 nestim run --estimator ./my-estimator/estimator.py --debug
@@ -81,26 +81,26 @@ nestim run --estimator ./my-estimator/estimator.py --debug
 2. If traceback still feels opaque, rerun in-process:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 Runner tradeoff:
 
-- `subprocess` (default): realistic isolation, safer runtime boundary.
-- `inprocess`: better local traceback fidelity while debugging estimator code.
+- `server` (default): realistic isolation — your estimator runs against the mechestim server.
+- `local`: in-process execution with better traceback fidelity while debugging.
 
 Concrete example:
 
 ```text
 Error [predict:PREDICT_ERROR]: Estimator predict failed.
 Use --debug to include a traceback.
-Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
+Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 ```
 
 Next command to run:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## ➡️ Next step

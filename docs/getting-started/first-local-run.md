@@ -24,7 +24,7 @@ Run local evaluation:
 nestim run --estimator ./my-estimator/estimator.py
 ```
 
-Note: `nestim run --estimator ...` defaults to `--runner subprocess`.
+Note: `nestim run --estimator ...` defaults to `--runner server`.
 
 Package a submission artifact:
 
@@ -48,7 +48,7 @@ Fix: ensure `predict(mlp, budget)` returns exactly `mlp.depth` rows and each row
 
 When `run` fails, use this sequence:
 
-1. Normal run (default subprocess isolation):
+1. Normal run (default server isolation):
 
 ```bash
 nestim run --estimator ./my-estimator/estimator.py
@@ -63,24 +63,24 @@ nestim run --estimator ./my-estimator/estimator.py --debug
 3. If still unclear, switch to in-process traceback fidelity:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 Why two runners:
 
-- `subprocess` (default): realistic isolation and safer runtime boundary.
-- `inprocess`: easier estimator-level traceback debugging on your machine.
+- `server` (default): realistic isolation — your estimator runs in a separate process talking to the mechestim server.
+- `local`: in-process execution with easier traceback debugging on your machine.
 
 Example failure and next command:
 
 ```text
 Error [setup:SETUP_ERROR]: Estimator setup failed.
 Use --debug to include a traceback.
-Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
+Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 ```
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## ➡️ Next step

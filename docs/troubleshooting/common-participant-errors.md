@@ -4,31 +4,31 @@ Use this page when `validate` or `run` fails.
 
 ## Understand runner modes first
 
-`nestim run --estimator ...` uses `--runner subprocess` by default.
+`nestim run --estimator ...` uses `--runner server` by default.
 
-- `subprocess`: realistic isolation and safer runtime boundary.
-- `inprocess`: best local traceback fidelity while debugging your estimator.
+- `server` (default): realistic isolation — your estimator runs against the mechestim server.
+- `local`: in-process execution with best traceback fidelity while debugging.
 
 Fast debug ladder:
 
 ```bash
 nestim run --estimator ./my-estimator/estimator.py
 nestim run --estimator ./my-estimator/estimator.py --debug
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
-Sample subprocess-style failure:
+Sample server-style failure:
 
 ```text
 Error [setup:SETUP_ERROR]: Estimator setup failed.
 Use --debug to include a traceback.
-Tip: For estimator-level tracebacks, rerun with --runner inprocess --debug.
+Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 ```
 
 Exact follow-up:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner inprocess --debug
+nestim run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Estimator returned wrong shape
@@ -37,7 +37,7 @@ Symptom: error mentions expected shape `(depth, width)`.
 
 Why it happens: returned wrong dimensions or a 1D array.
 
-Fix now: ensure `predict` returns an `np.ndarray` with shape `(mlp.depth, mlp.width)`.
+Fix now: ensure `predict` returns a mechestim array with shape `(mlp.depth, mlp.width)`. Use `me.zeros((mlp.depth, mlp.width))` as a starting point.
 
 Verify:
 
@@ -59,22 +59,23 @@ Verify:
 nestim validate --estimator ./my-estimator/estimator.py
 ```
 
-## Runtime envelope penalties
+## FLOP budget exceeded
 
-Symptom: unexpectedly poor `primary_score` despite reasonable `final_mse`.
+Symptom: unexpectedly poor `primary_score` despite reasonable prediction logic.
 
-Why it happens: estimator exceeding the time budget, causing predictions to be zeroed.
+Why it happens: your estimator exceeded the FLOP budget, causing all predictions for that MLP to be zeroed.
 
 Fix now:
 
-- simplify compute for smaller budgets,
-- keep total runtime under the sampling baseline,
-- compare `final_mse` vs `primary_score` to diagnose timing penalties.
+- check `flops_used` and `budget_exhausted` in the per-MLP report,
+- reduce expensive operations (matmul dominates FLOP cost),
+- consider diagonal approximations instead of full covariance,
+- see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md) for optimization guidance.
 
 Verify:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner subprocess --json
+nestim run --estimator ./my-estimator/estimator.py --runner server --json
 ```
 
 ## Next step
