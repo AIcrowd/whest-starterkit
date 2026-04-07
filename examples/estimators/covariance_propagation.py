@@ -46,10 +46,7 @@ from network_estimation.domain import MLP
 
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
-    return me.multiply(
-        me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(me.sqrt(2.0 * me.pi)),
-    )
+    return me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
 
 
 def _norm_cdf(x: me.ndarray) -> me.ndarray:
@@ -104,15 +101,15 @@ class Estimator(BaseEstimator):
             max_var_np = float(me.max(cov_diag))
             if max_var_np > _COV_RESCALE_THRESHOLD:
                 s = float(me.sqrt(max_var_np))
-                mu = me.divide(mu, s)
-                cov = me.divide(cov, s * s)
+                mu = mu / s
+                cov = cov / (s * s)
                 log_scale += float(me.log(s))
 
             # --- Step 3: propagate through the linear layer ---
             # Pre-activation mean:         mu_pre  = W^T mu
             # Pre-activation covariance:   cov_pre = W^T cov W
-            mu_pre = me.matmul(me.transpose(w), mu)
-            cov_pre = me.matmul(me.matmul(me.transpose(w), cov), w)
+            mu_pre = w.T @ mu
+            cov_pre = w.T @ cov @ w
 
             # Extract per-neuron pre-activation standard deviations from the
             # diagonal of cov_pre.
@@ -120,27 +117,18 @@ class Estimator(BaseEstimator):
             sigma_pre = me.sqrt(var_pre)
 
             # --- Step 4: compute alpha = mu / sigma for each neuron ---
-            alpha = me.divide(mu_pre, sigma_pre)
+            alpha = mu_pre / sigma_pre
             phi_alpha = _norm_pdf(alpha)
             Phi_alpha = _norm_cdf(alpha)
 
             # --- Step 5: post-ReLU mean (exact per neuron) ---
             # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
-            mu = me.add(
-                me.multiply(mu_pre, Phi_alpha),
-                me.multiply(sigma_pre, phi_alpha),
-            )
+            mu = mu_pre * Phi_alpha + sigma_pre * phi_alpha
 
             # --- Step 6: post-ReLU diagonal variance (exact per neuron) ---
             # E[z^2] = (mu_pre^2 + var_pre) * Phi(alpha) + mu_pre * sigma_pre * phi(alpha)
-            ez2 = me.add(
-                me.multiply(
-                    me.add(me.multiply(mu_pre, mu_pre), var_pre),
-                    Phi_alpha,
-                ),
-                me.multiply(me.multiply(mu_pre, sigma_pre), phi_alpha),
-            )
-            var_post = me.maximum(me.subtract(ez2, me.multiply(mu, mu)), 0.0)
+            ez2 = (mu_pre * mu_pre + var_pre) * Phi_alpha + mu_pre * sigma_pre * phi_alpha
+            var_post = me.maximum(ez2 - mu * mu, 0.0)
 
             # --- Step 7: approximate post-ReLU covariance ---
             # gain[i] = Phi(alpha[i])  when sigma_pre[i] > 0, else 0
@@ -157,7 +145,7 @@ class Estimator(BaseEstimator):
 
             # --- Step 8: record mean in original (unscaled) coordinates ---
             scale_factor = float(me.exp(log_scale))
-            rows.append(me.multiply(mu, scale_factor))
+            rows.append(mu * scale_factor)
 
         # Stack all layer means into a single (depth, width) array
         return me.stack(rows, axis=0)

@@ -33,10 +33,7 @@ from network_estimation.domain import MLP
 
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
-    return me.multiply(
-        me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(me.sqrt(2.0 * me.pi)),
-    )
+    return me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
 
 
 def _norm_cdf(x: me.ndarray) -> me.ndarray:
@@ -79,19 +76,19 @@ class Estimator(BaseEstimator):
         for w in mlp.weights:  # w has shape (width, width)
             # --- Step 2: propagate through the linear layer ---
             # Pre-activation mean:  mu_pre = W^T mu
-            mu_pre = me.matmul(me.transpose(w), mu)
+            mu_pre = w.T @ mu
 
             # Pre-activation variance (diagonal only):
             #   var_pre[i] = sum_j  W[j,i]^2 * var[j]
             #              = (W^2)^T var
-            var_pre = me.matmul(me.transpose(me.multiply(w, w)), var)
+            var_pre = (w * w).T @ var
 
             # Clamp to avoid division by zero or negative values from rounding.
             var_pre = me.maximum(var_pre, 1e-12)
             sigma_pre = me.sqrt(var_pre)  # shape (width,)
 
             # --- Step 3: compute the standardised ratio alpha = mu / sigma ---
-            alpha = me.divide(mu_pre, sigma_pre)
+            alpha = mu_pre / sigma_pre
 
             # Evaluate the PDF and CDF at alpha
             phi_alpha = _norm_pdf(alpha)  # phi(alpha)
@@ -99,23 +96,14 @@ class Estimator(BaseEstimator):
 
             # --- Step 4: ReLU expectation ---
             # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
-            mu = me.add(
-                me.multiply(mu_pre, Phi_alpha),
-                me.multiply(sigma_pre, phi_alpha),
-            )
+            mu = mu_pre * Phi_alpha + sigma_pre * phi_alpha
 
             # --- Step 5: post-ReLU variance ---
             # E[ReLU(pre)^2] = (mu_pre^2 + var_pre) * Phi(alpha)
             #                  + mu_pre * sigma_pre * phi(alpha)
-            ez2 = me.add(
-                me.multiply(
-                    me.add(me.multiply(mu_pre, mu_pre), var_pre),
-                    Phi_alpha,
-                ),
-                me.multiply(me.multiply(mu_pre, sigma_pre), phi_alpha),
-            )
+            ez2 = (mu_pre * mu_pre + var_pre) * Phi_alpha + mu_pre * sigma_pre * phi_alpha
             # Var[ReLU] = E[z^2] - E[z]^2  (clamped to 0 for numerical safety)
-            var = me.maximum(me.subtract(ez2, me.multiply(mu, mu)), 0.0)
+            var = me.maximum(ez2 - mu * mu, 0.0)
 
             # Record the post-ReLU mean for this layer
             rows.append(mu)
