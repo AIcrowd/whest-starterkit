@@ -31,7 +31,6 @@ The two paths differ only in how sigma_pre is obtained:
 from __future__ import annotations
 
 import mechestim as me
-import numpy as np
 from scipy.special import ndtr  # type: ignore[import-untyped]
 
 from network_estimation import BaseEstimator
@@ -46,7 +45,7 @@ def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
         me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(np.sqrt(2.0 * np.pi)),
+        1.0 / float(me.sqrt(2.0 * me.pi)),
     )
 
 
@@ -57,7 +56,7 @@ def _norm_cdf(x: me.ndarray) -> me.ndarray:
     The FLOP cost of CDF evaluation is negligible compared to
     the matmuls that produce the inputs.
     """
-    return me.array(ndtr(np.asarray(x, dtype=np.float64)).astype(np.float32))
+    return me.array(ndtr(me.asarray(x, dtype=me.float64)).astype(me.float32))
 
 
 # ---------------------------------------------------------------------------
@@ -138,12 +137,12 @@ def _covariance_path(mlp: MLP) -> me.ndarray:
         # -- Overflow prevention --
         # Rescale (mu, cov) if the covariance has grown too large
         cov_diag = me.diag(cov)
-        max_var_np = float(np.max(np.asarray(cov_diag)))
+        max_var_np = float(me.max(cov_diag))
         if max_var_np > _COV_RESCALE_THRESHOLD:
-            s = np.sqrt(max_var_np)
+            s = float(me.sqrt(max_var_np))
             mu = me.divide(mu, s)
             cov = me.divide(cov, s * s)
-            log_scale += np.log(s)
+            log_scale += float(me.log(s))
 
         # -- Linear layer --
         # Pre-activation mean:         mu_pre  = W^T mu
@@ -173,16 +172,16 @@ def _covariance_path(mlp: MLP) -> me.ndarray:
         var_post = me.maximum(me.subtract(ez2, me.multiply(mu, mu)), 0.0)
 
         # Approximate post-ReLU off-diagonal covariance via gain scaling
-        sigma_np = np.asarray(sigma_pre, dtype=np.float64)
-        Phi_np = np.asarray(Phi_alpha, dtype=np.float64)
-        gain_np = np.where(sigma_np > 1e-12, Phi_np, 0.0)
-        gain = me.array(gain_np.astype(np.float32))
+        sigma_np = me.asarray(sigma_pre, dtype=me.float64)
+        Phi_np = me.asarray(Phi_alpha, dtype=me.float64)
+        gain_np = me.where(sigma_np > 1e-12, Phi_np, 0.0)
+        gain = me.array(gain_np.astype(me.float32))
 
         cov = me.multiply(me.outer(gain, gain), cov_pre)
         me.fill_diagonal(cov, var_post)  # exact diagonal
 
         # Record mean in original (unscaled) coordinates
-        scale_factor = float(np.exp(log_scale))
+        scale_factor = float(me.exp(log_scale))
         rows.append(me.multiply(mu, scale_factor))
 
     return me.stack(rows, axis=0)

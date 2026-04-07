@@ -21,7 +21,6 @@ post-ReLU mean for each layer stacked into a (depth, width) array.
 from __future__ import annotations
 
 import mechestim as me
-import numpy as np
 from scipy.special import ndtr  # type: ignore[import-untyped]
 
 from network_estimation import BaseEstimator
@@ -36,7 +35,7 @@ def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
         me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(np.sqrt(2.0 * np.pi)),
+        1.0 / float(me.sqrt(2.0 * me.pi)),
     )
 
 
@@ -47,7 +46,7 @@ def _norm_cdf(x: me.ndarray) -> me.ndarray:
     The FLOP cost of CDF evaluation is negligible compared to
     the matmuls that produce the inputs.
     """
-    return me.array(ndtr(np.asarray(x, dtype=np.float64)).astype(np.float32))
+    return me.array(ndtr(me.asarray(x, dtype=me.float64)).astype(me.float32))
 
 
 # ---------------------------------------------------------------------------

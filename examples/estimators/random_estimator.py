@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import mechestim as me
-import numpy as np
 
 from network_estimation import BaseEstimator, SetupContext
 from network_estimation.domain import MLP
@@ -21,9 +20,9 @@ class Estimator(BaseEstimator):
     def predict(self, mlp: MLP, budget: int) -> me.ndarray:
         self._predict_calls += 1
         seed_text = f"random|call={self._predict_calls}|w={mlp.width}|d={mlp.depth}|b={budget}"
-        seed_entropy = np.frombuffer(seed_text.encode("utf-8"), dtype=np.uint8).astype(np.uint32)
-        rng = np.random.default_rng(seed_entropy)
-        return me.array(rng.uniform(0.0, 1.0, size=(mlp.depth, mlp.width)).astype(np.float32))
+        seed_entropy = me.frombuffer(seed_text.encode("utf-8"), dtype=me.uint8).astype(me.int32)
+        rng = me.random.default_rng(seed_entropy)
+        return rng.uniform(0.0, 1.0, size=(mlp.depth, mlp.width)).astype(me.float32)
 
     def teardown(self) -> None:
         self._context = None

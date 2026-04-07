@@ -34,7 +34,6 @@ Numerical stability:
 from __future__ import annotations
 
 import mechestim as me
-import numpy as np
 from scipy.special import ndtr  # type: ignore[import-untyped]
 
 from network_estimation import BaseEstimator
@@ -49,7 +48,7 @@ def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
     return me.multiply(
         me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(np.sqrt(2.0 * np.pi)),
+        1.0 / float(me.sqrt(2.0 * me.pi)),
     )
 
 
@@ -60,7 +59,7 @@ def _norm_cdf(x: me.ndarray) -> me.ndarray:
     The FLOP cost of CDF evaluation is negligible compared to
     the matmuls that produce the inputs.
     """
-    return me.array(ndtr(np.asarray(x, dtype=np.float64)).astype(np.float32))
+    return me.array(ndtr(me.asarray(x, dtype=me.float64)).astype(me.float32))
 
 
 # ---------------------------------------------------------------------------
@@ -102,12 +101,12 @@ class Estimator(BaseEstimator):
             # square root of the largest variance so that downstream matmuls
             # stay in a safe range.  We compensate in the recorded mean later.
             cov_diag = me.diag(cov)
-            max_var_np = float(np.max(np.asarray(cov_diag)))
+            max_var_np = float(me.max(cov_diag))
             if max_var_np > _COV_RESCALE_THRESHOLD:
-                s = np.sqrt(max_var_np)
+                s = float(me.sqrt(max_var_np))
                 mu = me.divide(mu, s)
                 cov = me.divide(cov, s * s)
-                log_scale += np.log(s)
+                log_scale += float(me.log(s))
 
             # --- Step 3: propagate through the linear layer ---
             # Pre-activation mean:         mu_pre  = W^T mu
@@ -145,10 +144,10 @@ class Estimator(BaseEstimator):
 
             # --- Step 7: approximate post-ReLU covariance ---
             # gain[i] = Phi(alpha[i])  when sigma_pre[i] > 0, else 0
-            sigma_np = np.asarray(sigma_pre, dtype=np.float64)
-            Phi_np = np.asarray(Phi_alpha, dtype=np.float64)
-            gain_np = np.where(sigma_np > 1e-12, Phi_np, 0.0)
-            gain = me.array(gain_np.astype(np.float32))
+            sigma_np = me.asarray(sigma_pre, dtype=me.float64)
+            Phi_np = me.asarray(Phi_alpha, dtype=me.float64)
+            gain_np = me.where(sigma_np > 1e-12, Phi_np, 0.0)
+            gain = me.array(gain_np.astype(me.float32))
 
             # Off-diagonal approximation:  cov_post[i,j] ≈ gain[i]*gain[j]*cov_pre[i,j]
             cov = me.multiply(me.outer(gain, gain), cov_pre)
@@ -157,7 +156,7 @@ class Estimator(BaseEstimator):
             me.fill_diagonal(cov, var_post)
 
             # --- Step 8: record mean in original (unscaled) coordinates ---
-            scale_factor = float(np.exp(log_scale))
+            scale_factor = float(me.exp(log_scale))
             rows.append(me.multiply(mu, scale_factor))
 
         # Stack all layer means into a single (depth, width) array
