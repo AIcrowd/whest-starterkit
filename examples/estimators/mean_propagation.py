@@ -21,7 +21,6 @@ post-ReLU mean for each layer stacked into a (depth, width) array.
 from __future__ import annotations
 
 import mechestim as me
-from scipy.special import ndtr  # type: ignore[import-untyped]
 
 from network_estimation import BaseEstimator
 from network_estimation.domain import MLP
@@ -30,6 +29,14 @@ from network_estimation.domain import MLP
 # Helpers: standard normal PDF and CDF
 # ---------------------------------------------------------------------------
 
+# Abramowitz & Stegun approximation constants (formula 26.2.17)
+_A1 = 0.254829592
+_A2 = -0.284496736
+_A3 = 1.421413741
+_A4 = -1.453152027
+_A5 = 1.061405429
+_P = 0.3275911
+
 
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
@@ -37,13 +44,14 @@ def _norm_pdf(x: me.ndarray) -> me.ndarray:
 
 
 def _norm_cdf(x: me.ndarray) -> me.ndarray:
-    """Standard normal CDF via scipy's ndtr (fast C implementation).
+    """Standard normal CDF using the Abramowitz & Stegun approximation.
 
-    Since me.ndarray is numpy.ndarray, ndtr works directly.
-    The FLOP cost of CDF evaluation is negligible compared to
-    the matmuls that produce the inputs.
+    Uses only basic mechestim operations (exp, abs). Accurate to ~1.5e-7.
     """
-    return me.array(ndtr(me.asarray(x, dtype=me.float64)).astype(me.float32))
+    t = 1.0 / (1.0 + _P * me.abs(x))
+    poly = ((((_A5 * t + _A4) * t + _A3) * t + _A2) * t + _A1) * t
+    cdf = 1.0 - poly * me.exp(-0.5 * x * x)
+    return me.where(x >= 0, cdf, 1.0 - cdf)
 
 
 # ---------------------------------------------------------------------------
