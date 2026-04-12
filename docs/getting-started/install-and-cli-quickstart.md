@@ -21,24 +21,24 @@ uv tool install -e .
 Sanity-check CLI wiring:
 
 ```bash
-nestim smoke-test
+whest smoke-test
 ```
 
 Alternative invocation without global tool install:
 
 ```bash
-uv run --with-editable . nestim smoke-test
+uv run --with-editable . whest smoke-test
 ```
 
 ## ✅ Expected outcome
 
-You can invoke `nestim smoke-test`, see the built-in dashboard, and receive next-step commands for running your own estimator.
+You can invoke `whest smoke-test`, see the built-in dashboard, and receive next-step commands for running your own estimator.
 
 ## 🛠 Common first failure
 
-Symptom: `nestim: command not found`
+Symptom: `whest: command not found`
 
-Fix: use the editable fallback invocation (`uv run --with-editable . nestim smoke-test`) and confirm `uv` is on your `PATH`.
+Fix: use the editable fallback invocation (`uv run --with-editable . whest smoke-test`) and confirm `uv` is on your `PATH`.
 
 ## ➡️ Next step
 

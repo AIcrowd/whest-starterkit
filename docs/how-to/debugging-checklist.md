@@ -7,7 +7,7 @@ Use this page when your estimator runs but the score is bad, or something feels 
 Run validation:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 If it fails, check:
@@ -21,7 +21,7 @@ If it fails, check:
 Run your estimator and look at the report:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3 --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3 --runner local --debug
 ```
 
 Check:

@@ -1,6 +1,6 @@
 # Algorithm Ideas
 
-This page surveys estimation strategies for the Network Estimation Challenge. Each approach trades accuracy against FLOP cost differently.
+This page surveys estimation strategies for the ARC Whitebox Estimation Challenge. Each approach trades accuracy against FLOP cost differently.
 
 ## Monte Carlo sampling
 

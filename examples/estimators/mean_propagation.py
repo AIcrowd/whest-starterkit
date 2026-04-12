@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import mechestim as me
 
-from network_estimation import BaseEstimator
-from network_estimation.domain import MLP
+from whestbench import BaseEstimator
+from whestbench.domain import MLP
 
 # ---------------------------------------------------------------------------
 # Helpers: standard normal PDF and CDF

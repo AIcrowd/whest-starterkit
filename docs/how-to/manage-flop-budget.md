@@ -52,9 +52,9 @@ with me.BudgetContext(flop_budget=100_000_000) as budget:
 
 This prints a table showing each operation's name, call count, and cumulative FLOP cost — letting you identify the expensive operations to optimize.
 
-## Interpret `nestim run` output
+## Interpret `whest run` output
 
-When you run your estimator with `nestim run`, the per-MLP report includes:
+When you run your estimator with `whest run`, the per-MLP report includes:
 
 - **`flops_used`**: total FLOPs your estimator consumed for that MLP.
 - **`budget_exhausted`**: `true` if your estimator exceeded the FLOP budget — predictions were zeroed.

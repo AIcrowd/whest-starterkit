@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import mechestim as me
 
-from network_estimation import BaseEstimator, SetupContext
-from network_estimation.domain import MLP
+from whestbench import BaseEstimator, SetupContext
+from whestbench.domain import MLP
 
 
 class Estimator(BaseEstimator):

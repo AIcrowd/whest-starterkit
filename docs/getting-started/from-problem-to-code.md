@@ -32,8 +32,8 @@ Your estimator must predict these values — without running 10,000 forward pass
 Start with the template estimator (it returns all zeros):
 
 ```bash
-nestim init ./my-estimator
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+whest init ./my-estimator
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3
 ```
 
 You will see a score report. Look for `primary_score` — this is the MSE of your final-layer predictions vs ground truth. With all-zeros predictions, it will be nonzero (you are wrong about everything).
@@ -44,7 +44,7 @@ Copy the mean propagation example — it uses the ReLU expectation formula to pr
 
 ```bash
 cp examples/estimators/mean_propagation.py ./my-estimator/estimator.py
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3
 ```
 
 Compare the `primary_score` to the zeros baseline. It should be significantly lower — mean propagation uses the network's weight matrices to make informed predictions instead of guessing.
@@ -69,7 +69,7 @@ You now have a working estimator. Next steps:
 1. **Try the combined estimator** — it routes between cheap and expensive algorithms based on budget:
    ```bash
    cp examples/estimators/combined_estimator.py ./my-estimator/estimator.py
-   nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+   whest run --estimator ./my-estimator/estimator.py --n-mlps 3
    ```
 
 2. **Understand the algorithms** — [Algorithm Ideas](../how-to/algorithm-ideas.md) surveys estimation strategies with FLOP costs and tradeoffs.

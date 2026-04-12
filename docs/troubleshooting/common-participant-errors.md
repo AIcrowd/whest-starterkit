@@ -4,7 +4,7 @@ Use this page when `validate` or `run` fails.
 
 ## Understand runner modes first
 
-`nestim run --estimator ...` uses `--runner server` by default.
+`whest run --estimator ...` uses `--runner server` by default.
 
 - `server` (default): realistic isolation — your estimator runs against the mechestim server.
 - `local`: in-process execution with best traceback fidelity while debugging.
@@ -12,9 +12,9 @@ Use this page when `validate` or `run` fails.
 Fast debug ladder:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py
-nestim run --estimator ./my-estimator/estimator.py --debug
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py
+whest run --estimator ./my-estimator/estimator.py --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 Sample server-style failure:
@@ -28,7 +28,7 @@ Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 Exact follow-up:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Estimator returned wrong shape
@@ -42,7 +42,7 @@ Fix now: ensure `predict` returns a mechestim array with shape `(mlp.depth, mlp.
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Non-finite values (`nan` or `inf`)
@@ -56,7 +56,7 @@ Fix now: add guards/clipping/checks in your prediction logic.
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## FLOP budget exceeded
@@ -75,7 +75,7 @@ Fix now:
 Verify:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner server --json
+whest run --estimator ./my-estimator/estimator.py --runner server --json
 ```
 
 ## Class not found
@@ -89,7 +89,7 @@ Fix now: rename your class to `Estimator`.
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Import error in estimator
@@ -103,7 +103,7 @@ Fix now: add missing dependencies to `requirements.txt`. For mechestim, use `imp
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Signature mismatch
@@ -117,7 +117,7 @@ Fix now: ensure signature is `def predict(self, mlp: MLP, budget: int) -> me.nda
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Setup timeout
@@ -131,7 +131,7 @@ Fix now: move expensive computation from `setup()` to `predict()`, or reduce set
 Verify:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Predict timeout
@@ -145,7 +145,7 @@ Fix now: check for infinite loops or extremely expensive operations. This is a s
 Verify:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Budget exhausted mid-operation
@@ -169,7 +169,7 @@ Fix now: add overflow guards — rescale covariance when diagonal values exceed 
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Dtype mismatch
@@ -183,7 +183,7 @@ Fix now: cast your output: `return me.asarray(result, dtype=me.float32)`.
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Empty predictions
@@ -197,7 +197,7 @@ Fix now: check that you iterate over `mlp.weights` and append results per layer.
 Verify:
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 ## Using numpy instead of mechestim
@@ -221,7 +221,7 @@ Fix now: run with `--runner local --debug` to see the full traceback.
 Verify:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Setup runs expensive operations

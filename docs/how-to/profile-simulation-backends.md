@@ -4,7 +4,7 @@
 
 The starter kit uses mechestim as its single simulation backend — analytical FLOP counting replaces wall-clock timing across multiple backends. The `profile-simulation` command lets you verify FLOP accounting correctness and explore how FLOP costs scale with network size.
 
-> This page covers the `nestim profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](./manage-flop-budget.md).
+> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](./manage-flop-budget.md).
 
 Use this page when you want to:
 
@@ -17,7 +17,7 @@ Use this page when you want to:
 ### 1. Run a quick profile
 
 ```bash
-nestim profile-simulation --preset quick
+whest profile-simulation --preset quick
 ```
 
 This finishes in seconds and gives you a first look at FLOP accounting correctness and scaling.
@@ -25,7 +25,7 @@ This finishes in seconds and gives you a first look at FLOP accounting correctne
 ### 2. Run the standard profile
 
 ```bash
-nestim profile-simulation
+whest profile-simulation
 ```
 
 The default `standard` preset tests two widths (64, 256) and five depths (4–128). It gives a reliable picture of FLOP cost scaling across network sizes.
@@ -33,7 +33,7 @@ The default `standard` preset tests two widths (64, 256) and five depths (4–12
 ### 3. Save results for comparison
 
 ```bash
-nestim profile-simulation --output results.json
+whest profile-simulation --output results.json
 ```
 
 The JSON file contains correctness results and FLOP accounting data across all tested configurations.
@@ -63,7 +63,7 @@ The terminal table shows:
 If the correctness check shows FAIL:
 
 ```bash
-nestim profile-simulation --preset quick --debug
+whest profile-simulation --preset quick --debug
 ```
 
 The error message will indicate whether the issue is a numerical tolerance failure or a missing dependency.
@@ -71,7 +71,7 @@ The error message will indicate whether the issue is a numerical tolerance failu
 ### Export FLOP data for estimator calibration
 
 ```bash
-nestim profile-simulation --preset exhaustive --output flop_data.json
+whest profile-simulation --preset exhaustive --output flop_data.json
 ```
 
 Use the FLOP counts in the JSON to understand how much budget your estimator consumes per layer, and tune your budget-allocation logic accordingly.
@@ -83,6 +83,6 @@ Use the FLOP counts in the JSON to understand how much budget your estimator con
 
 ## Next step
 
-- [CLI Reference: profile-simulation](../reference/cli-reference.md#nestim-profile-simulation) — full flag reference
+- [CLI Reference: profile-simulation](../reference/cli-reference.md#whest-profile-simulation) — full flag reference
 - [Use Evaluation Datasets](./use-evaluation-datasets.md) — pre-create datasets for faster iteration
 - [Validate, Run, and Package](./validate-run-package.md) — score your estimator

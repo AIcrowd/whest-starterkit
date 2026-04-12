@@ -9,27 +9,27 @@ Use this page for your first end-to-end participant loop.
 Create starter estimator files:
 
 ```bash
-nestim init ./my-estimator
+whest init ./my-estimator
 ```
 
 Validate contract (fast sanity check — small fixed MLP, not a full evaluation):
 
 ```bash
-nestim validate --estimator ./my-estimator/estimator.py
+whest validate --estimator ./my-estimator/estimator.py
 ```
 
 Run local evaluation:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py
+whest run --estimator ./my-estimator/estimator.py
 ```
 
-Note: `nestim run --estimator ...` defaults to `--runner server`.
+Note: `whest run --estimator ...` defaults to `--runner server`.
 
 Package a submission artifact:
 
 ```bash
-nestim package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
+whest package --estimator ./my-estimator/estimator.py --output ./submission.tar.gz
 ```
 
 ## ✅ Expected outcome
@@ -51,19 +51,19 @@ When `run` fails, use this sequence:
 1. Normal run (default server isolation):
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py
+whest run --estimator ./my-estimator/estimator.py
 ```
 
 2. Add traceback/debug fields:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --debug
+whest run --estimator ./my-estimator/estimator.py --debug
 ```
 
 3. If still unclear, switch to in-process traceback fidelity:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 Why two runners:
@@ -80,7 +80,7 @@ Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 ```
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## ➡️ Next step

@@ -2,11 +2,11 @@
 
 ## When to use this page
 
-Every `nestim run` generates fresh random MLPs and samples many forward passes to establish ground truth. This is correct but slow — especially when you are iterating on an estimator and re-running the same evaluation dozens of times during development.
+Every `whest run` generates fresh random MLPs and samples many forward passes to establish ground truth. This is correct but slow — especially when you are iterating on an estimator and re-running the same evaluation dozens of times during development.
 
 Pre-created evaluation datasets let you do that expensive work once and reuse it across your entire development cycle:
 
-- **Faster iteration** — `nestim run --dataset` skips MLP generation and ground truth sampling entirely.
+- **Faster iteration** — `whest run --dataset` skips MLP generation and ground truth sampling entirely.
 - **Fair comparisons** — every estimator you test is scored against the exact same MLPs with the same ground truth.
 - **Reproducibility** — the dataset file records the seed and all creation parameters, so anyone can recreate it exactly.
 
@@ -15,7 +15,7 @@ Pre-created evaluation datasets let you do that expensive work once and reuse it
 ### 1. Create your dataset (once)
 
 ```bash
-nestim create-dataset -o my_dataset.npz
+whest create-dataset -o my_dataset.npz
 ```
 
 This generates MLPs and samples ground truth means. Everything is saved to a single `.npz` file.
@@ -35,7 +35,7 @@ Common options:
 ### 2. Run against it (every time)
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --dataset my_dataset.npz
+whest run --estimator ./my-estimator/estimator.py --dataset my_dataset.npz
 ```
 
 The `--n-mlps` flag is ignored when `--dataset` is provided — the values come from the dataset file.

@@ -13,7 +13,7 @@ Yes. scipy is not part of mechestim, so you import it separately as your own dep
 Your estimator raised an exception or returned invalid data (wrong shape, NaN, non-numeric). The framework treats that MLP as a failure. Run with `--debug` to see the error:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
 ## Do I need to use the `budget` argument in `predict()`?

@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import mechestim as me
 
-from network_estimation import BaseEstimator
-from network_estimation.domain import MLP
+from whestbench import BaseEstimator
+from whestbench.domain import MLP
 
 
 class Estimator(BaseEstimator):
@@ -54,7 +54,7 @@ Fix: ensure `predict` returns a 2D array with shape `(mlp.depth, mlp.width)` and
 The template estimator returns all zeros. Run it to see what a bad score looks like:
 
 ```bash
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3
 ```
 
 Look at `primary_score` — this is the MSE of predicting all zeros. It is your floor.
@@ -65,7 +65,7 @@ Copy the mean propagation example — it uses the ReLU expectation formula:
 
 ```bash
 cp examples/estimators/mean_propagation.py ./my-estimator/estimator.py
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3
 ```
 
 Compare `primary_score` to the zeros baseline. Mean propagation uses the network's weights to make informed predictions, so it should score significantly better.
@@ -83,7 +83,7 @@ The combined estimator routes between cheap and expensive algorithms based on bu
 
 ```bash
 cp examples/estimators/combined_estimator.py ./my-estimator/estimator.py
-nestim run --estimator ./my-estimator/estimator.py --n-mlps 3
+whest run --estimator ./my-estimator/estimator.py --n-mlps 3
 ```
 
 This demonstrates the budget-aware routing pattern — a common design for production estimators.
