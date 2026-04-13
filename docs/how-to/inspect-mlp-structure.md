@@ -16,21 +16,25 @@ Use this traversal pattern inside `predict`:
 
 ```python
 import mechestim as me
-import numpy as np
-from scipy.special import ndtr
+
+# Abramowitz & Stegun approximation constants
+_P = 0.2316419
+_A1, _A2, _A3 = 0.319381530, -0.356563782, 1.781477937
+_A4, _A5 = -1.821255978, 1.330274429
 
 
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
     """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
-    return me.multiply(
-        me.exp(me.multiply(-0.5, me.multiply(x, x))),
-        1.0 / float(np.sqrt(2.0 * np.pi)),
-    )
+    return me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
 
 
 def _norm_cdf(x: me.ndarray) -> me.ndarray:
-    """Standard normal CDF via scipy's ndtr."""
-    return me.array(ndtr(np.asarray(x, dtype=np.float64)).astype(np.float32))
+    """Standard normal CDF using A&S approximation. Accurate to < 7.5e-8."""
+    t = 1.0 / (1.0 + _P * me.abs(x))
+    poly = ((((_A5 * t + _A4) * t + _A3) * t + _A2) * t + _A1) * t
+    pdf = me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
+    cdf = 1.0 - pdf * poly
+    return me.where(x >= 0, cdf, 1.0 - cdf)
 
 
 def predict(self, mlp: MLP, budget: int) -> me.ndarray:

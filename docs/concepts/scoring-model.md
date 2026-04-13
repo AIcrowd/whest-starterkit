@@ -64,6 +64,28 @@ Suppose ground truth for a 3-neuron final layer is `[0.42, 0.38, 0.51]` and your
 
 Your `primary_score` for this MLP would be approximately 0.001. Across all MLPs in the evaluation, scores are averaged to produce your final ranking.
 
+## Example estimator benchmarks
+
+The table below shows real scores from the four bundled example estimators, run with default settings (width=100, depth=16, 10 MLPs, 100M FLOP budget). Use these as calibration points for your own estimator.
+
+| Estimator | Final MSE | All-Layer MSE | Approach |
+|-----------|-----------|---------------|----------|
+| `random_estimator` | ~0.50 | ~0.48 | Returns zeros — the baseline. Any structural method should beat this. |
+| `mean_propagation` | ~0.004 | ~0.002 | Diagonal variance, O(depth x width^2). ~100x better than baseline. |
+| `covariance_propagation` | ~0.0003 | ~0.0002 | Full covariance, O(depth x width^3). ~1000x better than baseline. |
+| `combined_estimator` | ~0.0002 | ~0.0002 | Routes to covariance when budget allows, otherwise mean propagation. |
+
+**How to read these numbers:**
+
+- The **random estimator** (zeros) gives you the "doing nothing" baseline. Its MSE reflects the natural scale of the ground truth activations.
+- **Mean propagation** is ~100x more accurate than zeros — a huge improvement from a simple analytical formula with negligible FLOP cost.
+- **Covariance propagation** is another ~10x better, but costs O(width^3) per layer. At width=100, this is affordable; at width=1000, it would exhaust the budget.
+- The **combined estimator** gets the best of both worlds by checking the budget before deciding which algorithm to run.
+
+To reproduce: `whest run --estimator examples/estimators/<name>.py --n-mlps 10`
+
+Scores vary slightly between runs due to random MLP generation and Monte Carlo ground truth noise.
+
 ## Next step
 
 - [Score Report Fields](../reference/score-report-fields.md)
