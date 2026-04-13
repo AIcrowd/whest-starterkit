@@ -40,12 +40,12 @@ from whestbench.domain import MLP
 # ---------------------------------------------------------------------------
 
 # Abramowitz & Stegun approximation constants (formula 26.2.17)
-_A1 = 0.254829592
-_A2 = -0.284496736
-_A3 = 1.421413741
-_A4 = -1.453152027
-_A5 = 1.061405429
-_P = 0.3275911
+_P = 0.2316419
+_A1 = 0.319381530
+_A2 = -0.356563782
+_A3 = 1.781477937
+_A4 = -1.821255978
+_A5 = 1.330274429
 
 
 def _norm_pdf(x: me.ndarray) -> me.ndarray:
@@ -56,11 +56,12 @@ def _norm_pdf(x: me.ndarray) -> me.ndarray:
 def _norm_cdf(x: me.ndarray) -> me.ndarray:
     """Standard normal CDF using the Abramowitz & Stegun approximation.
 
-    Uses only basic mechestim operations (exp, abs). Accurate to ~1.5e-7.
+    Uses only basic mechestim operations (exp, abs). Accurate to < 7.5e-8.
     """
     t = 1.0 / (1.0 + _P * me.abs(x))
     poly = ((((_A5 * t + _A4) * t + _A3) * t + _A2) * t + _A1) * t
-    cdf = 1.0 - poly * me.exp(-0.5 * x * x)
+    pdf = me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
+    cdf = 1.0 - pdf * poly
     return me.where(x >= 0, cdf, 1.0 - cdf)
 
 
