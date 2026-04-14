@@ -38,10 +38,10 @@ An MLP is a layered computation graph with fixed **width** `n` (the number of ne
 **Layers.** Each layer applies a dense matrix multiply followed by ReLU activation:
 
 ```
-y = ReLU(W @ x)
+y = ReLU(W.T @ x)
 ```
 
-where `W` is a `(n, n)` weight matrix initialized with He initialization (`N(0, 2/n)`), and `ReLU(z) = max(z, 0)`.
+where `W` is a `(n, n)` weight matrix initialized with He initialization (`N(0, 2/n)`), and `ReLU(z) = max(z, 0)`. Weight matrices are stored as `(input, output)` following numpy convention, so the forward pass computes `W.T @ x` for a single input vector, or equivalently `x @ W` for batched inputs.
 
 This scaling keeps activations from exploding or vanishing through deep layers. For your estimator, it means the variance entering each layer is predictable — a useful property for analytical approaches.
 

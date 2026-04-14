@@ -90,3 +90,4 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 - [Validate, Run, and Package](../how-to/validate-run-package.md)
 - [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — skip repeated sampling when iterating
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)
+- [Whest Primer](../reference/whest-primer.md) — how FLOP tracking works under the hood

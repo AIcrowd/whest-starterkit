@@ -15,63 +15,43 @@ Use this page when implementing estimator logic that depends on MLP topology or 
 Use this traversal pattern inside `predict`:
 
 ```python
+from __future__ import annotations
+
 import whest as we
 
-# Abramowitz & Stegun approximation constants
-_P = 0.2316419
-_A1, _A2, _A3 = 0.319381530, -0.356563782, 1.781477937
-_A4, _A5 = -1.821255978, 1.330274429
+from whestbench import BaseEstimator, MLP
 
 
-def _norm_pdf(x: we.ndarray) -> we.ndarray:
-    """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
-    return we.exp(-0.5 * x * x) / we.sqrt(2.0 * we.pi)
+class Estimator(BaseEstimator):
+    def predict(self, mlp: MLP, budget: int) -> we.ndarray:
+        mu = we.zeros(mlp.width)
+        var = we.ones(mlp.width)
 
+        rows = []
+        for w in mlp.weights:
+            # w has shape (width, width)
+            mu_pre = w.T @ mu
+            var_pre = (w * w).T @ var
+            var_pre = we.maximum(var_pre, 1e-12)
+            sigma_pre = we.sqrt(var_pre)
 
-def _norm_cdf(x: we.ndarray) -> we.ndarray:
-    """Standard normal CDF using A&S approximation. Accurate to < 7.5e-8."""
-    t = 1.0 / (1.0 + _P * we.abs(x))
-    poly = ((((_A5 * t + _A4) * t + _A3) * t + _A2) * t + _A1) * t
-    pdf = we.exp(-0.5 * x * x) / we.sqrt(2.0 * we.pi)
-    cdf = 1.0 - pdf * poly
-    return we.where(x >= 0, cdf, 1.0 - cdf)
+            alpha = mu_pre / sigma_pre
 
+            # Compute phi(alpha) and Phi(alpha) for the ReLU expectation
+            phi_alpha = we.stats.norm.pdf(alpha)
+            Phi_alpha = we.stats.norm.cdf(alpha)
 
-def predict(self, mlp: MLP, budget: int) -> we.ndarray:
-    mu = we.zeros(mlp.width)
-    var = we.ones(mlp.width)
+            # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
+            mu = mu_pre * Phi_alpha + sigma_pre * phi_alpha
 
-    rows = []
-    for w in mlp.weights:
-        # w has shape (width, width)
-        mu_pre = we.matmul(we.transpose(w), mu)
-        var_pre = we.matmul(we.transpose(we.multiply(w, w)), var)
-        var_pre = we.maximum(var_pre, 1e-12)
-        sigma_pre = we.sqrt(var_pre)
+            # E[z^2] = (mu_pre^2 + var_pre) * Phi(alpha) + mu_pre * sigma_pre * phi(alpha)
+            ez2 = (mu_pre * mu_pre + var_pre) * Phi_alpha + mu_pre * sigma_pre * phi_alpha
+            # Var[ReLU] = E[z^2] - E[z]^2
+            var = we.maximum(ez2 - mu * mu, 0.0)
 
-        alpha = we.divide(mu_pre, sigma_pre)
+            rows.append(mu)
 
-        # Compute phi(alpha) and Phi(alpha) for the ReLU expectation
-        phi_alpha = _norm_pdf(alpha)
-        Phi_alpha = _norm_cdf(alpha)
-
-        # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
-        mu = we.add(
-            we.multiply(mu_pre, Phi_alpha),
-            we.multiply(sigma_pre, phi_alpha),
-        )
-
-        # E[z^2] = (mu_pre^2 + var_pre) * Phi(alpha) + mu_pre * sigma_pre * phi(alpha)
-        ez2 = we.add(
-            we.multiply(we.add(we.multiply(mu_pre, mu_pre), var_pre), Phi_alpha),
-            we.multiply(we.multiply(mu_pre, sigma_pre), phi_alpha),
-        )
-        # Var[ReLU] = E[z^2] - E[z]^2
-        var = we.maximum(we.subtract(ez2, we.multiply(mu, mu)), 0.0)
-
-        rows.append(mu)
-
-    return we.stack(rows, axis=0)
+        return we.stack(rows, axis=0)
 ```
 
 ## MLP fields

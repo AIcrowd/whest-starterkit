@@ -28,7 +28,7 @@ This finishes in seconds and gives you a first look at FLOP accounting correctne
 whest profile-simulation
 ```
 
-The default `standard` preset tests two widths (64, 256) and five depths (4–128). It gives a reliable picture of FLOP cost scaling across network sizes.
+The default `standard` preset tests two widths (64, 256) and three depths (4, 32, 128). It gives a reliable picture of FLOP cost scaling across network sizes.
 
 ### 3. Save results for comparison
 
@@ -40,12 +40,12 @@ The JSON file contains correctness results and FLOP accounting data across all t
 
 ## Choosing presets
 
-| Preset | Widths | Depths | Typical time |
-|--------|--------|--------|--------------|
-| `super-quick` | 256 | 4 | Sub-second |
-| `quick` | 256 | 4, 128 | Seconds |
-| `standard` | 64, 256 | 4, 32, 128 | Under a minute |
-| `exhaustive` | 64, 256 | 4, 32, 128 | Minutes |
+| Preset | Widths | Depths | N_Samples | Typical time |
+|--------|--------|--------|-----------|--------------|
+| `super-quick` | 256 | 4 | 10 000 | Sub-second |
+| `quick` | 256 | 4, 128 | 10 000, 100 000 | Seconds |
+| `standard` | 64, 256 | 4, 32, 128 | 10 000, 100 000 | Under a minute |
+| `exhaustive` | 64, 256 | 4, 32, 128 | 10 000, 100 000, 1 000 000 | Minutes |
 
 Use `quick` for a fast sanity check and `standard` for development decisions.
 

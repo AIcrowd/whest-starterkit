@@ -29,9 +29,9 @@ For typical networks (width=100, depth=16), with 10,000 samples, ground truth me
 
 ## Configuration
 
-The number of ground truth samples is set in the `ContestSpec`:
+The number of ground truth samples is set in the contest configuration (`ContestSpec`), which defines all evaluation parameters: width, depth, FLOP budget, number of MLPs, and ground truth sample count. You can override some of these via CLI flags (e.g., `--n-mlps`, `--flop-budget`, `--n-samples`).
 
-- `ground_truth_samples`: number of forward passes used to estimate ground truth (default varies by contest configuration)
+- `ground_truth_samples`: number of forward passes used to estimate ground truth (default: `width * width * 256`)
 
 Higher values produce more accurate ground truth but take longer to compute. The contest organizer balances this tradeoff.
 

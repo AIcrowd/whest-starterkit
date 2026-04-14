@@ -44,3 +44,4 @@ Fix: use the editable fallback invocation (`uv run --with-editable . whest smoke
 
 - [First Local Run](./first-local-run.md)
 - [CLI Reference](../reference/cli-reference.md)
+- [Whest Primer](../reference/whest-primer.md) — how FLOP tracking works under the hood

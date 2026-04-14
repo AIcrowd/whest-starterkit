@@ -6,7 +6,7 @@ This page walks you through your first estimator — from understanding the prob
 
 You receive a random MLP (multilayer perceptron) with ReLU activations. Your job: predict the expected value of each neuron after each layer, without running thousands of forward passes.
 
-The MLP has a fixed `width` (neurons per layer) and `depth` (number of layers). Each layer applies a weight matrix and a ReLU activation: `output = max(0, W @ input)`. The input to the network is standard normal noise — one independent N(0,1) value per neuron.
+The MLP has a fixed `width` (neurons per layer) and `depth` (number of layers). Each layer applies a weight matrix and a ReLU activation: `output = max(0, W.T @ input)`. Weights are stored as `(input, output)` following numpy convention. The input to the network is standard normal noise — one independent N(0,1) value per neuron.
 
 Your estimator receives the MLP's weight matrices and a FLOP budget. It returns a `(depth, width)` array of predicted neuron means. The closer to ground truth, the better your score.
 
@@ -24,6 +24,8 @@ Ground truth (from averaging 10,000 forward passes) might look like:
 |---|---|---|---|---|
 | Layer 1 | 0.42 | 0.38 | 0.51 | 0.29 |
 | Layer 2 | 0.15 | 0.22 | 0.18 | 0.11 |
+
+All values are positive because ReLU clips negatives, and they are typically small because He initialization keeps activations from growing through layers.
 
 Your estimator must predict these values — without running 10,000 forward passes.
 

@@ -25,7 +25,7 @@ Common options:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--n-mlps` | 10 | Number of random MLPs to generate |
-| `--ground-truth-samples` | 10000 | Samples per MLP for ground truth estimation |
+| `--n-samples` | 10000 | Samples per MLP for ground truth estimation |
 | `--seed` | auto | RNG seed (auto-generated if omitted, always recorded) |
 | `-o, --output` | `eval_dataset.npz` | Output file path |
 | `--width` | (contest default) | Neuron count per MLP |
@@ -45,7 +45,7 @@ You can keep reusing the same dataset file across your entire development cycle.
 ## Expected outcome
 
 - `create-dataset` produces a `.npz` file at the specified path.
-- `run --dataset` skips the "Sampling (Ground Truth)" progress bar.
+- `run --dataset` shows "Loading dataset" instead of "Generating MLPs" and skips ground truth sampling.
 - Score reports are consistent across runs with the same dataset.
 
 ## Dataset portability

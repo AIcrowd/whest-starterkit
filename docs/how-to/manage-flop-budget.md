@@ -6,7 +6,7 @@ Use this page to understand how FLOP budgets work and how to optimize your estim
 
 ## Why FLOPs, not wall-clock time
 
-This challenge scores estimators by **analytical FLOP count**, not execution tiwe. Every mathematical operation your estimator performs is tracked by [whest](https://github.com/AIcrowd/whest) — a NumPy-compatible library that counts floating-point operations deterministically from tensor shapes.
+This challenge scores estimators by **analytical FLOP count**, not execution time. Every mathematical operation your estimator performs is tracked by [whest](https://github.com/AIcrowd/whest) — a NumPy-compatible library that counts floating-point operations deterministically from tensor shapes.
 
 This means your score is **hardware-independent**: the same estimator produces the same FLOP count on a laptop and a GPU cluster. You can focus on algorithmic efficiency rather than hardware tuning.
 

@@ -70,7 +70,7 @@ The table below shows real scores from the four bundled example estimators, run 
 
 | Estimator | Final MSE | All-Layer MSE | Approach |
 |-----------|-----------|---------------|----------|
-| `random_estimator` | ~0.50 | ~0.48 | Returns zeros — the baseline. Any structural method should beat this. |
+| `random_estimator` | ~0.50 | ~0.48 | Returns random values — the interface walkthrough. The `whest init` template (all zeros) is the true baseline. |
 | `mean_propagation` | ~0.004 | ~0.002 | Diagonal variance, O(depth x width^2). ~100x better than baseline. |
 | `covariance_propagation` | ~0.0003 | ~0.0002 | Full covariance, O(depth x width^3). ~1000x better than baseline. |
 | `combined_estimator` | ~0.0002 | ~0.0002 | Routes to covariance when budget allows, otherwise mean propagation. |

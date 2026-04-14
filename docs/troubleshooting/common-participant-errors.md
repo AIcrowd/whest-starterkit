@@ -82,7 +82,7 @@ whest run --estimator ./my-estimator/estimator.py --runner server --json
 
 Symptom: "No estimator class found" or `ImportError`.
 
-Why it happens: your class must be named `Estimator` (or specify `--class-name`).
+Why it happens: your class must be named `Estimator` (or specify `--class`).
 
 Fix now: rename your class to `Estimator`.
 
