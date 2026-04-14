@@ -35,7 +35,6 @@ import whest as we
 from whestbench import BaseEstimator
 from whestbench.domain import MLP
 
-
 # ---------------------------------------------------------------------------
 # Mean propagation path  (diagonal variance only)
 # ---------------------------------------------------------------------------
