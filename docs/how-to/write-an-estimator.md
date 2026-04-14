@@ -13,15 +13,15 @@ Minimal structure:
 ```python
 from __future__ import annotations
 
-import mechestim as me
+import whest as we
 
 from whestbench import BaseEstimator
 from whestbench.domain import MLP
 
 
 class Estimator(BaseEstimator):
-    def predict(self, mlp: MLP, budget: int) -> me.ndarray:
-        return me.zeros((mlp.depth, mlp.width))
+    def predict(self, mlp: MLP, budget: int) -> we.ndarray:
+        return we.zeros((mlp.depth, mlp.width))
 ```
 
 ## Expected outcome

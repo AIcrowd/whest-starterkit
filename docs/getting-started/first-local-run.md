@@ -68,7 +68,7 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 
 Why two runners:
 
-- `server` (default): realistic isolation — your estimator runs in a separate process talking to the mechestim server.
+- `server` (default): realistic isolation — your estimator runs in a separate process talking to the whest server.
 - `local`: in-process execution with easier traceback debugging on your machine.
 
 Example failure and next command:

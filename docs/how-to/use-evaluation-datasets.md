@@ -50,7 +50,7 @@ You can keep reusing the same dataset file across your entire development cycle.
 
 ## Dataset portability
 
-Unlike the old time-based scoring model, mechestim uses analytical FLOP counting rather than wall-clock timing. This means datasets are **fully portable across machines** — the stored ground truth and FLOP budgets are hardware-independent. You can create a dataset on a laptop and run it on a cloud instance with identical results.
+Unlike the old time-based scoring model, whest uses analytical FLOP counting rather than wall-clock timing. This means datasets are **fully portable across machines** — the stored ground truth and FLOP budgets are hardware-independent. You can create a dataset on a laptop and run it on a cloud instance with identical results.
 
 ## Dataset traceability
 

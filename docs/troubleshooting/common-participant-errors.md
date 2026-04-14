@@ -6,7 +6,7 @@ Use this page when `validate` or `run` fails.
 
 `whest run --estimator ...` uses `--runner server` by default.
 
-- `server` (default): realistic isolation — your estimator runs against the mechestim server.
+- `server` (default): realistic isolation — your estimator runs against the whest server.
 - `local`: in-process execution with best traceback fidelity while debugging.
 
 Fast debug ladder:
@@ -37,7 +37,7 @@ Symptom: error mentions expected shape `(depth, width)`.
 
 Why it happens: returned wrong dimensions or a 1D array.
 
-Fix now: ensure `predict` returns a mechestim array with shape `(mlp.depth, mlp.width)`. Use `me.zeros((mlp.depth, mlp.width))` as a starting point.
+Fix now: ensure `predict` returns a whest array with shape `(mlp.depth, mlp.width)`. Use `we.zeros((mlp.depth, mlp.width))` as a starting point.
 
 Verify:
 
@@ -98,7 +98,7 @@ Symptom: `ModuleNotFoundError` when loading your file.
 
 Why it happens: your estimator imports a module not installed in the environment.
 
-Fix now: add missing dependencies to `requirements.txt`. For mechestim, use `import mechestim as me`.
+Fix now: add missing dependencies to `requirements.txt`. For whest, use `import whest as we`.
 
 Verify:
 
@@ -112,7 +112,7 @@ Symptom: `TypeError: predict() missing 1 required positional argument`.
 
 Why it happens: your `predict` method has the wrong signature.
 
-Fix now: ensure signature is `def predict(self, mlp: MLP, budget: int) -> me.ndarray:`.
+Fix now: ensure signature is `def predict(self, mlp: MLP, budget: int) -> we.ndarray:`.
 
 Verify:
 
@@ -152,9 +152,9 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 
 Symptom: `BudgetExhaustedError` raised during a specific operation.
 
-Why it happens: a single mechestim operation would exceed your remaining FLOP budget.
+Why it happens: a single whest operation would exceed your remaining FLOP budget.
 
-Fix now: use `me.budget_summary()` to find the expensive operation. Consider diagonal approximations or fewer iterations.
+Fix now: use `we.budget_summary()` to find the expensive operation. Consider diagonal approximations or fewer iterations.
 
 Verify: check `flops_used` in the score report.
 
@@ -176,9 +176,9 @@ whest validate --estimator ./my-estimator/estimator.py
 
 Symptom: output is float64 but evaluator expects float32, or similar type issues.
 
-Why it happens: mechestim operations may produce different dtypes than expected.
+Why it happens: whest operations may produce different dtypes than expected.
 
-Fix now: cast your output: `return me.asarray(result, dtype=me.float32)`.
+Fix now: cast your output: `return we.asarray(result, dtype=we.float32)`.
 
 Verify:
 
@@ -200,13 +200,13 @@ Verify:
 whest validate --estimator ./my-estimator/estimator.py
 ```
 
-## Using numpy instead of mechestim
+## Using numpy instead of whest
 
 Symptom: operations work but FLOP budget is not consumed (shows 0 flops_used).
 
-Why it happens: you are using `import numpy as np` instead of `import mechestim as me`. Numpy operations are not FLOP-tracked.
+Why it happens: you are using `import numpy as np` instead of `import whest as we`. Numpy operations are not FLOP-tracked.
 
-Fix now: replace all `np.*` calls with `me.*` equivalents. See [Code Patterns](../reference/code-patterns.md).
+Fix now: replace all `np.*` calls with `we.*` equivalents. See [Code Patterns](../reference/code-patterns.md).
 
 Verify: check `flops_used > 0` in score report.
 
@@ -228,7 +228,7 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 
 Symptom: unexpected FLOP usage or budget consumption before `predict()`.
 
-Why it happens: `setup()` runs outside any `BudgetContext`, so mechestim operations there use the default (very large) budget. This is fine — but if you accidentally do heavy computation in setup that should be in predict, you lose budget awareness.
+Why it happens: `setup()` runs outside any `BudgetContext`, so whest operations there use the default (very large) budget. This is fine — but if you accidentally do heavy computation in setup that should be in predict, you lose budget awareness.
 
 Fix now: keep `setup()` lightweight. Move estimation logic to `predict()`.
 

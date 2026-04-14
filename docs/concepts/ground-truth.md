@@ -11,7 +11,7 @@ For each MLP in the evaluation:
 3. This is repeated for many samples (configured by `ground_truth_samples`, typically 10,000+).
 4. The per-neuron mean across all samples is the ground truth for each layer.
 
-The evaluator uses mechestim for this computation, but under a very large FLOP budget (effectively unlimited). Ground truth computation is not constrained by the participant's FLOP budget.
+The evaluator uses whest for this computation, but under a very large FLOP budget (effectively unlimited). Ground truth computation is not constrained by the participant's FLOP budget.
 
 ## Ground truth has its own error
 

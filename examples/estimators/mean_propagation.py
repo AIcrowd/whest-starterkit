@@ -20,44 +20,10 @@ post-ReLU mean for each layer stacked into a (depth, width) array.
 
 from __future__ import annotations
 
-import mechestim as me
+import whest as we
 
 from whestbench import BaseEstimator
 from whestbench.domain import MLP
-
-# ---------------------------------------------------------------------------
-# Helpers: standard normal PDF and CDF
-# ---------------------------------------------------------------------------
-
-# Abramowitz & Stegun approximation constants (formula 26.2.17)
-_P = 0.2316419
-_A1 = 0.319381530
-_A2 = -0.356563782
-_A3 = 1.781477937
-_A4 = -1.821255978
-_A5 = 1.330274429
-
-
-def _norm_pdf(x: me.ndarray) -> me.ndarray:
-    """Standard normal PDF: phi(x) = exp(-x^2 / 2) / sqrt(2*pi)."""
-    return me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
-
-
-def _norm_cdf(x: me.ndarray) -> me.ndarray:
-    """Standard normal CDF using the Abramowitz & Stegun approximation.
-
-    Uses only basic mechestim operations (exp, abs). Accurate to < 7.5e-8.
-    """
-    t = 1.0 / (1.0 + _P * me.abs(x))
-    poly = ((((_A5 * t + _A4) * t + _A3) * t + _A2) * t + _A1) * t
-    pdf = me.exp(-0.5 * x * x) / me.sqrt(2.0 * me.pi)
-    cdf = 1.0 - pdf * poly
-    return me.where(x >= 0, cdf, 1.0 - cdf)
-
-
-# ---------------------------------------------------------------------------
-# Estimator
-# ---------------------------------------------------------------------------
 
 
 class Estimator(BaseEstimator):
@@ -67,7 +33,7 @@ class Estimator(BaseEstimator):
     formula with a diagonal variance approximation (assumes independent neurons).
     """
 
-    def predict(self, mlp: MLP, budget: int) -> me.ndarray:
+    def predict(self, mlp: MLP, budget: int) -> we.ndarray:
         """Predict per-layer output means via first-moment propagation.
 
         Returns an array of shape (depth, width) where row i is the predicted
@@ -78,8 +44,8 @@ class Estimator(BaseEstimator):
 
         # --- Step 1: initialise the input distribution ---
         # Treat the network input as standard normal: mu=0, var=1 per dimension.
-        mu = me.zeros(width)  # shape (width,)
-        var = me.ones(width)  # shape (width,)  — diagonal of the covariance
+        mu = we.zeros(width)  # shape (width,)
+        var = we.ones(width)  # shape (width,)  — diagonal of the covariance
 
         rows = []
         for w in mlp.weights:  # w has shape (width, width)
@@ -93,15 +59,15 @@ class Estimator(BaseEstimator):
             var_pre = (w * w).T @ var
 
             # Clamp to avoid division by zero or negative values from rounding.
-            var_pre = me.maximum(var_pre, 1e-12)
-            sigma_pre = me.sqrt(var_pre)  # shape (width,)
+            var_pre = we.maximum(var_pre, 1e-12)
+            sigma_pre = we.sqrt(var_pre)  # shape (width,)
 
             # --- Step 3: compute the standardised ratio alpha = mu / sigma ---
             alpha = mu_pre / sigma_pre
 
             # Evaluate the PDF and CDF at alpha
-            phi_alpha = _norm_pdf(alpha)  # phi(alpha)
-            Phi_alpha = _norm_cdf(alpha)  # Phi(alpha)
+            phi_alpha = we.stats.norm.pdf(alpha)  # phi(alpha)
+            Phi_alpha = we.stats.norm.cdf(alpha)  # Phi(alpha)
 
             # --- Step 4: ReLU expectation ---
             # E[ReLU(pre)] = mu_pre * Phi(alpha) + sigma_pre * phi(alpha)
@@ -112,10 +78,10 @@ class Estimator(BaseEstimator):
             #                  + mu_pre * sigma_pre * phi(alpha)
             ez2 = (mu_pre * mu_pre + var_pre) * Phi_alpha + mu_pre * sigma_pre * phi_alpha
             # Var[ReLU] = E[z^2] - E[z]^2  (clamped to 0 for numerical safety)
-            var = me.maximum(ez2 - mu * mu, 0.0)
+            var = we.maximum(ez2 - mu * mu, 0.0)
 
             # Record the post-ReLU mean for this layer
             rows.append(mu)
 
         # Stack all layer means into a single (depth, width) array
-        return me.stack(rows, axis=0)
+        return we.stack(rows, axis=0)

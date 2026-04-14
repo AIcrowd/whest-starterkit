@@ -15,13 +15,13 @@ Use this page to understand how the leaderboard score is computed from your esti
 
 The scoring model answers a specific question: **how accurately can your estimator predict expected neuron values within a fixed analytical compute budget?**
 
-Each estimator call is given a `flop_budget` — a cap on the number of floating-point operations it may perform, tracked analytically by mechestim. If the estimator stays within budget, its predictions are scored by MSE against Monte Carlo ground truth. If it exceeds the budget, all predictions for that MLP are replaced with zeros.
+Each estimator call is given a `flop_budget` — a cap on the number of floating-point operations it may perform, tracked analytically by whest. If the estimator stays within budget, its predictions are scored by MSE against Monte Carlo ground truth. If it exceeds the budget, all predictions for that MLP are replaced with zeros.
 
 ## How scoring works
 
 For the configured FLOP budget:
 
-1. **Your estimator runs.** Your `predict(mlp, budget)` is called. mechestim tracks all FLOP usage analytically — no wall-clock measurement.
+1. **Your estimator runs.** Your `predict(mlp, budget)` is called. whest tracks all FLOP usage analytically — no wall-clock measurement.
 2. **Budget is checked.** If the total FLOPs used exceed `flop_budget`, all predictions for this MLP are replaced with zero vectors.
 3. **Accuracy is measured.** Per-depth mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed.
 4. **Score is MSE.** Your score is pure MSE — the closer to zero, the better.
@@ -34,7 +34,7 @@ Your estimator receives a `budget` argument (the FLOP budget). You may use it to
 
 ## Budget enforcement rules
 
-mechestim enforces the FLOP budget analytically:
+whest enforces the FLOP budget analytically:
 
 - **Exceeded budget.** If your estimator's total FLOPs exceed `flop_budget`, **all** predictions for that MLP are replaced with zeros. This is a hard cutoff, not per-depth.
 - **Under budget.** Predictions are used as-is. There is no bonus for using fewer FLOPs than the cap — accuracy is what matters.

@@ -2,11 +2,11 @@
 
 ## Can I use numpy directly?
 
-All computation must go through mechestim (`import mechestim as me`). mechestim wraps numpy with analytical FLOP counting — your score depends on the FLOP cost of your operations, and only mechestim tracks those costs.
+All computation must go through whest (`import whest as we`). whest wraps numpy with analytical FLOP counting — your score depends on the FLOP cost of your operations, and only whest tracks those costs.
 
 ## Can I use scipy?
 
-Yes. scipy is not part of mechestim, so you import it separately as your own dependency. Common usage: `scipy.special.ndtr` for the standard normal CDF. Add `scipy` to your `requirements.txt` when packaging.
+Yes. scipy is not part of whest, so you import it separately as your own dependency. Common usage: `scipy.special.ndtr` for the standard normal CDF. Add `scipy` to your `requirements.txt` when packaging.
 
 ## Why is my score `inf`?
 
@@ -20,7 +20,7 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 
 The `budget` argument tells you how many FLOPs you are allowed. You can use it to choose between cheap and expensive algorithms (like the combined estimator does), or you can ignore it and always use the same strategy.
 
-mechestim enforces the budget regardless — if your operations exceed it, `BudgetExhaustedError` is raised and your predictions are zeroed.
+whest enforces the budget regardless — if your operations exceed it, `BudgetExhaustedError` is raised and your predictions are zeroed.
 
 ## Can I precompute things in `setup()`?
 
@@ -30,11 +30,11 @@ However, `setup()` does have a time limit (`setup_timeout_s`, typically 5 second
 
 ## What happens if I exceed the FLOP budget?
 
-mechestim raises `BudgetExhaustedError` before the over-budget operation executes. The framework catches this and zeros all your predictions for that MLP. You will see `budget_exhausted: true` in the per-MLP report.
+whest raises `BudgetExhaustedError` before the over-budget operation executes. The framework catches this and zeros all your predictions for that MLP. You will see `budget_exhausted: true` in the per-MLP report.
 
 ## Is scoring hardware-dependent?
 
-No. mechestim counts FLOPs analytically based on tensor shapes — not wall-clock time. The same estimator produces the same FLOP count on any hardware. You can develop on a laptop and submit for evaluation on a cluster with identical results.
+No. whest counts FLOPs analytically based on tensor shapes — not wall-clock time. The same estimator produces the same FLOP count on any hardware. You can develop on a laptop and submit for evaluation on a cluster with identical results.
 
 ## How many MLP networks are in a full evaluation?
 

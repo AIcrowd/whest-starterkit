@@ -74,7 +74,7 @@ To estimate a width-100, depth-16 MLP to 1% accuracy, sampling needs roughly 10,
 Each evaluation call provides:
 
 - one `MLP` with `n` neurons and `d` layers,
-- one integer `flop_budget` — the maximum number of floating-point operations your estimator may use, tracked analytically by mechestim.
+- one integer `flop_budget` — the maximum number of floating-point operations your estimator may use, tracked analytically by whest.
 
 Your estimator must emit exactly `d` vectors, each with shape `(n,)`.
 
@@ -82,7 +82,7 @@ Row `i` is your estimate of expected neuron values after layer `i`.
 
 ## Computational model
 
-All FLOP usage is tracked analytically by mechestim — there is no wall-clock timing. Your estimator imports mechestim (`import mechestim as me`) and uses its primitives, which report exact FLOP counts. If the total exceeds `flop_budget`, all predictions for that MLP are zeroed.
+All FLOP usage is tracked analytically by whest — there is no wall-clock timing. Your estimator imports whest (`import whest as we`) and uses its primitives, which report exact FLOP counts. If the total exceeds `flop_budget`, all predictions for that MLP are zeroed.
 
 ## Ground truth
 
