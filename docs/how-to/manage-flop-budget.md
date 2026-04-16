@@ -38,19 +38,45 @@ print(f"FLOPs used: {budget.flops_used:,}")
 print(f"FLOPs remaining: {budget.flops_remaining:,}")
 ```
 
+If you also want a wall-clock guardrail while debugging locally, set
+`wall_time_limit_s` on the same `BudgetContext`:
+
+```python
+with we.BudgetContext(
+    flop_budget=100_000_000,
+    wall_time_limit_s=2.0,
+) as budget:
+    result = estimator.predict(mlp, budget=100_000_000)
+```
+
 ## Get a per-operation breakdown
 
-Use `we.budget_summary()` inside an active budget context to see which operations consume the most FLOPs:
+Use `budget.summary()` for the current explicit context or
+`we.budget_summary()` for the session/global view to see which operations
+consume the most FLOPs:
 
 ```python
 import whest as we
 
 with we.BudgetContext(flop_budget=100_000_000) as budget:
     result = estimator.predict(mlp, budget=100_000_000)
-    we.budget_summary()
+    print(budget.summary())
+
+we.budget_summary()
 ```
 
 This prints a table showing each operation's name, call count, and cumulative FLOP cost — letting you identify the expensive operations to optimize.
+
+The same summaries also show timing data:
+
+- `wall_time_s`: total elapsed time for the context
+- `tracked_time_s`: time spent inside counted whest calls
+- `untracked_time_s`: time spent outside counted whest calls
+
+In `whest run`, the CLI flags map to these concepts as follows:
+
+- `--wall-time-limit`: forwards a wall-clock limit into the estimator's `BudgetContext`
+- `--untracked-time-limit`: adds a WhestBench scoring check on the reported `untracked_time_s`
 
 ## Interpret `whest run` output
 

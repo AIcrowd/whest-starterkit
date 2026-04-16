@@ -28,9 +28,43 @@ Yes. `setup()` runs before any `predict()` calls and is not under a FLOP budget.
 
 However, `setup()` does have a time limit (`setup_timeout_s`, typically 5 seconds).
 
+## How do I set a time limit on my estimator code?
+
+At the whest level, time limits live on `BudgetContext` via
+`wall_time_limit_s`:
+
+```python
+with we.BudgetContext(flop_budget=10_000_000, wall_time_limit_s=2.0) as budget:
+    ...
+```
+
+In WhestBench CLI runs, `--wall-time-limit` sets that same limit for each
+`predict()` call.
+
+## What is `untracked_time_limit`?
+
+`untracked_time_limit` is a WhestBench rule, not a `BudgetContext`
+parameter. Whest reports:
+
+- `tracked_time_s`: time spent inside counted whest calls
+- `untracked_time_s`: total wall time minus tracked time
+
+WhestBench can then zero predictions if `untracked_time_s` exceeds the
+configured `--untracked-time-limit`.
+
 ## What happens if I exceed the FLOP budget?
 
 whest raises `BudgetExhaustedError` before the over-budget operation executes. The framework catches this and zeros all your predictions for that MLP. You will see `budget_exhausted: true` in the per-MLP report.
+
+## How do I inspect budget summaries while debugging?
+
+Use:
+
+- `budget.summary()` for the current explicit `BudgetContext`
+- `we.budget_summary()` for the accumulated process/session view
+- `budget.summary_dict(...)` or `we.budget_summary_dict(...)` for structured data
+
+If you want namespace attribution, pass `by_namespace=True`.
 
 ## Is scoring hardware-dependent?
 
