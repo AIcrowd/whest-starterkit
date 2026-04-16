@@ -22,7 +22,7 @@ For the full whest API and cost model, see the [whest documentation](https://git
 | **Matrix operations** | `we.matmul()`, `we.einsum()` | Depends on dimensions — typically dominates your budget |
 | **Random generation** | `we.random.normal()`, `we.random.uniform()` | Output element count |
 
-**Key insight:** `we.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs. For width-100 networks, a single matmul costs ~2M FLOPs. Most of your budget goes to matrix operations.
+**Key insight:** `we.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs. For width-100 networks, a single matmul costs ~1M FLOPs. Most of your budget goes to matrix operations.
 
 ## Check your budget usage
 

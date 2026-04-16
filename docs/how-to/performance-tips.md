@@ -4,7 +4,7 @@ This page lists concrete patterns for reducing FLOP usage in your estimator.
 
 ## Matmul dominates your budget
 
-A single `we.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width=100, that is ~2M FLOPs per matmul. In a 16-layer network, 16 matmuls cost ~32M FLOPs — a large fraction of a typical budget.
+A single `we.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width=100, that is ~1M FLOPs per matmul. In a 16-layer network, 16 matmuls cost ~16M FLOPs — a large fraction of a typical budget.
 
 **Tip:** If you only need diagonal information (per-neuron variance), avoid full matrix-matrix multiplies. Diagonal propagation uses matrix-vector products: O(n^2) per layer instead of O(n^3).
 

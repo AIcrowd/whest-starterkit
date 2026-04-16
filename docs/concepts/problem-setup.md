@@ -67,7 +67,7 @@ The simplest approach is **Monte Carlo sampling**:
 
 This is unbiased and converges as `k → ∞`, but the error decreases slowly (`≈ 1/√k`). The challenge asks: can you reach the same accuracy more efficiently by exploiting the network's structure?
 
-To estimate a width-100, depth-16 MLP to 1% accuracy, sampling needs roughly 10,000 forward passes at ~320K FLOPs each — about 3.2 billion FLOPs total. Mean propagation reaches similar accuracy for ~3.2 million FLOPs. That is a 1000x improvement.
+To estimate a width-100, depth-16 MLP to 1% accuracy, sampling needs roughly 10,000 forward passes at ~160K FLOPs each — about 1.6 billion FLOPs total. Mean propagation reaches similar accuracy for ~1.6 million FLOPs. That is a 1000x improvement.
 
 ## What the estimator receives
 

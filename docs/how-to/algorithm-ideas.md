@@ -11,7 +11,7 @@ import whest as we
 
 def predict_sampling(mlp, budget):
     width = mlp.width
-    n_samples = budget // (mlp.depth * width * width * 2)  # rough FLOP estimate per sample
+    n_samples = budget // (mlp.depth * width * width)  # rough FLOP estimate per sample
     n_samples = max(n_samples, 1)
     x = we.array(we.random.default_rng().standard_normal((n_samples, width)).astype(we.float32))
     rows = []
@@ -21,7 +21,7 @@ def predict_sampling(mlp, budget):
     return we.stack(rows, axis=0)
 ```
 
-**FLOP cost:** O(samples x depth x width^2). For width=100, depth=16, one sample costs ~320K FLOPs. 100 samples costs ~32M FLOPs.
+**FLOP cost:** O(samples x depth x width^2). For width=100, depth=16, one sample costs ~160K FLOPs. 100 samples costs ~16M FLOPs.
 
 **When to use:** As a baseline or sanity check. Accuracy improves as 1/sqrt(samples) — slow convergence.
 
@@ -29,7 +29,7 @@ def predict_sampling(mlp, budget):
 
 Track per-neuron means and variances through each layer using the ReLU expectation formula. Assumes neurons are independent (diagonal covariance).
 
-**FLOP cost:** O(depth x width^2) — one matrix-vector multiply per layer. For width=100, depth=16: ~3.2M FLOPs.
+**FLOP cost:** O(depth x width^2) — one matrix-vector multiply per layer. For width=100, depth=16: ~1.6M FLOPs.
 
 **When to use:** Default choice for most budgets. Fast and reasonably accurate for shallow-to-medium networks.
 
@@ -39,7 +39,7 @@ Track per-neuron means and variances through each layer using the ReLU expectati
 
 Track the full covariance matrix between neurons. More accurate because it captures correlations that diagonal methods ignore.
 
-**FLOP cost:** O(depth x width^3) — matrix-matrix multiply per layer. For width=100, depth=16: ~3.2B FLOPs. Much more expensive.
+**FLOP cost:** O(depth x width^3) — matrix-matrix multiply per layer. For width=100, depth=16: ~1.6B FLOPs. Much more expensive.
 
 **When to use:** When the FLOP budget is large relative to width^2, and accuracy matters more than speed. Best for narrow networks or shallow depths.
 
