@@ -95,8 +95,9 @@ This demonstrates the budget-aware routing pattern — a common design for produ
 2. [`examples/estimators/mean_propagation.py`](../../examples/estimators/mean_propagation.py) — simplest real algorithm
 3. [`examples/estimators/covariance_propagation.py`](../../examples/estimators/covariance_propagation.py) — more accurate, more expensive
 4. [`examples/estimators/combined_estimator.py`](../../examples/estimators/combined_estimator.py) — budget-aware routing
-5. [Algorithm Ideas](./algorithm-ideas.md) — full survey of strategies
-6. [Performance Tips](./performance-tips.md) — FLOP optimization patterns
+5. [`examples/estimators/standalone_example.py`](../../examples/estimators/standalone_example.py) — self-contained pure-Python harness (runnable as `python examples/estimators/standalone_example.py` or via `whest run`); copy when you want a minimal iteration loop
+6. [Algorithm Ideas](./algorithm-ideas.md) — full survey of strategies
+7. [Performance Tips](./performance-tips.md) — FLOP optimization patterns
 
 ## Next step
 

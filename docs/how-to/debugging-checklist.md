@@ -2,6 +2,20 @@
 
 Use this page when your estimator runs but the score is bad, or something feels wrong. Work through the tiers in order.
 
+## Tier 0: Pure-Python inner loop (fastest iteration)
+
+For fast, no-framework iteration — e.g. to print intermediate activations, attach `pdb`, or sweep Monte Carlo sample counts — run your estimator as a plain Python script instead of going through `whest run`. See [`examples/estimators/standalone_example.py`](https://github.com/AIcrowd/whestbench/blob/main/examples/estimators/standalone_example.py) — a self-contained ~100-line example that constructs an MLP, invokes the inline `Estimator`, and prints a FLOPs-vs-MSE convergence table. It's runnable two ways:
+
+```bash
+# 1) Direct: no CLI, no runner, no subprocess — just Python.
+python examples/estimators/standalone_example.py
+
+# 2) Scored via whestbench (same file, same class — honors BaseEstimator):
+whest run --estimator examples/estimators/standalone_example.py
+```
+
+Copy it as a starting point for your own debug loops.
+
 ## Tier 1: Sanity checks (2 minutes)
 
 Run validation:
