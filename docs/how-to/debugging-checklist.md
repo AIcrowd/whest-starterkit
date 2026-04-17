@@ -26,6 +26,7 @@ whest run --estimator ./my-estimator/estimator.py --n-mlps 3 --runner local --de
 
 Check:
 
+- [ ] **Did `predict()` raise?** If `whest run` exits with status `1` and prints an "Estimator Errors" panel, your estimator raised an exception. Use `--debug` to include tracebacks inline in the panel, or add `--fail-fast` to halt at the first failure and let the raw Python traceback propagate.
 - [ ] **Does zeros beat you?** If returning `we.zeros((mlp.depth, mlp.width))` scores better than your estimator, your predictions are wrong in a way that's worse than guessing zero.
 - [ ] **Is `budget_exhausted` true?** If so, your estimator exceeded the FLOP budget and all predictions were zeroed. See [Manage Your FLOP Budget](./manage-flop-budget.md).
 - [ ] **Are errors concentrated at deep layers?** Run with `--debug` and compare `all_layer_mse` — if early layers are good but later layers are bad, your propagation may accumulate errors.

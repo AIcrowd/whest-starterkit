@@ -10,10 +10,11 @@ Yes. scipy is not part of whest, so you import it separately as your own depende
 
 ## Why is my score `inf`?
 
-Your estimator raised an exception or returned invalid data (wrong shape, NaN, non-numeric). The framework treats that MLP as a failure. Run with `--debug` to see the error:
+Either your estimator raised during `predict()`, returned invalid data (wrong shape, NaN, non-numeric), or exhausted the FLOP / wall-time budget. Since 2026-04, explicit predict errors surface through an "Estimator Errors" panel in the report and set exit code `1`; `inf` with exit `0` means budget or time exhaustion rather than a swallowed exception. Run with `--debug` to see the tracebacks:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --debug
+whest run --estimator ./my-estimator/estimator.py --debug --fail-fast   # halt at first error
 ```
 
 ## Do I need to use the `budget` argument in `predict()`?
