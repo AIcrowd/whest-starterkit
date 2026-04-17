@@ -10,6 +10,8 @@ Pre-created evaluation datasets let you do that expensive work once and reuse it
 - **Fair comparisons** — every estimator you test is scored against the exact same MLPs with the same ground truth.
 - **Reproducibility** — the dataset file records the seed and all creation parameters, so anyone can recreate it exactly.
 
+For explicit seeds, `create-dataset` now uses a hierarchical `SeedSequence` split: each MLP gets one child stream for weight sampling and one child stream for Monte Carlo sampling.
+
 ## Do this now
 
 ### 1. Create your dataset (once)
@@ -67,6 +69,18 @@ When using `--dataset`, the results JSON includes a `dataset` reference under `r
     }
   }
 }
+```
+
+Example seeded run command:
+
+```bash
+whest run --estimator ./my-estimator/estimator.py --seed 20260417
+```
+
+`run --seed` stores the chosen seed in `run_config.seed`, and all `create-dataset` metadata now records:
+
+```json
+{"seed_protocol": {"name": "whestbench_seedsequence_hierarchy", "version": "1.0", "seeded": true}}
 ```
 
 ## Next step
