@@ -58,11 +58,12 @@ Scores below what sampling would achieve at that budget indicate your structural
 
 Suppose ground truth for a 3-neuron final layer is `[0.42, 0.38, 0.51]` and your estimator predicts `[0.40, 0.35, 0.55]`.
 
-    MSE = mean((0.40 - 0.42)^2 + (0.35 - 0.38)^2 + (0.55 - 0.51)^2)
-        = mean(0.0004 + 0.0009 + 0.0016)
-        = 0.000967
+    final_mse = mean([(0.40 - 0.42)^2, (0.35 - 0.38)^2, (0.55 - 0.51)^2])
+              = mean([0.0004, 0.0009, 0.0016])
+              = (0.0004 + 0.0009 + 0.0016) / 3
+              = 0.000967
 
-Your `primary_score` for this MLP would be approximately 0.001. Across all MLPs in the evaluation, scores are averaged to produce your final ranking.
+That `0.000967` is this MLP's per-MLP `final_mse`. The leaderboard `primary_score` is the **mean of per-MLP `final_mse` values across all MLPs** in the evaluation — a mean of means, not a sum.
 
 ## Example estimator benchmarks
 
