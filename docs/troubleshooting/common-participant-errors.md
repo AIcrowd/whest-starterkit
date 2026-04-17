@@ -120,6 +120,24 @@ Verify:
 whest validate --estimator ./my-estimator/estimator.py
 ```
 
+## Predict raised an unexpected exception
+
+Symptom: `whest run` exits with status `1` and prints an "Estimator Errors" panel listing one or more MLPs with a `PREDICT_ERROR` code. A stderr line reads e.g. `2 of 10 MLP(s) raised during predict; rerun with --debug for tracebacks...`.
+
+Why it happens: your `predict()` raised an exception that is neither `BudgetExhaustedError` nor `TimeExhaustedError`. WhestBench still scores the remaining MLPs (producing `inf` for the failed ones) so you can see partial progress, but the non-zero exit code signals that the submission is not yet passing.
+
+Fix now:
+
+```bash
+# Show full tracebacks in the "Estimator Errors" panel:
+whest run --estimator ./my-estimator/estimator.py --debug
+
+# Stop at the first failure and propagate the raw Python traceback:
+whest run --estimator ./my-estimator/estimator.py --debug --fail-fast
+```
+
+The traceback in the panel (or the raw stack from `--fail-fast`) points directly at the line in your estimator that raised.
+
 ## Setup timeout
 
 Symptom: `SETUP_TIMEOUT` error.
@@ -214,14 +232,19 @@ Verify: check `flops_used > 0` in score report.
 
 Symptom: `primary_score` shows as `inf`.
 
-Why it happens: your estimator raised an exception during `predict()`.
+Why it happens: every MLP either raised during `predict()` or exhausted the FLOP / time budget, so the mean of per-MLP MSEs is `inf`.
 
-Fix now: run with `--runner local --debug` to see the full traceback.
+Tell them apart from the exit code and the report:
 
-Verify:
+- **Exit `1` + "Estimator Errors" panel** — `predict()` raised exceptions. See [Predict raised an unexpected exception](#predict-raised-an-unexpected-exception).
+- **Exit `0` + every `per_mlp[i].budget_exhausted: true`** — you ran out of FLOPs.
+- **Exit `0` + every `per_mlp[i].time_exhausted: true`** — you ran out of wall-clock time.
+
+Fix now: run with `--debug` to see tracebacks in the "Estimator Errors" panel (works with any runner), or `--fail-fast` to halt at the first failing MLP with the raw Python stack:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --debug
+whest run --estimator ./my-estimator/estimator.py --debug --fail-fast
 ```
 
 ## Setup runs expensive operations
