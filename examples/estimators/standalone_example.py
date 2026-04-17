@@ -1,11 +1,11 @@
-"""Self-contained debug loop for the WhestBench challenge — runnable two ways.
+"""Self-contained example for the WhestBench challenge — runnable two ways.
 
-1. **Direct**: ``python examples/estimators/debug_loop.py``
+1. **Direct**: ``python examples/estimators/standalone_example.py``
    Builds one small MLP, runs the inline mean-propagation ``Estimator`` once,
    then sweeps ``SAMPLE_COUNTS`` of Monte Carlo samples and prints a
    convergence table. No CLI, no dataset, no subprocess — just a script.
 
-2. **Scored via whestbench**: ``whest run --estimator examples/estimators/debug_loop.py``
+2. **Scored via whestbench**: ``whest run --estimator examples/estimators/standalone_example.py``
    The inline class is named ``Estimator`` and honours the ``BaseEstimator``
    contract, so the whest CLI picks it up as a valid submission and scores
    it against the real contest spec.

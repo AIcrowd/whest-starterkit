@@ -68,17 +68,19 @@ If `budget_exhausted` is `true`, your estimator is too expensive. See [Manage Yo
 
 You now have a working estimator. Next steps:
 
-1. **Try the combined estimator** — it routes between cheap and expensive algorithms based on budget:
+1. **Iterate fast with a pure-Python loop** — [`examples/estimators/standalone_example.py`](https://github.com/AIcrowd/whestbench/blob/main/examples/estimators/standalone_example.py) is a self-contained script you can run as `python examples/estimators/standalone_example.py` to build an MLP, invoke your estimator, and print a Monte Carlo convergence table — no CLI, no runner, no subprocess. The same file also works with `whest run --estimator examples/estimators/standalone_example.py`. Copy it as a template when you want to print intermediate values, attach `pdb`, or sweep parameters.
+
+2. **Try the combined estimator** — it routes between cheap and expensive algorithms based on budget:
    ```bash
    cp examples/estimators/combined_estimator.py ./my-estimator/estimator.py
    whest run --estimator ./my-estimator/estimator.py --n-mlps 3
    ```
 
-2. **Understand the algorithms** — [Algorithm Ideas](../how-to/algorithm-ideas.md) surveys estimation strategies with FLOP costs and tradeoffs.
+3. **Understand the algorithms** — [Algorithm Ideas](../how-to/algorithm-ideas.md) surveys estimation strategies with FLOP costs and tradeoffs.
 
-3. **Optimize your budget** — [Manage Your FLOP Budget](../how-to/manage-flop-budget.md) shows how to check costs and stay within budget.
+4. **Optimize your budget** — [Manage Your FLOP Budget](../how-to/manage-flop-budget.md) shows how to check costs and stay within budget.
 
-4. **Debug when stuck** — [Debugging Checklist](../how-to/debugging-checklist.md) gives a systematic diagnosis flow.
+5. **Debug when stuck** — [Debugging Checklist](../how-to/debugging-checklist.md) gives a systematic diagnosis flow.
 
 ## Next step
 
