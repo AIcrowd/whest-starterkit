@@ -4,10 +4,11 @@ Use this page when `validate` or `run` fails.
 
 ## Understand runner modes first
 
-`whest run --estimator ...` uses `--runner server` by default.
+`whest run --estimator ...` uses `--runner local` by default.
 
-- `server` (default): realistic isolation — your estimator runs against the whest server.
-- `local`: in-process execution with best traceback fidelity while debugging.
+- `local` (default): in-process execution with best traceback fidelity while debugging.
+- `subprocess`: isolated process execution for stricter reproduction; `server` remains a legacy alias.
+- `docker`: use containerized evaluator execution when subprocess still differs from remote scoring.
 
 Fast debug ladder:
 
@@ -75,7 +76,7 @@ Fix now:
 Verify:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner server --json
+whest run --estimator ./my-estimator/estimator.py --json
 ```
 
 ## Class not found

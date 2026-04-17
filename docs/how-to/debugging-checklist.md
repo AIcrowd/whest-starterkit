@@ -89,7 +89,7 @@ The interactive progress display can mask the debugger prompt when you drop a br
 
   The CLI auto-detects this and switches to plain-text output automatically.
 
-> Debugging is only supported with `--runner local`. The default `--runner server` isolates your estimator in a subprocess whose stdin/stdout carry the worker protocol, so interactive debuggers cannot attach there. Switch to `--runner local` (or `--runner inprocess`) when you want to break into your code.
+> Debugging is best supported with `--runner local`. `--runner local` (or `--runner inprocess`) runs in-process for direct traces and interactive debugging. The isolation runners (`--runner subprocess`, legacy `--runner server`) communicate via worker protocol I/O, so interactive debuggers should be used in local mode.
 
 ## Next step
 
