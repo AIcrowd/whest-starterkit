@@ -24,7 +24,7 @@ Run local evaluation:
 whest run --estimator ./my-estimator/estimator.py
 ```
 
-Note: `whest run --estimator ...` defaults to `--runner server`.
+Note: `whest run --estimator ...` defaults to `--runner local`.
 
 Package a submission artifact:
 
@@ -48,7 +48,7 @@ Fix: ensure `predict(mlp, budget)` returns exactly `mlp.depth` rows and each row
 
 When `run` fails, use this sequence:
 
-1. Normal run (default server isolation):
+1. Normal run (default local execution):
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py
@@ -60,7 +60,7 @@ whest run --estimator ./my-estimator/estimator.py
 whest run --estimator ./my-estimator/estimator.py --debug
 ```
 
-3. If still unclear, switch to in-process traceback fidelity:
+3. If still unclear, switch to explicit in-process traceback fidelity:
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py --runner local --debug
@@ -68,8 +68,10 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 
 Why two runners:
 
-- `server` (default): realistic isolation — your estimator runs in a separate process talking to the whest server.
-- `local`: in-process execution with easier traceback debugging on your machine.
+- `local` (default): in-process execution with immediate startup, faster iteration, and full local tracebacks.
+- `subprocess` (and legacy alias `server`): isolated process execution; use this when you need a stricter boundary.
+- `docker`: use the dedicated evaluator container path when subprocess isolation is still not enough (not a local CLI flag in this repo yet).
+- `inprocess`: alias for `local`.
 
 Example failure and next command:
 

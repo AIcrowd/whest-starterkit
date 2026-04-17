@@ -20,7 +20,7 @@ Run local scoring (recommended default runner):
 whest run --estimator ./my-estimator/estimator.py
 ```
 
-`whest run` defaults to `--runner server`.
+`whest run` defaults to `--runner local` for fast iteration.
 
 Run against a pre-created dataset (skips sampling — much faster for repeated runs):
 
@@ -40,7 +40,7 @@ whest run --estimator ./my-estimator/estimator.py --runner local
 Run with machine-readable output:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner server --json
+whest run --estimator ./my-estimator/estimator.py --runner local --json
 ```
 
 Package submission artifact:
@@ -72,7 +72,7 @@ Symptom: `run` fails after `validate` passed.
 
 Use this escalation flow:
 
-1. Retry with debug info in default server mode:
+1. Retry with debug info:
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py --debug

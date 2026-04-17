@@ -52,7 +52,7 @@ You can interactively inspect network structure, layer behavior, and estimator c
 Official score semantics still come from:
 
 ```bash
-whest run --estimator <path> --runner server
+whest run --estimator <path> --runner local
 ```
 
 ## Common first failure
