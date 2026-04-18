@@ -60,6 +60,16 @@ with we.BudgetContext(flop_budget=100_000_000) as budget:
 
 This prints a per-operation table showing call counts and cumulative FLOPs. Look for the dominant operation and optimize that first.
 
+## Skip hardware fallback probes during local iteration
+
+If startup latency matters while you are iterating locally, you can skip the extra OS-native hardware fallback probes that populate report and dataset metadata:
+
+```bash
+WHEST_SKIP_HARDWARE_FALLBACK_PROBES=1 whest run --estimator ./my_estimator.py
+```
+
+This keeps cheap metadata collection and `psutil`-backed fields enabled. Only the fallback probes are skipped, so fields such as `cpu_count_physical` or `ram_total_bytes` may remain `null` when they are not already available.
+
 ## Next step
 
 - [Manage Your FLOP Budget](./manage-flop-budget.md)

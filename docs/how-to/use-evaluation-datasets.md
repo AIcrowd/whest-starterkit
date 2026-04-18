@@ -34,6 +34,8 @@ Common options:
 | `--depth` | (contest default) | Layers per MLP |
 | `--flop-budget` | (contest default) | FLOP cap for the estimator |
 
+If you want to avoid extra host probing during local development, set `WHEST_SKIP_HARDWARE_FALLBACK_PROBES=1` before `whest create-dataset` or `whest run`. This skips only the OS-native fallback probes used to fill missing hardware fields in report and dataset metadata. Cheap fields and `psutil`-backed fields are still recorded, and fallback-backed fields may remain `null`.
+
 ### 2. Run against it (every time)
 
 ```bash
