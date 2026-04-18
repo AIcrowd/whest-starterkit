@@ -24,6 +24,12 @@ Run local evaluation:
 whest run --estimator ./my-estimator/estimator.py
 ```
 
+For your first pass, this can be slower because a full local evaluation regenerates MLPs and recomputes ground-truth targets. A faster first debug loop is:
+
+```bash
+whest run --estimator ./my-estimator/estimator.py --n-mlps 1
+```
+
 Note: `whest run --estimator ...` defaults to `--runner local`.
 
 Package a submission artifact:
@@ -46,44 +52,72 @@ Fix: ensure `predict(mlp, budget)` returns exactly `mlp.depth` rows and each row
 
 ## 🧭 Debug runner flow (copy/paste)
 
-When `run` fails, use this sequence:
+### How to debug in order
 
-1. Normal run (default local execution):
+1) Run with defaults (local runner, full MLP set):
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py
 ```
 
-2. Add traceback/debug fields:
+2) Add tracebacks to scoring failures:
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py --debug
 ```
 
-3. If still unclear, switch to explicit in-process traceback fidelity:
+3) Stop immediately at first exception to avoid scrolling:
+
+```bash
+whest run --estimator ./my-estimator/estimator.py --debug --fail-fast
+```
+
+4) If failures are coming from isolated mode, switch to local mode for direct traces:
 
 ```bash
 whest run --estimator ./my-estimator/estimator.py --runner local --debug
 ```
 
-Why two runners:
+5) If you want interactive debugging in `predict()`, use local + plain output:
 
-- `local` (default): in-process execution with immediate startup, faster iteration, and full local tracebacks.
-- `subprocess` (and legacy alias `server`): isolated process execution; use this when you need a stricter boundary.
-- `docker`: use the dedicated evaluator container path when subprocess isolation is still not enough (not a local CLI flag in this repo yet).
-- `inprocess`: alias for `local`.
+```bash
+whest run --estimator ./my-estimator/estimator.py --runner local --no-rich
+```
 
-Example failure and next command:
+### What each runner means
 
-```text
-Error [setup:SETUP_ERROR]: Estimator setup failed.
-Use --debug to include a traceback.
-Tip: For estimator-level tracebacks, rerun with --runner local --debug.
+- `local` is the default and executes your estimator in the current process.
+- `inprocess` is the same as `local`.
+- `subprocess` executes the estimator in a worker process for isolation.
+- `server` is a legacy alias for `subprocess`.
+
+### `--debug` and `--fail-fast` behavior
+
+- `--debug` includes per-MLP tracebacks in the report and includes top-level tracebacks for setup/runtime command failures.
+- `--fail-fast` stops scoring on the first unexpected `predict()` exception and exits immediately.
+- Without `--fail-fast`, WhestBench still runs all MLPs, reports every failure, and exits non-zero at the end.
+
+### Use `pdb` if you need it
+
+Use `breakpoint()` (or `pdb.set_trace`) and force plain output so prompts are visible:
+
+```python
+def predict(self, mlp, budget):
+    breakpoint()
+    ...
 ```
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --debug
+whest run --estimator ./my-estimator/estimator.py --runner local --no-rich
 ```
+
+With `pdb` specifically:
+
+```bash
+PYTHONBREAKPOINT=pdb.set_trace whest run --estimator ./my-estimator/estimator.py --runner local
+```
+
+The CLI auto-disables rich output for debugger sessions, so plain output is usually enough even without `--no-rich`.
 
 ## ➡️ Next step
 
