@@ -81,7 +81,7 @@ whest run --estimator ./my-estimator/estimator.py --runner local --debug
 5) If you want interactive debugging in `predict()`, use local + plain output:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --no-rich
+whest run --estimator ./my-estimator/estimator.py --runner local --format plain
 ```
 
 ### What each runner means
@@ -108,7 +108,7 @@ def predict(self, mlp, budget):
 ```
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --no-rich
+whest run --estimator ./my-estimator/estimator.py --runner local --format plain
 ```
 
 With `pdb` specifically:
@@ -117,7 +117,7 @@ With `pdb` specifically:
 PYTHONBREAKPOINT=pdb.set_trace whest run --estimator ./my-estimator/estimator.py --runner local
 ```
 
-The CLI auto-disables rich output for debugger sessions, so plain output is usually enough even without `--no-rich`.
+The CLI auto-disables rich output for debugger sessions, so plain output is usually enough even without `--format plain`.
 
 ## ➡️ Next step
 
