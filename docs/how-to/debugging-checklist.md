@@ -75,10 +75,10 @@ The interactive progress display can mask the debugger prompt when you drop a br
       ...
   ```
 
-- **With `pdb.set_trace()`** — pass `--no-rich` to disable the live display entirely:
+- **With `pdb.set_trace()`** — pass `--format plain` to disable the live display entirely:
 
   ```bash
-  whest run --estimator ./my-estimator/estimator.py --runner local --no-rich
+  whest run --estimator ./my-estimator/estimator.py --runner local --format plain
   ```
 
 - **Or** set the standard env var before running:
@@ -87,7 +87,7 @@ The interactive progress display can mask the debugger prompt when you drop a br
   PYTHONBREAKPOINT=pdb.set_trace whest run --estimator ./... --runner local
   ```
 
-  The CLI auto-detects this and switches to plain-text output automatically.
+  The CLI auto-detects this and switches to plain output automatically.
 
 > Debugging is best supported with `--runner local`. `--runner local` (or `--runner inprocess`) runs in-process for direct traces and interactive debugging. The isolation runners (`--runner subprocess`, legacy `--runner server`) communicate via worker protocol I/O, so interactive debuggers should be used in local mode.
 

@@ -50,6 +50,7 @@ You can keep reusing the same dataset file across your entire development cycle.
 
 - `create-dataset` produces a `.npz` file at the specified path.
 - `run --dataset` shows "Loading dataset" instead of "Generating MLPs" and skips ground truth sampling.
+- `run --dataset` still shows a `Sampling Budget Breakdown (Ground Truth)` section in human output, restored from the dataset metadata for exactly the MLPs used in that run.
 - Score reports are consistent across runs with the same dataset.
 
 ## Dataset portability

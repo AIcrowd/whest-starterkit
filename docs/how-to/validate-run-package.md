@@ -40,8 +40,10 @@ whest run --estimator ./my-estimator/estimator.py --runner local
 Run with machine-readable output:
 
 ```bash
-whest run --estimator ./my-estimator/estimator.py --runner local --json
+whest run --estimator ./my-estimator/estimator.py --runner local --format json
 ```
+
+`--json` still works as an alias, but `--format rich|plain|json` is the canonical output selector across the CLI.
 
 Package submission artifact:
 
