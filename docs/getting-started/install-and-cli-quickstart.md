@@ -40,6 +40,16 @@ Symptom: `whest: command not found`
 
 Fix: use the editable fallback invocation (`uv run --with-editable . whest smoke-test`) and confirm `uv` is on your `PATH`.
 
+## 🩺 If in doubt, run `whest doctor`
+
+When `smoke-test` fails or behaves unexpectedly, `whest doctor` runs a one-screen health check of your environment: Python version, `uv` / Node.js availability, BLAS thread pool, disk space, and working-directory writability. Each item reports `[OK]`, `[WARN]`, or `[FAIL]` with a one-line fix hint.
+
+```bash
+whest doctor
+```
+
+See [CLI Reference → `whest doctor`](../reference/cli-reference.md#whest-doctor) for flags (`--json`, `--strict`, `--no-rich`, `--debug`) and exit-code semantics.
+
 ## ➡️ Next step
 
 - [First Local Run](./first-local-run.md)
