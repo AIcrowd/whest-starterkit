@@ -180,3 +180,14 @@ class Estimator(BaseEstimator):
         if budget >= _COVARIANCE_FLOP_MULTIPLIER * mlp.width * mlp.width:
             return _covariance_path(mlp)
         return _mean_path(mlp)
+
+
+if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from local_engine import build_mlp, compare_against_monte_carlo
+
+    mlp = build_mlp(width=32, depth=6, seed=0)
+    compare_against_monte_carlo(Estimator(), mlp)
