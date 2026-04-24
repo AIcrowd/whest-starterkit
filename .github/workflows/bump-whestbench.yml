@@ -1,0 +1,67 @@
+name: Bump whestbench pin
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"  # Monday 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.10
+
+      - name: Look up latest whestbench tag
+        id: lookup
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! LATEST=$(gh api repos/AIcrowd/whestbench/releases/latest --jq '.tag_name' 2>/dev/null); then
+            echo "info: no whestbench releases yet — skipping bump"
+            echo "needs_bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CURRENT=$(grep -oE 'whestbench\.git@[^"]+' pyproject.toml | head -1 | sed 's/.*@//')
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "needs_bump=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_bump=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump pin in pyproject.toml
+        if: steps.lookup.outputs.needs_bump == 'true'
+        run: |
+          sed -i "s|whestbench.git@${{ steps.lookup.outputs.current }}|whestbench.git@${{ steps.lookup.outputs.latest }}|" pyproject.toml
+          uv lock
+
+      - name: Open PR
+        if: steps.lookup.outputs.needs_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="bump/whestbench-${{ steps.lookup.outputs.latest }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add pyproject.toml uv.lock
+          git commit -m "chore: bump whestbench to ${{ steps.lookup.outputs.latest }}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: bump whestbench to ${{ steps.lookup.outputs.latest }}" \
+            --body "Auto-bump from ${{ steps.lookup.outputs.current }} to ${{ steps.lookup.outputs.latest }}.
+
+          Changelog: https://github.com/AIcrowd/whestbench/releases/tag/${{ steps.lookup.outputs.latest }}
+
+          Review checklist: see [docs/RELEASING.md](docs/RELEASING.md)."
