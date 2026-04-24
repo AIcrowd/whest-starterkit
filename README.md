@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/logo/logo.png" alt="ARC Whitebox Estimation Challenge logo" style="height: 120px;">
+</div>
+
 # Whitebox Estimation — Starter Kit
 
 [![CI](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml)
