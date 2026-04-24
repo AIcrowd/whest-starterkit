@@ -17,16 +17,19 @@ lint:
 	uv run ruff check .
 
 # Records a fresh-clone walkthrough cast and renders to GIF.
+# Sequence: git clone -> cd -> uv sync -> python estimator.py -> whest validate
 # Output: assets/demo.cast (committed) + assets/demo.gif (committed).
 # Requires: asciinema and agg (brew install asciinema agg).
 demo-cast:
 	@command -v asciinema >/dev/null || (echo "Install asciinema first: brew install asciinema"; exit 1)
 	@command -v agg >/dev/null || (echo "Install agg first: brew install agg"; exit 1)
 	@DEMO_DIR=$$(mktemp -d) && \
-	  SCRIPT='cd '"$$DEMO_DIR"' && printf "\033c" && echo "$$ git clone https://github.com/AIcrowd/whest-starterkit.git" && git clone --quiet https://github.com/AIcrowd/whest-starterkit.git && echo && echo "$$ cd whest-starterkit" && cd whest-starterkit && echo && echo "$$ uv sync" && uv sync --quiet && echo && echo "$$ uv run python estimator.py" && uv run python estimator.py' && \
-	  TERM=xterm-256color asciinema rec --overwrite --idle-time-limit=2 \
-	    --title="whest-starterkit: first 5 minutes" \
-	    --command="bash -c '$$SCRIPT'" assets/demo.cast && \
+	  cp scripts/record-demo.sh "$$DEMO_DIR/demo.sh" && \
+	  chmod +x "$$DEMO_DIR/demo.sh" && \
+	  TERM=xterm-256color FORCE_COLOR=1 asciinema rec --overwrite --idle-time-limit=2 \
+	    --window-size 90x36 \
+	    --title="whest-starterkit: clone, sync, estimate, validate" \
+	    --command="bash $$DEMO_DIR/demo.sh $$DEMO_DIR" assets/demo.cast && \
 	  rm -rf "$$DEMO_DIR"
-	agg --theme monokai --font-size 16 --last-frame-duration 5 \
-	  --cols 80 --rows 18 assets/demo.cast assets/demo.gif
+	agg --theme monokai --font-size 14 --last-frame-duration 5 \
+	  --cols 90 --rows 36 assets/demo.cast assets/demo.gif
