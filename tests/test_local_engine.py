@@ -135,3 +135,27 @@ def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
     assert "MSE" in out
     assert "10" in out
     assert "100" in out
+
+
+@pytest.mark.parametrize("name,max_mse", [
+    # Update these tolerances if the curriculum table changes.
+    ("examples/01_random.py", 1.0),
+    ("examples/02_mean_propagation.py", 0.10),
+    ("examples/03_covariance_propagation.py", 0.10),
+    ("examples/04_combined.py", 0.10),
+])
+def test_example_mse_within_table_tolerance(name, max_mse):
+    """examples/README.md advertises MSE values; CI keeps them honest."""
+    import subprocess
+    import sys
+    import re
+
+    result = subprocess.run(
+        [sys.executable, name],
+        capture_output=True, text=True, check=True,
+    )
+    last_line = [line for line in result.stdout.splitlines() if line.strip()][-1]
+    mse_match = re.search(r"(\d+\.\d+)\s*$", last_line)
+    assert mse_match, f"Could not parse MSE from: {last_line}"
+    mse = float(mse_match.group(1))
+    assert mse <= max_mse, f"{name} MSE {mse} exceeds curriculum-table cap {max_mse}"
