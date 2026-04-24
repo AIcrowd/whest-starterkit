@@ -11,18 +11,6 @@
       Why: README snapshot only covers fenced blocks; doesn't catch missed-step
       regressions across stages.
 
-- [ ] **Asciinema demo cast** (Task 22 deferred from initial release).
-      Record a 5-minute walkthrough on a real terminal:
-      `make demo-cast` requires a TTY for proper styling and prompts.
-      Then upload via `asciinema upload assets/demo.cast`, capture the asciinema.org
-      ID, and replace the placeholder note at the top of `README.md` with:
-      `[![asciicast](https://asciinema.org/a/<ID>.svg)](https://asciinema.org/a/<ID>)`.
-      Optionally render to SVG locally with `agg` (`cargo install --git
-      https://github.com/asciinema/agg`) and commit `assets/demo.svg` instead of
-      relying on asciinema.org hosting.
-      Why: design spec §6 (Delight #2) — visible "first 5 minutes" recording is
-      the single highest-leverage README element for evaluating fit at a glance.
-
 ## Whestbench dependencies (not our work)
 - Stage 5 (Docker runner) is "coming soon" until whestbench ships `--runner docker`.
   No fixed target. Update `docs/getting-started/stage-5-run-docker.md` placeholder

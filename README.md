@@ -7,7 +7,9 @@
 [![CI](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml)
 [![whestbench pin](https://github.com/AIcrowd/whest-starterkit/actions/workflows/bump-whestbench.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/bump-whestbench.yml)
 
-> **Demo cast:** A 5-minute walkthrough recording will be linked here once published. See [TODOS.md](TODOS.md).
+<div align="center">
+  <img src="assets/demo.gif" alt="whest-starterkit first 5 minutes" width="720">
+</div>
 
 ## 60-Second Overview
 
@@ -16,6 +18,11 @@ You are given a randomly-initialized ReLU MLP and a FLOP budget. Your job: predi
 This kit walks you up a "ladder of formality" — start by iterating math locally with zero CLI knowledge, then graduate to the harness when you're ready.
 
 ## Your First 5 Minutes (Stage 1: just `whest`)
+
+```bash
+git clone https://github.com/AIcrowd/whest-starterkit.git
+cd whest-starterkit
+```
 
 ```bash-test
 uv sync && uv run python estimator.py
