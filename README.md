@@ -3,7 +3,7 @@
 [![CI](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml)
 [![whestbench pin](https://github.com/AIcrowd/whest-starterkit/actions/workflows/bump-whestbench.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/bump-whestbench.yml)
 
-[![asciicast](https://asciinema.org/a/PLACEHOLDER.svg)](https://asciinema.org/a/PLACEHOLDER)
+> **Demo cast:** A 5-minute walkthrough recording will be linked here once published. See [TODOS.md](TODOS.md).
 
 ## 60-Second Overview
 
