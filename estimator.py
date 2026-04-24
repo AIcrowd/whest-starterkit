@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
-import sys
 from pathlib import Path
 
 import whest as we
-
-from whestbench import BaseEstimator, MLP
+from whestbench import MLP, BaseEstimator
 
 
 class Estimator(BaseEstimator):
@@ -57,7 +55,7 @@ if __name__ == "__main__":
 
     mlp = build_mlp(width=args.width, depth=args.depth, seed=args.seed)
 
-    print(f"--- Your estimator ---")
+    print("--- Your estimator ---")
     compare_against_monte_carlo(Estimator(), mlp)
 
     if args.baseline:

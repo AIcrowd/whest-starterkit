@@ -75,9 +75,10 @@ def test_monte_carlo_layer_means_is_deterministic():
 def test_compare_against_mc_preflight_rejects_wrong_shape(capsys):
     """Estimator returning the wrong shape should print a one-line diagnostic
     and SystemExit cleanly, not raise a numpy traceback."""
-    from local_engine import build_mlp, compare_against_monte_carlo
     import whest as we
-    from whestbench import BaseEstimator, MLP
+    from whestbench import BaseEstimator
+
+    from local_engine import build_mlp, compare_against_monte_carlo
 
     class WrongShapeEstimator(BaseEstimator):
         def predict(self, mlp: MLP, budget: int) -> we.ndarray:
@@ -95,10 +96,10 @@ def test_compare_against_mc_preflight_rejects_wrong_shape(capsys):
 
 def test_compare_against_mc_preflight_rejects_wrong_dtype(capsys):
     """Estimator returning numpy array (not whest.ndarray) should be caught."""
-    from local_engine import build_mlp, compare_against_monte_carlo
     import numpy as np
-    import whest as we
-    from whestbench import BaseEstimator, MLP
+    from whestbench import BaseEstimator
+
+    from local_engine import build_mlp, compare_against_monte_carlo
 
     class NumpyEstimator(BaseEstimator):
         def predict(self, mlp: MLP, budget: int) -> we.ndarray:
@@ -116,9 +117,10 @@ def test_compare_against_mc_preflight_rejects_wrong_dtype(capsys):
 def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
     """Happy path: zeros estimator returns the right shape, MC sweep runs,
     a table is printed."""
-    from local_engine import build_mlp, compare_against_monte_carlo
     import whest as we
-    from whestbench import BaseEstimator, MLP
+    from whestbench import BaseEstimator
+
+    from local_engine import build_mlp, compare_against_monte_carlo
 
     class ZerosEstimator(BaseEstimator):
         def predict(self, mlp: MLP, budget: int) -> we.ndarray:
@@ -146,9 +148,9 @@ def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
 ])
 def test_example_mse_within_table_tolerance(name, max_mse):
     """examples/README.md advertises MSE values; CI keeps them honest."""
+    import re
     import subprocess
     import sys
-    import re
 
     result = subprocess.run(
         [sys.executable, name],

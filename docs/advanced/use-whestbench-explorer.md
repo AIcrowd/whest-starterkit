@@ -76,5 +76,5 @@ Patterns to look for:
 
 ## Next step
 
-- [Validate, Run, and Package](./validate-run-package.md)
+- [Validate, Run, and Package](../how-to/validate-run-package.md)
 - [Problem Setup](../concepts/problem-setup.md)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import whest as we
-
 from whestbench import BaseEstimator, SetupContext
 from whestbench.domain import MLP
 

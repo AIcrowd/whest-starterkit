@@ -102,5 +102,5 @@ If `budget_exhausted` is `true`, your predictions were discarded. You need to re
 
 - [Write an Estimator](./write-an-estimator.md)
 - [Scoring Model](../concepts/scoring-model.md)
-- [Profile Simulation](./profile-simulation.md)
+- [Profile Simulation](../advanced/profile-simulation.md)
 - [Estimator Contract](../reference/estimator-contract.md)

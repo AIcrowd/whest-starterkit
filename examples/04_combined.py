@@ -31,7 +31,6 @@ The two paths differ only in how sigma_pre is obtained:
 from __future__ import annotations
 
 import whest as we
-
 from whestbench import BaseEstimator
 from whestbench.domain import MLP
 

@@ -4,7 +4,7 @@
 
 The starter kit uses whest as its single simulation backend — analytical FLOP counting replaces wall-clock timing across multiple backends. The `profile-simulation` command lets you verify FLOP accounting correctness and explore how FLOP costs scale with network size.
 
-> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](./manage-flop-budget.md).
+> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
 
 Use this page when you want to:
 
@@ -84,5 +84,5 @@ Use the FLOP counts in the JSON to understand how much budget your estimator con
 ## Next step
 
 - [CLI Reference: profile-simulation](../reference/cli-reference.md#whest-profile-simulation) — full flag reference
-- [Use Evaluation Datasets](./use-evaluation-datasets.md) — pre-create datasets for faster iteration
-- [Validate, Run, and Package](./validate-run-package.md) — score your estimator
+- [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — pre-create datasets for faster iteration
+- [Validate, Run, and Package](../how-to/validate-run-package.md) — score your estimator
