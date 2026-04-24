@@ -70,3 +70,68 @@ def test_monte_carlo_layer_means_is_deterministic():
 
     import whest as we
     assert float(we.max(we.abs(a - b))) == 0.0
+
+
+def test_compare_against_mc_preflight_rejects_wrong_shape(capsys):
+    """Estimator returning the wrong shape should print a one-line diagnostic
+    and SystemExit cleanly, not raise a numpy traceback."""
+    from local_engine import build_mlp, compare_against_monte_carlo
+    import whest as we
+    from whestbench import BaseEstimator, MLP
+
+    class WrongShapeEstimator(BaseEstimator):
+        def predict(self, mlp: MLP, budget: int) -> we.ndarray:
+            return we.zeros((mlp.depth + 99, mlp.width))  # wrong rows
+
+    mlp = build_mlp(width=4, depth=2, seed=0)
+
+    with pytest.raises(SystemExit):
+        compare_against_monte_carlo(WrongShapeEstimator(), mlp, sample_counts=(10,))
+
+    out = capsys.readouterr().out
+    assert "expected" in out.lower()
+    assert "estimator-contract" in out
+
+
+def test_compare_against_mc_preflight_rejects_wrong_dtype(capsys):
+    """Estimator returning numpy array (not whest.ndarray) should be caught."""
+    from local_engine import build_mlp, compare_against_monte_carlo
+    import numpy as np
+    import whest as we
+    from whestbench import BaseEstimator, MLP
+
+    class NumpyEstimator(BaseEstimator):
+        def predict(self, mlp: MLP, budget: int) -> we.ndarray:
+            return np.zeros((mlp.depth, mlp.width))  # type: ignore
+
+    mlp = build_mlp(width=4, depth=2, seed=0)
+
+    with pytest.raises(SystemExit):
+        compare_against_monte_carlo(NumpyEstimator(), mlp, sample_counts=(10,))
+
+    out = capsys.readouterr().out
+    assert "whest.ndarray" in out or "we.ndarray" in out
+
+
+def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
+    """Happy path: zeros estimator returns the right shape, MC sweep runs,
+    a table is printed."""
+    from local_engine import build_mlp, compare_against_monte_carlo
+    import whest as we
+    from whestbench import BaseEstimator, MLP
+
+    class ZerosEstimator(BaseEstimator):
+        def predict(self, mlp: MLP, budget: int) -> we.ndarray:
+            return we.zeros((mlp.depth, mlp.width))
+
+    mlp = build_mlp(width=4, depth=2, seed=0)
+    result = compare_against_monte_carlo(
+        ZerosEstimator(), mlp, sample_counts=(10, 100)
+    )
+
+    assert result is None
+    out = capsys.readouterr().out
+    assert "n_samples" in out
+    assert "MSE" in out
+    assert "10" in out
+    assert "100" in out

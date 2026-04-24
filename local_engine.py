@@ -66,3 +66,69 @@ def monte_carlo_layer_means(
         x = we.maximum(we.matmul(x, w), 0.0)
         rows.append(we.mean(x, axis=0))
     return we.stack(rows, axis=0)
+
+
+def compare_against_monte_carlo(
+    estimator: BaseEstimator,
+    mlp: MLP,
+    sample_counts: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000),
+    estimator_budget: int = int(1e9),
+    sampling_budget: int = int(1e12),
+    seed: int = 0,
+) -> None:
+    """Run estimator once, then sweep MC at each sample count and print a table.
+
+    Friendly preflight: before the MC sweep, validate the estimator returns the
+    right shape/dtype on the actual MLP. On failure, print a one-line diagnostic
+    pointing at the contract doc and exit cleanly (SystemExit) — no numpy traceback.
+
+    Returns None — this is a print helper for stage-1 dev loops.
+    """
+    expected_shape = (mlp.depth, mlp.width)
+
+    try:
+        with we.BudgetContext(flop_budget=estimator_budget, quiet=True) as est_ctx:
+            est_pred = estimator.predict(mlp, estimator_budget)
+    except Exception as exc:
+        import inspect
+        try:
+            src_file = inspect.getsourcefile(type(estimator))
+        except TypeError:
+            src_file = "<unknown>"
+        print(
+            f"\n[whest-starterkit] Your estimator raised at {src_file} "
+            f"during predict():\n  {type(exc).__name__}: {exc}\n"
+            f"See docs/reference/estimator-contract.md\n"
+        )
+        raise SystemExit(2) from exc
+
+    if not isinstance(est_pred, we.ndarray):
+        print(
+            f"\n[whest-starterkit] predict() must return a `whest.ndarray`, "
+            f"got `{type(est_pred).__name__}`.\n"
+            f"Tip: use `import whest as we` and return `we.zeros(...)` or "
+            f"`we.array(...)`.\n"
+            f"See docs/reference/estimator-contract.md\n"
+        )
+        raise SystemExit(2)
+
+    if est_pred.shape != expected_shape:
+        print(
+            f"\n[whest-starterkit] predict() returned shape {tuple(est_pred.shape)}, "
+            f"expected (depth={mlp.depth}, width={mlp.width}).\n"
+            f"See docs/reference/estimator-contract.md\n"
+        )
+        raise SystemExit(2)
+
+    estimator_flops = est_ctx.flops_used
+
+    row = "{:>10} | {:>14} | {:>15} | {:>10}".format
+    header = row("n_samples", "sampling_flops", "estimator_flops", "MSE")
+    print(f"MLP: width={mlp.width} depth={mlp.depth} seed={seed}\n")
+    print(header)
+    print("-" * len(header))
+    for n in sample_counts:
+        with we.BudgetContext(flop_budget=sampling_budget, quiet=True) as mc_ctx:
+            sampled = monte_carlo_layer_means(mlp, n, seed=seed)
+        mse = float(we.mean((est_pred - sampled) ** 2))
+        print(row(f"{n:,}", f"{mc_ctx.flops_used:,}", f"{estimator_flops:,}", f"{mse:.6f}"))
