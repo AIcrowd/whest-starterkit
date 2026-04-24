@@ -50,3 +50,23 @@ def test_build_mlp_rejects_invalid_dimensions():
         build_mlp(width=0, depth=3, seed=0)
     with pytest.raises(ValueError):
         build_mlp(width=8, depth=0, seed=0)
+
+
+def test_monte_carlo_layer_means_returns_correct_shape():
+    from local_engine import build_mlp, monte_carlo_layer_means
+
+    mlp = build_mlp(width=8, depth=3, seed=0)
+    means = monte_carlo_layer_means(mlp, n_samples=100, seed=0)
+
+    assert means.shape == (3, 8)
+
+
+def test_monte_carlo_layer_means_is_deterministic():
+    from local_engine import build_mlp, monte_carlo_layer_means
+
+    mlp = build_mlp(width=4, depth=2, seed=0)
+    a = monte_carlo_layer_means(mlp, n_samples=50, seed=42)
+    b = monte_carlo_layer_means(mlp, n_samples=50, seed=42)
+
+    import whest as we
+    assert float(we.max(we.abs(a - b))) == 0.0

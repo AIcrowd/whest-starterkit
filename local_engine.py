@@ -46,3 +46,23 @@ def build_mlp(width: int, depth: int, seed: int = 0) -> MLP:
         for _ in range(depth)
     ]
     return MLP(width=width, depth=depth, weights=weights)
+
+
+def monte_carlo_layer_means(
+    mlp: MLP,
+    n_samples: int,
+    seed: int = 0,
+) -> we.ndarray:
+    """Forward `n_samples` N(0,1) inputs through `mlp.weights` and average per layer.
+
+    Returns shape `(depth, width)` — same shape as `Estimator.predict` so the two
+    can be subtracted directly.
+    """
+    rng = we.random.default_rng(seed)
+    width = mlp.width
+    x = we.array(rng.standard_normal((n_samples, width)).astype(we.float32))
+    rows = []
+    for w in mlp.weights:
+        x = we.maximum(we.matmul(x, w), 0.0)
+        rows.append(we.mean(x, axis=0))
+    return we.stack(rows, axis=0)
