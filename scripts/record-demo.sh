@@ -29,5 +29,5 @@ prompt "uv run whest validate --estimator estimator.py"
 uv run whest validate --estimator estimator.py
 echo
 
-prompt "uv run whest run --estimator estimator.py --runner local --n-mlps 10 --n-samples 50000 --seed 42"
-uv run whest run --estimator estimator.py --runner local --n-mlps 10 --n-samples 50000 --seed 42
+prompt "uv run whest run --estimator estimator.py --runner local --n-mlps 20 --n-samples 100000 --seed 42"
+uv run whest run --estimator estimator.py --runner local --n-mlps 20 --n-samples 100000 --seed 42
