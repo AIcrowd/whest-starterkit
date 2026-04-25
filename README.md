@@ -50,14 +50,12 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 
 | Stage | Command | What it adds |
 |---|---|---|
-| 1 | `uv run python estimator.py` | The math. Estimator vs Monte Carlo. |
-| 2 | `uv run whest validate --estimator estimator.py` | Contract correctness (shapes, types). |
-| 3 | `uv run whest run --estimator estimator.py --runner local` | Real scoring, in-process, debuggable with `pdb`. |
-| 4 | `uv run whest run --estimator estimator.py --runner subprocess` | Isolation; closer to grader environment. |
-| 5 | `uv run whest run --estimator estimator.py --runner docker` | **Coming soon.** Production-equivalent grader. |
-| 6 | `uv run whest package --estimator estimator.py -o submission.tar.gz` | Submission artifact. |
-
-Each stage has a short doc: [docs/getting-started/](docs/getting-started/).
+| [1](docs/getting-started/stage-1-standalone.md) | `uv run python estimator.py` | The math. Estimator vs Monte Carlo. |
+| [2](docs/getting-started/stage-2-validate.md) | `uv run whest validate --estimator estimator.py` | Contract correctness (shapes, types). |
+| [3](docs/getting-started/stage-3-run-local.md) | `uv run whest run --estimator estimator.py --runner local` | Real scoring, in-process, debuggable with `pdb`. |
+| [4](docs/getting-started/stage-4-run-subprocess.md) | `uv run whest run --estimator estimator.py --runner subprocess` | Isolation; closer to grader environment. |
+| [5](docs/getting-started/stage-5-run-docker.md) | `uv run whest run --estimator estimator.py --runner docker` | **Coming soon.** Production-equivalent grader. |
+| [6](docs/getting-started/stage-6-package.md) | `uv run whest package --estimator estimator.py -o submission.tar.gz` | Submission artifact. |
 
 ## When Something Breaks
 
