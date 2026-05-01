@@ -152,8 +152,11 @@ This decomposition lets you see whether time is going to numpy compute, framewor
 
 ## WhestBench-specific limits
 
-Flopscope itself only knows about `wall_time_limit_s` on `BudgetContext`.
-WhestBench adds two run-level knobs on top:
+Flopscope's `BudgetContext` measures `wall_time_s`, `flopscope_backend_time_s`,
+`flopscope_overhead_time_s`, and `residual_wall_time_s`. It also accepts
+`wall_time_limit_s`, which it checks while counted flopscope operations run.
+
+WhestBench exposes some of those concepts as run-level CLI knobs:
 
 - `--wall-time-limit`: passed through to the estimator's `BudgetContext`
 - `--residual-wall-time-limit`: enforced by WhestBench after `predict()` returns,
@@ -162,8 +165,10 @@ WhestBench adds two run-level knobs on top:
   Python and uninstrumented work — not numpy backend execution or the
   framework's bookkeeping tax.
 
-So if you see `residual_wall_time_exhausted` in a report, that came from
-WhestBench scoring logic, not from a `BudgetContext` parameter.
+So if you see `time_exhausted`, that came from Flopscope's `wall_time_limit_s`.
+If you see `residual_wall_time_exhausted`, that came from WhestBench scoring
+logic comparing Flopscope's measured `residual_wall_time_s` with the configured
+`--residual-wall-time-limit`.
 
 ## Common Gotchas
 
