@@ -162,9 +162,11 @@ When using `whest run --dataset`, the report includes `run_config.dataset`:
 
 ### Dataset format compatibility
 
-The `.npz` files produced by `whest create-dataset` carry a `seed_protocol.version` in their embedded metadata. WhestBench refuses to load datasets at any other version: loading a v1.0 dataset raises `ValueError("Incompatible dataset seed_protocol version: file has '1.0', this whestbench requires '2.0'. Re-bake the dataset with `whest create-dataset`.")`.
+Datasets produced by `whest dataset bake` are written as **directory bundles** in the schema-3.0 layout used by HF Hub (a per-split parquet under `data/`, a `metadata.json`, and a rendered `README.md`). The `metadata.json` carries `schema_version` (currently `"3.0"`) and `seed_protocol.version` (currently `"3.0"`, name `whestbench_explicit_per_mlp_seeds`). WhestBench refuses to load a dataset whose schema or seed-protocol version it doesn't recognize, and the error message points at the modern bake command.
 
-The v2.0 format adds a per-MLP `seed` (stored as the `mlp_seeds` array in the `.npz`) that is exposed to estimators via `mlp.seed` — see [estimator-contract.md](./estimator-contract.md#reproducibility-under-the-grader-seed) for how to consume it.
+The 3.0 seed protocol stores the per-MLP input seed in the parquet `mlp_seed` column. Each estimator receives the participant-facing seed via `mlp.seed`, derived deterministically from the input seed — see [estimator-contract.md](./estimator-contract.md#reproducibility-under-the-grader-seed) for how to consume it.
+
+> Historical note: pre-`schema_version: 3.0` releases shipped datasets as `.npz` files produced by `whest create-dataset`. That command was renamed to `whest dataset bake` when the layout moved to the multi-file HF-friendly form, and `.npz` datasets are no longer supported.
 
 ## ➡️ Next step
 

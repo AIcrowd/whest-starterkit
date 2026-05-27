@@ -4,101 +4,134 @@
 
 ## 🎯 When to use this page
 
-Every `whest run` generates fresh random MLPs and samples many forward passes to establish ground truth. This is correct but slow — especially when you are iterating on an estimator and re-running the same evaluation dozens of times during development.
+Every `whest run` *without* `--dataset` generates fresh random MLPs and runs millions of forward passes to establish ground-truth means. That's slow when you're iterating: you pay the ground-truth tax on every run, and you can't compare two estimator versions on identical MLPs.
 
-Pre-created evaluation datasets let you do that expensive work once and reuse it across your entire development cycle:
+Pre-baked evaluation datasets fix both:
 
-- **Faster iteration** — `whest run --dataset` skips MLP generation and ground truth sampling entirely.
-- **Fair comparisons** — every estimator you test is scored against the exact same MLPs with the same ground truth.
-- **Reproducibility** — the dataset artifact records the seed and all creation parameters, so anyone can recreate it exactly.
+- **Fast iteration** — ground truth is precomputed; `whest run --dataset ...` skips MLP generation and Monte-Carlo sampling entirely.
+- **Fair comparisons** — every estimator you test scores against the exact same MLPs against the exact same ground-truth means.
+- **Reproducibility** — the dataset's `metadata.json` pins the seeds, schema, and bake config, so anyone can verify your numbers.
 
-For explicit seeds, `create-dataset` now uses a hierarchical `SeedSequence` split: each MLP gets one child stream for weight sampling and one child stream for Monte Carlo sampling.
+For day-to-day estimator work, you almost never need to bake your own. The AIcrowd team publishes a pre-baked dataset on HuggingFace Hub; just point `whest run` at it.
 
-## 💾 Public starter dataset
+## 🚀 Do this now (HF Hub, no bake required)
 
-The public baseline dataset now lives on Hugging Face:
+The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026) and contains two splits:
 
-<https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026>
+| Split | Size | Use for |
+|---|---:|---|
+| `mini` | 100 MLPs (~250 MB) | Day-to-day iteration. Downloads in seconds. |
+| `full` | 1,000 MLPs (~1.4 GB) | Final lock-in check before you submit. |
 
-Use that dataset (or a locally generated HF-compatible dataset) as the input to `--dataset` so you and your collaborators run against the same fixed ground-truth set:
+`mini` is the **default split** — `whest run --dataset hf://...` without `--split` picks it automatically.
 
-```bash
-whest run --estimator estimator.py --dataset aicrowd/arc-whestbench-public-2026
-```
-
-## 🚀 Do this now
-
-### 1. Create your dataset (once)
+### 1. Iterate against mini
 
 ```bash
-whest create-dataset -o my_dataset
+whest run \
+    --estimator estimator.py \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-warmup
 ```
 
-This generates MLPs and samples ground truth means. Output is saved as a Hugging Face-compatible dataset artifact for easy sharing.
+The CLI prints something like `Using default split 'mini' (from metadata.default_split)`, downloads ~250 MB on the first run (cached for every subsequent run), and runs your estimator against 100 MLPs. Typical end-to-end wall time after the cache is warm: under 5 seconds.
 
-Common options:
+### 2. Lock in your numbers against full
+
+```bash
+whest run \
+    --estimator estimator.py \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-warmup \
+    --split full
+```
+
+Use this before submitting. `mini` is independent of `full` (different MLPs entirely), so a good mini score doesn't guarantee a good full score — but big regressions on full almost always show up on mini first.
+
+### 3. Same dataset via the pure HF API
+
+If you want the raw rows for analysis (rather than running an estimator), use `datasets`:
+
+```python
+from datasets import load_dataset
+
+# mini is the default config of this repo
+mini = load_dataset("aicrowd/arc-whestbench-public-2026",
+                    revision="v1-warmup", split="mini")
+print(mini[0]["mlp_name"])     # e.g. "krista-wright"
+print(mini[0]["weights"])      # (depth=8, width=256, width=256) float64
+
+# full is a separate config; pass the config name explicitly
+full = load_dataset("aicrowd/arc-whestbench-public-2026",
+                    "full", revision="v1-warmup", split="full")
+```
+
+The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), so re-downloads dedupe at the chunk level and parallel multi-shard fetches are fast. For maximum download throughput on a fast connection, set `HF_XET_HIGH_PERFORMANCE=1` in your environment before the load.
+
+## 🛠 Bake your own (rare)
+
+You only need this when:
+
+- You're testing on MLPs the public dataset doesn't include (a different width / depth, or a private seed list).
+- You want to validate a custom bake config end-to-end.
+
+The modern command is `whest dataset bake`. It writes a *directory* (not a `.npz`) in the schema-3.0 layout used by HF Hub:
+
+```bash
+whest dataset bake \
+    --output ./my-eval \
+    --n-mlps 10 \
+    --n-samples 1_000_000 \
+    --width 256 \
+    --depth 8
+# Produces:
+#   ./my-eval/
+#   ├── data/public-00000-of-00001.parquet
+#   ├── metadata.json
+#   └── README.md
+```
+
+Common flags:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--n-mlps` | 10 | Number of random MLPs to generate |
-| `--n-samples` | 10000 | Samples per MLP for ground truth estimation |
-| `--seed` | auto | RNG seed (auto-generated if omitted, always recorded) |
-| `-o, --output` | `eval_dataset` | Output dataset path/id |
-| `--width` | (contest default) | Neuron count per MLP |
-| `--depth` | (contest default) | Layers per MLP |
-| `--flop-budget` | (contest default) | FLOP cap for the estimator |
+| `--n-mlps` | 10 | Number of MLPs to bake |
+| `--n-samples` | 10000 | Ground-truth samples per MLP |
+| `--width` | 256 | Neurons per layer |
+| `--depth` | 8 | Number of weight matrices |
+| `--output` / `-o` | (required) | Output directory (must not exist) |
+| `--mlp-seeds` | auto | JSON file with per-MLP seeds; defaults to fresh `secrets.randbits(63)` |
+| `--split` | `public` | Split name for the parquet file |
 
-If you want to avoid extra host probing during local development, set `WHEST_SKIP_HARDWARE_FALLBACK_PROBES=1` before `whest create-dataset` or `whest run`. This skips only the OS-native fallback probes used to fill missing hardware fields in report and dataset metadata. Cheap fields and `psutil`-backed fields are still recorded, and fallback-backed fields may remain `null`.
-
-### 2. Run against it (every time)
+Then run against it like any HF dataset:
 
 ```bash
-whest run --estimator estimator.py --dataset my_dataset
+whest run --estimator estimator.py --dataset ./my-eval
 ```
 
-The `--n-mlps` flag is ignored when `--dataset` is provided — the values come from the dataset artifact.
-
-You can keep reusing the same dataset file across your entire development cycle. Edit your estimator, re-run the command, compare scores — the ground truth stays the same so differences reflect only your estimator changes.
+If you want to avoid extra host probing during local bakes, set `WHEST_SKIP_HARDWARE_FALLBACK_PROBES=1` before `whest dataset bake` or `whest run`. This skips only the OS-native fallback probes used to fill missing hardware fields in metadata. Cheap fields and `psutil`-backed fields are still recorded.
 
 ## ✅ Expected outcome
 
-- `create-dataset` produces a HF-compatible dataset at the specified location.
-- `run --dataset` shows "Loading dataset" instead of "Generating MLPs" and skips ground truth sampling.
-- `run --dataset` still shows a `Sampling Budget Breakdown (Ground Truth)` section in human output, restored from the dataset metadata for exactly the MLPs used in that run.
-- Score reports are consistent across runs with the same dataset.
+- `whest run --dataset hf://...@v1-warmup` (no `--split`) auto-resolves to `mini`, downloads ~250 MB on first call, scores in seconds on subsequent calls.
+- `whest run --dataset hf://...@v1-warmup --split full` deliberately switches to the 1,000-MLP split.
+- Re-running with the same dataset + estimator gives identical scores (the bake is deterministic).
 
-## Dataset portability
+## 📚 Dataset traceability
 
-Unlike the old time-based scoring model, flopscope uses analytical FLOP counting rather than wall-clock timing. This means datasets are **fully portable across machines** — the stored ground truth and FLOP budgets are hardware-independent. You can create a dataset on a laptop and run it on a cloud instance with identical results.
-
-## Dataset traceability
-
-When using `--dataset`, the results JSON includes a `dataset` reference under `run_config` so you can always trace exactly which dataset produced a given score:
+When you use `--dataset`, the results JSON records exactly which dataset produced the score:
 
 ```json
 {
   "run_config": {
     "dataset": {
-      "path": "my_dataset",
-      "sha256": "a1b2c3...",
-      "seed": 42,
-      "n_mlps": 10
+      "path": "hf://aicrowd/arc-whestbench-public-2026@v1-warmup",
+      "split": "mini",
+      "n_mlps": 100
     }
   }
 }
 ```
 
-Example seeded run command:
-
-```bash
-whest run --estimator estimator.py --seed 20260417
-```
-
-`run --seed` stores the chosen seed in `run_config.seed`, and all `create-dataset` metadata now records:
-
-```json
-{"seed_protocol": {"name": "whestbench_seedsequence_hierarchy", "version": "1.0", "seeded": true}}
-```
+The dataset's own `metadata.json` pins `seed_protocol`, `whestbench_version`, `bake_config`, and the per-pod hardware fingerprints. Anyone can verify the bake from a commit OID + seed list.
 
 ## ➡️ Next step
 

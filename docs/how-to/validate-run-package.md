@@ -24,11 +24,20 @@ whest run --estimator estimator.py
 
 `whest run` defaults to `--runner local` for fast iteration.
 
-Run against a pre-created dataset (skips sampling — much faster for repeated runs):
+Run against the published evaluation dataset on HuggingFace (skips sampling — much faster for repeated runs, no local bake needed):
 
 ```bash
-whest create-dataset -o my_dataset
-whest run --estimator estimator.py --dataset my_dataset
+whest run \
+    --estimator estimator.py \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-warmup
+# auto-resolves to the `mini` split (100 MLPs, ~250 MB cached after first call)
+```
+
+Or bake a custom local dataset once and reuse it:
+
+```bash
+whest dataset bake --output ./my-eval --n-mlps 10 --n-samples 10000
+whest run --estimator estimator.py --dataset ./my-eval
 ```
 
 See [Use Evaluation Datasets](./use-evaluation-datasets.md) for details.
@@ -71,7 +80,7 @@ These all show up in `whest run --help` but get lost there. Reach for them when:
 | Flag | Reach for it when… |
 |---|---|
 | `--seed N` | Deterministic comparison between two estimator versions. Pin the seed and the same MLPs, the same per-MLP `mlp.seed` values, and the same `SetupContext.seed` are used across runs. Also accepted by `whest validate` (seeds the validation `setup(ctx)` call). With `--dataset`, the dataset supplies the per-MLP seeds and `--seed` controls `ctx.seed` only. |
-| `--n-samples N` | Ground-truth sampling samples per MLP. The contest default (in `whest run` without an explicit override) is `100 * 100 * 256 = 2,560,000`; `whest create-dataset --n-samples` defaults to `10000`. Drop to `--n-samples 5000` for a ~10x faster local sanity check; raise back up before drawing real conclusions. |
+| `--n-samples N` | Ground-truth sampling samples per MLP. The contest default (in `whest run` without an explicit override) is `100 * 100 * 256 = 2,560,000`; `whest dataset bake --n-samples` defaults to `10000`. Drop to `--n-samples 5000` for a ~10x faster local sanity check; raise back up before drawing real conclusions. |
 | `--n-mlps N` | Default `10`. Drop to `3` while iterating to halve runtime; raise to `20+` when you're trying to reduce noise on a close score. |
 | `--flop-budget N` | Default `6.8e10` (the grader effective-compute budget — caps `C_m = F_m + λ·R_m`, not just analytical FLOPs). Bump to `1e11` to confirm an algorithm idea isn't budget-starved before optimizing for budget. |
 | `--profile` | Emits a per-namespace FLOP/time breakdown so you can see where your estimator burns the budget. |
