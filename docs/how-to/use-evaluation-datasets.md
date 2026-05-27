@@ -66,6 +66,8 @@ full = load_dataset("aicrowd/arc-whestbench-public-2026",
 
 The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), so re-downloads dedupe at the chunk level and parallel multi-shard fetches are fast. For maximum download throughput on a fast connection, set `HF_XET_HIGH_PERFORMANCE=1` in your environment before the load.
 
+> **Tip — prepared-Arrow fast path.** When you load via `whestbench.load_dataset(...)` (or via `whest run --dataset hf://...`), WhestBench prefers a pre-built `prepared/<split>/` Arrow artifact published alongside the parquet. It downloads only that subtree and memory-maps it via `datasets.Dataset.load_from_disk()`, skipping the parquet→arrow conversion that the bare `datasets.load_dataset(...)` path runs on first use. End-to-end this is ~18% faster on `mini` and ~60% faster on `full`, with a ~33% smaller cache footprint. You'll see a one-line stderr notice (`whestbench: using prepared Arrow split 'mini' from ...`) when the fast path fires. Falls back silently to the parquet path if anything goes wrong.
+
 ## 🛠 Bake your own (rare)
 
 You only need this when:
