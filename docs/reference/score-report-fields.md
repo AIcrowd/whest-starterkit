@@ -158,13 +158,13 @@ When using `whest run --dataset`, the report includes `run_config.dataset`:
 | `sha256` | SHA-256 hash of the file for integrity |
 | `seed` | RNG seed used to generate the dataset |
 | `n_mlps` | Number of MLPs in the dataset |
-| `seed_protocol` | Object with `name` and `version`. WhestBench currently requires `version = "2.0"`. |
+| `seed_protocol` | Object with `name` and `version`. WhestBench currently requires `version = "3.0"` (`whestbench_explicit_per_mlp_seeds`). |
 
 ### Dataset format compatibility
 
-The `.npz` files produced by `whest create-dataset` carry a `seed_protocol.version` in their embedded metadata. WhestBench refuses to load datasets at any other version: loading a v1.0 dataset raises `ValueError("Incompatible dataset seed_protocol version: file has '1.0', this whestbench requires '2.0'. Re-bake the dataset with `whest create-dataset`.")`.
+Datasets produced by `whest dataset bake` are HF-compatible **directories** (parquet shards under `data/` plus a `metadata.json`). They are not `.npz` files: the older `whest create-dataset` command and its single-file `.npz` output have been removed.
 
-The v2.0 format adds a per-MLP `seed` (stored as the `mlp_seeds` array in the `.npz`) that is exposed to estimators via `mlp.seed` — see [estimator-contract.md](./estimator-contract.md#reproducibility-under-the-grader-seed) for how to consume it.
+`metadata.json` carries a `seed_protocol.version`. WhestBench refuses to load datasets at any other version; loading an old format raises a `ValueError` telling you to re-bake with `whest dataset bake`. The v3.0 format names the protocol `whestbench_explicit_per_mlp_seeds` and stores an explicit per-MLP `seed` that is exposed to estimators via `mlp.seed`. See [estimator-contract.md](./estimator-contract.md#reproducibility-under-the-grader-seed) for how to consume it.
 
 ## ➡️ Next step
 

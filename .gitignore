@@ -16,6 +16,11 @@ build/
 dist/
 *.egg-info/
 
+# Baked whest datasets (`whest dataset bake --output DIR/`)
+/train_dataset/
+/test_dataset/
+/eval_dataset/
+
 # OS
 .DS_Store
 Thumbs.db

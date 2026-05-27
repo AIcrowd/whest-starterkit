@@ -50,6 +50,18 @@ uv run python examples/03_covariance_propagation.py
 
 See [examples/README.md](examples/README.md) for the curriculum table.
 
+## 🤗 Score Against the Official Public Suite
+
+For a real, reproducible score, point `--dataset` at the public set on Hugging Face. The first run downloads about **2 GB** of parquet shards and caches them under `~/.cache/huggingface/`; every later run hits the cache.
+
+```bash
+uv run whest run --estimator examples/02_mean_propagation.py \
+  --dataset hf://aicrowd/arc-whestbench-public-2026@v1-warmup \
+  --split mini
+```
+
+Two splits are available on the `v1-warmup` tag: **`mini`** (100 MLPs, the recommended default) and **`full`** (larger, longer to evaluate). `--n-mlps` is optional with `--dataset`; pass a smaller number, for example `--n-mlps 10`, only when you want a quick sanity-check subset. Full details (including baking your own dataset locally) are in [docs/how-to/use-evaluation-datasets.md](docs/how-to/use-evaluation-datasets.md).
+
 ## 🪜 Climb the Ladder (Stages 2-6)
 
 | Stage | Command | What it adds |

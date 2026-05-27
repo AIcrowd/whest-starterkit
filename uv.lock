@@ -1769,7 +1769,7 @@ dev = [
 
 [[package]]
 name = "whestbench"
-version = "0.5.0"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -1784,9 +1784,9 @@ dependencies = [
     { name = "threadpoolctl" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/28/b79e801a808b050df9878e83219f35fc5d88e014c3c7bc887fa9346d9008/whestbench-0.5.0.tar.gz", hash = "sha256:cde929b3d354e9697ceb73b1fdee1ad702fcd36f89d2801ffd24837b0e22cc84", size = 975940, upload-time = "2026-05-26T23:16:52.973Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/2d/9feb815ed1bf4e46d66615843d33cae4b1b41099882706c11f5f11444daf/whestbench-0.6.0.tar.gz", hash = "sha256:78321393dcd5866ceac0d62bdda5ab3663d077c815c35a1be72cb5df843d81f2", size = 983128, upload-time = "2026-05-27T14:11:18.402Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/20/aa077a7e4ada61abd3620a55115f22dcd81486b2aaea4305ab1ad2be90db/whestbench-0.5.0-py3-none-any.whl", hash = "sha256:41a36913693d435204e6a0eae597d8b032cba1eddfdaab564e3739a8ddd12273", size = 131007, upload-time = "2026-05-26T23:16:51.416Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/68/dcc2747cc57740f26d0087e9646376b625ce877f017b4453d4c570f7aee9/whestbench-0.6.0-py3-none-any.whl", hash = "sha256:8e38137a1bd737a4c1bcc73b5cd4f37fb1701e3152fa69de1c02e548c4cda448", size = 144975, upload-time = "2026-05-27T14:11:16.79Z" },
 ]
 
 [[package]]

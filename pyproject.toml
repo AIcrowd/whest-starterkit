@@ -2,6 +2,9 @@
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+py-modules = []
+
 [project]
 name = "whest-starterkit"
 version = "0.1.0"
