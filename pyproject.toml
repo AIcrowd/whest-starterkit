@@ -9,7 +9,7 @@ description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 dependencies = [
     "flopscope",
-    "whestbench",
+    "whestbench>=0.9.0",
 ]
 
 [dependency-groups]
