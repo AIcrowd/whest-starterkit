@@ -61,6 +61,25 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 | [5: Docker runner](docs/getting-started/stage-5-run-docker.md) | `uv run whest run --estimator estimator.py --runner docker` | **Coming soon.** Production-equivalent grader. |
 | [6: Package your submission](docs/getting-started/stage-6-package.md) | `uv run whest package --estimator estimator.py -o submission.tar.gz` | Submission artifact. |
 
+## 🏁 Submit to AIcrowd
+
+Climbed to Stage 6? Ship it from the CLI. Log in once with your
+[AIcrowd API key](https://www.aicrowd.com/participants/me/customize):
+
+```bash
+uv run whest login
+```
+
+Then package + submit in one step (add `--watch` to follow it to a score):
+
+```bash
+uv run whest submit --estimator estimator.py --watch
+```
+
+Your score and per-MLP detail land on the
+[challenge leaderboard](https://www.aicrowd.com/). Full walkthrough:
+[Stage 6 → Submit to AIcrowd](docs/getting-started/stage-6-package.md#-submit-to-aicrowd).
+
 ## 🚑 When Something Breaks
 
 ```bash-test

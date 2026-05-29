@@ -17,6 +17,7 @@ Each stage doc carries an "Expected outcome" callout so you know what success lo
 
 ## ➡️ Where to look next
 
+- Ready to ship? → [Stage 6 → Submit to AIcrowd](stage-6-package.md#-submit-to-aicrowd) (`whest login` then `whest submit`).
 - Got a working estimator and want a better score? → [How-to: algorithm ideas](../how-to/algorithm-ideas.md), [Reference: code patterns](../reference/code-patterns.md).
 - Score regressed after a change? → [How-to: debugging checklist](../how-to/debugging-checklist.md), [Troubleshooting](../troubleshooting/).
 - Need the exact contract? → [Reference: estimator contract](../reference/estimator-contract.md).

@@ -65,13 +65,19 @@ checks; each one maps to a single command or a one-line confirmation.
 
 ## Final command
 
+Once every box above is checked, ship it (run `whest login` first if you
+haven't):
+
 ```bash
-uv run whest package --estimator estimator.py -o submission.tar.gz
+uv run whest submit --estimator estimator.py --watch
 ```
 
-Inspect the artifact (`tar tf submission.tar.gz`) — it should contain
-`estimator.py`, `requirements.txt`, and `metadata.json`. Upload to
-[AIcrowd](https://www.aicrowd.com/) and move on.
+`whest submit` packages, uploads, and creates the submission in one step.
+Prefer to inspect the artifact first? Build it with
+`uv run whest package --estimator estimator.py -o submission.tar.gz`, check
+`tar tf submission.tar.gz` (it should contain `estimator.py`,
+`requirements.txt`, and `metadata.json`), then
+`uv run whest submit submission.tar.gz`.
 
 ## ➡️ See also
 

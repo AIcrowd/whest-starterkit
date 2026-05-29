@@ -16,7 +16,38 @@ You've climbed the ladder. Now ship it.
 uv run whest package --estimator estimator.py -o submission.tar.gz
 ```
 
-This produces `submission.tar.gz` containing your `estimator.py`, the resolved `whestbench` version, and any imports your estimator needs (auto-detected). Upload that file to the AIcrowd submission portal.
+This produces `submission.tar.gz` containing your `estimator.py`, the resolved `whestbench` version, and any imports your estimator needs (auto-detected).
+
+## 📤 Submit to AIcrowd
+
+Ship it straight from the CLI — no manual portal upload needed.
+
+First, log in once with your AIcrowd API key (grab it from your
+[AIcrowd profile](https://www.aicrowd.com/participants/me/customize)):
+
+```bash
+uv run whest login
+```
+
+Then submit. `whest submit` packages `estimator.py` and uploads it to the
+challenge in one step (you can also submit a prebuilt tarball):
+
+```bash
+# package + submit in one go
+uv run whest submit --estimator estimator.py
+
+# or submit a tarball you already built
+uv run whest submit submission.tar.gz
+```
+
+Add `--watch` to follow the submission until it's graded:
+
+```bash
+uv run whest submit --estimator estimator.py --watch
+```
+
+Prefer the browser? The packaged `submission.tar.gz` still uploads fine on
+the AIcrowd challenge submission page.
 
 ## What's in the artifact
 
@@ -26,7 +57,8 @@ This produces `submission.tar.gz` containing your `estimator.py`, the resolved `
 
 ## After submission
 
-What happens once you upload `submission.tar.gz`:
+What happens once `whest submit` (or a portal upload) accepts your
+`submission.tar.gz`:
 
 1. **AIcrowd unpacks the artifact** into a clean grader container that
    pre-installs the runner’s `whestbench` release plus the contents of
