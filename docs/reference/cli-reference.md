@@ -13,6 +13,5 @@ The `whest` CLI is shipped by [whestbench](https://github.com/AIcrowd/whestbench
 | `whest validate` | Check estimator contract | 2 |
 | `whest run --runner local` | Score in-process | 3 |
 | `whest run --runner subprocess` | Score in subprocess | 4 |
-| `whest run --runner docker` | Score in docker (coming soon) | 5 |
-| `whest package` | Build submission tarball | 6 |
+| `whest package` | Build submission tarball | 5 |
 | `whest doctor` | Diagnose environment issues | any |

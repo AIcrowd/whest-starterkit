@@ -2,7 +2,7 @@
 
 > [← Tutorial](README.md)
 
-> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · **3** · [4](stage-4-run-subprocess.md) · [5](stage-5-run-docker.md) · [6](stage-6-package.md)
+> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · **3** · [4](stage-4-run-subprocess.md) · [5](stage-5-package.md)
 
 Stage 2 confirms the contract. Stage 3 actually scores you against the same MLPs the grader uses — but in-process, so you can drop `import pdb; pdb.set_trace()` anywhere in `predict()` and step through it.
 

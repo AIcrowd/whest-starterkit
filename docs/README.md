@@ -10,7 +10,7 @@ jump in below.
 
 |     | Section | What lives here | Start with |
 |---|---|---|---|
-| 🪜 | **[Tutorial](getting-started/)** | The 6-stage ladder. Run code, climb step by step. | [Stage 1: Iterate locally](getting-started/stage-1-standalone.md) |
+| 🪜 | **[Tutorial](getting-started/)** | The 5-stage ladder. Run code, climb step by step. | [Stage 1: Iterate locally](getting-started/stage-1-standalone.md) |
 | 📖 | **[Concepts](concepts/)** | Why the challenge exists, what's being measured, how the math works. | [Problem Setup](concepts/problem-setup.md) |
 | 🔧 | **[How-to](how-to/)** | Recipes for specific tasks: write, debug, optimize, submit. | [Write an Estimator](how-to/write-an-estimator.md) |
 | 📚 | **[Reference](reference/)** | Exact contracts, field schemas, CLI options, attribute lists. | [Estimator Contract](reference/estimator-contract.md) |
@@ -35,7 +35,7 @@ Pick the line that sounds like you.
 
 ### "I'm about to submit."
 
-[pre-submission-checklist](how-to/pre-submission-checklist.md) → [Stage 6](getting-started/stage-6-package.md) → [score-report-fields](reference/score-report-fields.md) (so you can read the leaderboard report).
+[pre-submission-checklist](how-to/pre-submission-checklist.md) → [Stage 5](getting-started/stage-5-package.md) → [score-report-fields](reference/score-report-fields.md) (so you can read the leaderboard report).
 
 ## 🪜 By Stage (the ladder)
 
@@ -43,8 +43,7 @@ Pick the line that sounds like you.
 2. [Stage 2: Validate the contract](getting-started/stage-2-validate.md)
 3. [Stage 3: Run locally](getting-started/stage-3-run-local.md)
 4. [Stage 4: Subprocess runner](getting-started/stage-4-run-subprocess.md)
-5. [Stage 5: Docker runner](getting-started/stage-5-run-docker.md) — coming soon
-6. [Stage 6: Package your submission](getting-started/stage-6-package.md)
+5. [Stage 5: Package your submission](getting-started/stage-5-package.md)
 
 ## 🎯 By Need
 

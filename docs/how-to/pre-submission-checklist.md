@@ -74,13 +74,13 @@ uv run whest submit --estimator estimator.py --watch
 
 `whest submit` packages, uploads, and creates the submission in one step.
 Prefer to inspect the artifact first? Build it with
-`uv run whest package --estimator estimator.py -o submission.tar.gz`, check
-`tar tf submission.tar.gz` (it should contain `estimator.py`,
-`requirements.txt`, and `metadata.json`), then
+`uv run whest package --estimator estimator.py --output submission.tar.gz`, check
+`tar tf submission.tar.gz` (it should contain `estimator.py` and
+`manifest.json`), then
 `uv run whest submit submission.tar.gz`.
 
 ## ➡️ See also
 
-- [Stage 6: Package Your Submission](../getting-started/stage-6-package.md)
+- [Stage 5: Package Your Submission](../getting-started/stage-5-package.md)
 - [Common Participant Errors](../troubleshooting/common-participant-errors.md)
 - [Score Report Fields](../reference/score-report-fields.md)

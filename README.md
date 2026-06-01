@@ -20,7 +20,7 @@ You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per
   <sub><em>Per-neuron mean activations of a small MLP (width 4, depth 5) after Monte-Carlo ground truth — exactly what your estimator predicts. Generate your own at the <a href="https://aicrowd.github.io/whestbench-explorer/">hosted WhestBench Explorer</a>.</em></sub>
 </div>
 
-The kit is structured as a six-stage **ladder of formality**: each stage adds one more layer of harness rigor. Start at Stage 1 (pure local math, zero CLI knowledge); climb to Stage 6 (a packaged submission) when you're ready.
+The kit is structured as a five-stage **ladder of formality**: each stage adds one more layer of harness rigor. Start at Stage 1 (pure local math, zero CLI knowledge); climb to Stage 5 (a packaged submission) when you're ready.
 
 ## 🚀 Your First 5 Minutes (Stage 1: just `python`)
 
@@ -50,7 +50,7 @@ uv run python examples/03_covariance_propagation.py
 
 See [examples/README.md](examples/README.md) for the curriculum table.
 
-## 🪜 Climb the Ladder (Stages 2-6)
+## 🪜 Climb the Ladder (Stages 2-5)
 
 | Stage | Command | What it adds |
 |---|---|---|
@@ -58,12 +58,11 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 | [2: Validate the contract](docs/getting-started/stage-2-validate.md) | `uv run whest validate --estimator estimator.py` | Contract correctness (shapes, types). |
 | [3: Run locally](docs/getting-started/stage-3-run-local.md) | `uv run whest run --estimator estimator.py --runner local` | Real scoring, in-process, debuggable with `pdb`. |
 | [4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) | `uv run whest run --estimator estimator.py --runner subprocess` | Isolation; closer to grader environment. |
-| [5: Docker runner](docs/getting-started/stage-5-run-docker.md) | `uv run whest run --estimator estimator.py --runner docker` | **Coming soon.** Production-equivalent grader. |
-| [6: Package your submission](docs/getting-started/stage-6-package.md) | `uv run whest package --estimator estimator.py -o submission.tar.gz` | Submission artifact. |
+| [5: Package your submission](docs/getting-started/stage-5-package.md) | `uv run whest package --estimator estimator.py --output submission.tar.gz` | Submission artifact. |
 
 ## 🏁 Submit to AIcrowd
 
-Climbed to Stage 6? Ship it from the CLI. Log in once with your
+Climbed to Stage 5? Ship it from the CLI. Log in once with your
 [AIcrowd API key](https://www.aicrowd.com/participants/me/customize):
 
 ```bash
@@ -78,7 +77,7 @@ uv run whest submit --estimator estimator.py --watch
 
 Your score and per-MLP detail land on the
 [challenge leaderboard](https://www.aicrowd.com/). Full walkthrough:
-[Stage 6 → Submit to AIcrowd](docs/getting-started/stage-6-package.md#-submit-to-aicrowd).
+[Stage 5 → Submit to AIcrowd](docs/getting-started/stage-5-package.md#-submit-to-aicrowd).
 
 ## 🚑 When Something Breaks
 
@@ -95,14 +94,13 @@ Or check [docs/troubleshooting/](docs/troubleshooting/).
 Past Stage 1, the documentation is organized into six sections — pick whichever matches your task. Full map and guided reading paths at **[docs/](docs/README.md)**.
 
 <details>
-<summary>🪜 <b><a href="docs/getting-started/">Tutorial</a></b> — Climb the 6-stage ladder above</summary>
+<summary>🪜 <b><a href="docs/getting-started/">Tutorial</a></b> — Climb the 5-stage ladder above</summary>
 
 - [Stage 1: Iterate locally](docs/getting-started/stage-1-standalone.md) — The math; `flopscope` + `local_engine.py`, no `whest` CLI.
 - [Stage 2: Validate the contract](docs/getting-started/stage-2-validate.md) — Class resolves, `setup()` runs, shape, finite values.
 - [Stage 3: Run locally](docs/getting-started/stage-3-run-local.md) — Real scoring against the grader's MLP suite, in-process.
 - [Stage 4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) — Catches state-bleed, RNG re-use, dirty imports.
-- [Stage 5: Docker runner](docs/getting-started/stage-5-run-docker.md) — Production-equivalent grader env. **Coming soon.**
-- [Stage 6: Package your submission](docs/getting-started/stage-6-package.md) — Build the AIcrowd submission tarball.
+- [Stage 5: Package your submission](docs/getting-started/stage-5-package.md) — Build the AIcrowd submission tarball.
 
 </details>
 

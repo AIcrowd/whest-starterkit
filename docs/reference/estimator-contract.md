@@ -51,7 +51,7 @@ for budget rules.
 | `depth` | `int` | Number of layers per MLP |
 | `flop_budget` | `int` | FLOP cap for the estimator |
 | `api_version` | `str` | Contract version string |
-| `scratch_dir` | `str \| None` | Optional writable directory for caching across calls (subprocess and Docker runners; otherwise typically `None`) |
+| `scratch_dir` | `str \| None` | Optional writable directory for caching across calls (subprocess runner; otherwise typically `None`) |
 
 ## Input object quick reference
 

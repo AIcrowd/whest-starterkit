@@ -28,7 +28,7 @@ You don't need to create `BudgetContext` yourself — something else opens it fo
 | 2 — `whest validate` | the validator (small probe budget on a width=4, depth=2 MLP) | the `whestbench` CLI |
 | 3 — `whest run --runner local` | the in-process harness (default `--flop-budget 6.8e10`) | the `whestbench` CLI |
 | 4 — `whest run --runner subprocess` | the subprocess worker (same default) | the `whestbench` CLI |
-| 5 — `whest run --runner docker` | the harness inside the grader container | the `whestbench` CLI (when shipped) |
+| Grader (after you submit) | the harness inside the grader's sandboxed container | (runs server-side on AIcrowd) |
 
 The `budget` integer your `predict(mlp, budget)` receives matches the
 `flop_budget` of the surrounding context and is the hard cap for that call.

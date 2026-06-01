@@ -2,7 +2,7 @@
 
 > [← Tutorial](README.md)
 
-> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · [3](stage-3-run-local.md) · **4** · [5](stage-5-run-docker.md) · [6](stage-6-package.md)
+> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · [3](stage-3-run-local.md) · **4** · [5](stage-5-package.md)
 
 Stage 3 runs in your interpreter. Stage 4 spawns each estimator call in a fresh subprocess — the same isolation the grader uses. Catches:
 
@@ -38,4 +38,4 @@ Move state into the `Estimator` instance (or stash it on the
 
 ## ✅ When you're ready
 
-Move on to [Stage 5: Docker runner](stage-5-run-docker.md) (placeholder for now).
+Move on to [Stage 5: Package your submission](stage-5-package.md).

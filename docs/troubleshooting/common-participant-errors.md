@@ -10,7 +10,6 @@ Use this page when `validate` or `run` fails.
 
 - `local` (default): in-process execution with best traceback fidelity while debugging.
 - `subprocess`: isolated process execution for stricter reproduction; `server` remains a legacy alias.
-- `docker`: use containerized evaluator execution when subprocess still differs from remote scoring.
 
 Fast debug ladder:
 

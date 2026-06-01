@@ -1,8 +1,8 @@
-# Stage 6: Package Your Submission
+# Stage 5: Package Your Submission
 
 > [← Tutorial](README.md)
 
-> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · [5](stage-5-run-docker.md) · **6**
+> Ladder: [1](stage-1-standalone.md) · [2](stage-2-validate.md) · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · **5**
 
 You've climbed the ladder. Now ship it.
 
@@ -13,7 +13,7 @@ You've climbed the ladder. Now ship it.
 ## 🚀 Run it
 
 ```bash
-uv run whest package --estimator estimator.py -o submission.tar.gz
+uv run whest package --estimator estimator.py --output submission.tar.gz
 ```
 
 This produces `submission.tar.gz` containing your `estimator.py`, the resolved `whestbench` version, and any imports your estimator needs (auto-detected).
@@ -52,8 +52,8 @@ the AIcrowd challenge submission page.
 ## What's in the artifact
 
 - `estimator.py` — verbatim copy of yours
-- `requirements.txt` — frozen from your `uv.lock`
-- `metadata.json` — whestbench version, package timestamp
+- `manifest.json` — entrypoint, whestbench/flopscope/numpy versions, Python version, per-file SHA-256, and package timestamp
+- `requirements.txt` — only when your estimator pulls in extra packages (frozen from your `uv.lock`)
 
 ## After submission
 
@@ -63,9 +63,10 @@ What happens once `whest submit` (or a portal upload) accepts your
 1. **AIcrowd unpacks the artifact** into a clean grader container that
    pre-installs the runner’s `whestbench` release plus the contents of
    your `requirements.txt`.
-2. **The grader runs `whest run --runner docker`** against a held-out
+2. **The grader runs your estimator** against a held-out
    MLP suite (same `width`, `depth`, `flop_budget` as the public
-   defaults; same `n_mlps` order of magnitude). No network, no GPU,
+   defaults; same `n_mlps` order of magnitude), in an isolated
+   subprocess inside a sandboxed container. No network, no GPU,
    no access to the local filesystem outside `SetupContext.scratch_dir`.
 3. **Your `setup()` runs once.** If it raises, the run is recorded as a
    failed submission with the traceback surfaced in the AIcrowd UI.

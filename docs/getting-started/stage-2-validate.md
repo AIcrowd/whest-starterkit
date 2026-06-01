@@ -2,7 +2,7 @@
 
 > [← Tutorial](README.md)
 
-> Ladder: [1](stage-1-standalone.md) · **2** · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · [5](stage-5-run-docker.md) · [6](stage-6-package.md)
+> Ladder: [1](stage-1-standalone.md) · **2** · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · [5](stage-5-package.md)
 
 Stage 1 confirms your estimator runs and converges. Stage 2 confirms it satisfies the harness contract — right shapes, right types, finite values, optional lifecycle hooks behave.
 
