@@ -23,7 +23,7 @@ def predict_sampling(mlp, budget):
     return fnp.stack(rows, axis=0)
 ```
 
-**FLOP cost:** O(samples x depth x width^2). For width=256, depth=8, one sample costs ~520K FLOPs. 100 samples costs ~52M FLOPs.
+**FLOP cost:** O(samples x depth x width^2). For width=256, depth=8, one sample costs ~1M FLOPs. 100 samples costs ~105M FLOPs.
 
 **When to use:** As a baseline or sanity check. Accuracy improves as 1/sqrt(samples) — slow convergence.
 
@@ -31,7 +31,7 @@ def predict_sampling(mlp, budget):
 
 Track per-neuron means and variances through each layer using the ReLU expectation formula. Assumes neurons are independent (diagonal covariance).
 
-**FLOP cost:** O(depth x width^2) — one matrix-vector multiply per layer. For width=256, depth=8: ~520K FLOPs.
+**FLOP cost:** O(depth x width^2) — matrix-vector products per layer. For width=256, depth=8: ~2.7M FLOPs (see the worked walkthrough in [Manage Your FLOP Budget](./manage-flop-budget.md)).
 
 **When to use:** Default choice for most budgets. Fast and reasonably accurate for shallow-to-medium networks.
 
@@ -41,7 +41,7 @@ Track per-neuron means and variances through each layer using the ReLU expectati
 
 Track the full covariance matrix between neurons. More accurate because it captures correlations that diagonal methods ignore.
 
-**FLOP cost:** O(depth x width^3) — matrix-matrix multiply per layer. For width=256, depth=8: ~134M FLOPs. Much more expensive.
+**FLOP cost:** O(depth x width^3) — matrix-matrix products per layer. For width=256, depth=8: ~404M FLOPs. Much more expensive.
 
 **When to use:** When the FLOP budget is large relative to width^2, and accuracy matters more than speed. Best for narrow networks or shallow depths.
 
