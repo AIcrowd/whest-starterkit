@@ -114,6 +114,7 @@ that the harness passed in.
 | `wall_time_s` | `float` | Elapsed wall time since the context was entered. |
 | `wall_time_limit_s` | `float \| None` | Cap configured at construction time. |
 | `flopscope_backend_time` | `float` | Time spent inside counted flopscope calls. |
+| `flopscope_overhead_time` | `float` | Time spent inside flopscope's own dispatch (wrapper preambles, FLOP bookkeeping, namespace push/pop) — framework cost, not participant cost. |
 | `residual_wall_time` | `float` | Wall time inside the context that is neither flopscope backend execution nor flopscope's own dispatch — i.e. participant Python (loops, control flow), GC, uninstrumented numpy. |
 | `elapsed_s` | `float` | Alias of `wall_time_s` for symmetry with the report. |
 | `namespace` | `str \| None` | Namespace this context attributes ops to (set via `with flops.namespace("name")`). |
