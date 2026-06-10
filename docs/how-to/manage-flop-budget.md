@@ -74,7 +74,7 @@ The same summaries also show timing data:
 - `wall_time_s`: total elapsed time for the context
 - `flopscope_backend_time_s`: time spent inside counted flopscope backend calls
 - `flopscope_overhead_time_s`: time spent inside flopscope dispatch and bookkeeping
-- `residual_wall_time_s`: time spent outside flopscope backend and dispatch work
+- `residual_wall_time_s`: participant Python (loops, control flow), GC, and Python-callback op time; as of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual
 
 In `whest run`, the CLI flags map to these concepts as follows:
 

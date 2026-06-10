@@ -145,7 +145,7 @@ wall_time_s = flopscope_backend_time_s + flopscope_overhead_time_s + residual_wa
 - `wall_time_s`: total elapsed time in the context
 - `flopscope_backend_time_s`: time spent inside counted flopscope numpy kernels (the participant's actual numpy compute)
 - `flopscope_overhead_time_s`: time spent inside flopscope's own dispatch (wrapper preambles, FLOP bookkeeping, namespace push/pop) — framework cost, not participant cost
-- `residual_wall_time_s`: everything else — participant Python, GC, uninstrumented numpy
+- `residual_wall_time_s`: participant Python (loops, control flow), GC, and Python-callback op time; as of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual
 
 This decomposition lets you see whether time is going to numpy compute, framework dispatch, or your own Python.
 
