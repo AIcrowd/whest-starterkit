@@ -16,7 +16,9 @@ You've climbed the ladder. Now ship it.
 uv run whest package --estimator estimator.py --output submission.tar.gz
 ```
 
-This produces `submission.tar.gz` containing your `estimator.py`, the resolved `whestbench` version, and any imports your estimator needs (auto-detected).
+This bundles **your estimator's entire folder** (minus `.whestignore` entries and built-in ignores) into `submission.tar.gz`. Before writing the archive, `whest package` shows a file/size preview and asks for confirmation; pass `--yes` / `-y` to skip the prompt in CI. The submission must stay within **50 MB** and **50 files** — use `.whestignore` to exclude scratch files, caches, or large artefacts you don't need on the grader.
+
+Helper modules and data files (e.g. `weights.npz`) kept next to `estimator.py` ship automatically — no extra flags needed. See [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md) for the full walkthrough.
 
 ## 📤 Submit to AIcrowd
 
