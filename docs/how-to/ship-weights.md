@@ -66,12 +66,15 @@ class Estimator(BaseEstimator):
         if context.submission_dir is not None:
             weights_path = Path(context.submission_dir) / "weights.npz"
             if weights_path.exists():
-                scale = fnp.load(weights_path)["scale"]  # 0 FLOPs to load
+                scale = fnp.load(str(weights_path))["scale"]  # 0 FLOPs to load
         self._scale = scale if scale is not None else fnp.ones(())
 ```
 
 `fnp.load` (flopscope's NumPy-compatible load) costs **0 FLOPs** — loading
-data does not count against your budget.
+data does not count against your budget. **Pass a `str` path, not a `Path`** —
+the grader's `flopscope-client` requires a string filename. (The full flopscope
+in your local venv also accepts a `Path`, so a `Path` appears to work under
+`whest validate` but fails on the grader — always wrap with `str(...)`.)
 
 See the full worked example at [`examples/04_shipped_weights.py`](../../examples/04_shipped_weights.py).
 

@@ -21,7 +21,10 @@ class Estimator(BaseEstimator):
         if context.submission_dir is not None:
             weights_path = Path(context.submission_dir) / "weights.npz"
             if weights_path.exists():
-                scale = fnp.load(weights_path)["scale"]  # 0 FLOPs to load
+                # Pass a str, not a Path: the grader's flopscope-client requires
+                # str (the local full-flopscope build also accepts Path, so a
+                # Path "works" locally but fails on the grader — always str()).
+                scale = fnp.load(str(weights_path))["scale"]  # 0 FLOPs to load
         # Fallback keeps the example runnable without the weight file.
         self._scale = scale if scale is not None else fnp.ones(())
 
