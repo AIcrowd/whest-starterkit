@@ -87,7 +87,7 @@ adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)   for valid ru
 adjusted_final_layer_score = final_layer_mse × 1.0                 for failures (no compute discount)
 
 C_m = F_m + λ · R_m                       (effective compute, FLOPs + FLOP-equivalents)
-λ   = 1e11 FLOPs/sec                      (residual-wall-time conversion rate)
+λ   = residual-wall-time conversion rate (default 1e11 FLOPs/sec, contest-configured)
 ```
 
 Where `F_m` is the analytical FLOPs counted by flopscope (`flops_used`), `R_m` is the residual wall-time bucket (`residual_wall_time_s` — neither flopscope-backend nor flopscope-overhead), and `B` is `flop_budget`. The `max(0.1, …)` floor caps the discount at 10× so an arbitrarily cheap-but-wrong submission cannot dominate the ranking.

@@ -67,7 +67,7 @@ Symptom: unexpectedly poor `adjusted_final_layer_score` despite reasonable predi
 
 Why it happens: your estimator's effective compute `C_m = F_m + λ·R_m` exceeded `flop_budget`. The affected MLP's predictions are replaced with zeros and the per-MLP multiplier is forced to **1.0** (no compute discount), so `adjusted_final_layer_score_m = MSE(0, Y_m) × 1.0` — strictly worse than a trivial-zero submission that succeeds (which gets the 0.1 multiplier floor).
 
-`budget_exhausted` fires when flopscope itself trips (your analytical FLOPs exceed the cap). `combined_budget_exhausted` fires on the post-hoc check `C_m > B` — flopscope didn't trip, but the residual-wall-time penalty (`λ · residual_wall_time_s` at `λ = 1e11` FLOPs/sec) pushed effective compute past the cap.
+`budget_exhausted` fires when flopscope itself trips (your analytical FLOPs exceed the cap). `combined_budget_exhausted` fires on the post-hoc check `C_m > B` — flopscope didn't trip, but the residual-wall-time penalty (`λ · residual_wall_time_s`, λ default `1e11` FLOPs/sec) pushed effective compute past the cap.
 
 Fix now:
 

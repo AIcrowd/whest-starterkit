@@ -71,7 +71,7 @@ Each estimator call is given a `flop_budget` — a cap on the floating-point ope
 For the configured FLOP budget `B`:
 
 1. **Your estimator runs.** Your `predict(mlp, budget)` is called. flopscope counts every floating-point operation analytically (`F_m`); the harness also measures the residual wall-time bucket (`R_m`) — Python-side work that runs outside a flopscope kernel.
-2. **Effective compute is formed.** `C_m = F_m + λ·R_m`, where `λ = 1e11` FLOPs/sec converts residual wall-time into FLOP-equivalents.
+2. **Effective compute is formed.** `C_m = F_m + λ·R_m`, where λ (the residual-penalty rate, default `1e11` FLOPs/sec — the grader uses the configured contest rate) converts residual wall-time into FLOP-equivalents. Locally you can experiment with a different rate via `whest run --lambda-flops-per-second`; the leaderboard always uses the contest-configured value.
 3. **Budget is checked.** If `C_m > B` (or flopscope trips mid-run, or a wall-time limit fires), all predictions for this MLP are replaced with zero vectors and the compute multiplier is forced to `1.0`.
 4. **Raw accuracy is measured.** The final-layer mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed — this is `final_layer_mse`, a diagnostic.
 5. **Score is the budget-adjusted MSE.** The per-MLP score is `final_layer_mse × max(0.1, C_m / B)` — accuracy scaled by the share of budget you used, with the discount capped at 10×.
@@ -95,7 +95,7 @@ final_layer_mse_m  = ─── ∑  ( pred_m[d-1, i] − truth_m[d-1, i] )²
                         └──────── final-layer cells only ────────┘
 
   C_m = F_m + λ·R_m   effective compute: analytical FLOPs F_m plus residual
-                      wall-time R_m converted at λ = 1e11 FLOPs/sec
+                      wall-time R_m converted at λ (default 1e11 FLOPs/sec)
   B   = flop_budget
   max(0.1, C_m / B)   compute multiplier — caps the discount at 10× (the 0.1
                       floor); forced to 1.0 for any MLP whose budget was exceeded
