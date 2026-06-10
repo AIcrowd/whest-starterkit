@@ -59,8 +59,10 @@ whest run --estimator estimator.py --runner local --format json
 Package submission artifact:
 
 ```bash
-whest package --estimator estimator.py --output ./submission.tar.gz
+whest package --estimator estimator.py --output ./submission.tar.gz --yes
 ```
+
+`whest package` bundles your estimator's whole folder (minus `.whestignore` entries and built-in ignores), previews the file list and sizes, and asks for confirmation before writing the archive (pass `--yes` / `-y` to skip the prompt in CI or scripts). It enforces the 50 MiB / 50-file caps — use `.whestignore` to exclude scratch files or large artefacts you don't need on the grader. For shipping precomputed weight files, see [Ship Weights and Multi-File Submissions](./ship-weights.md).
 
 Optional files during packaging:
 

@@ -32,7 +32,6 @@ class Estimator(BaseEstimator):
 
 if __name__ == "__main__":
     import sys
-    from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from local_engine import build_mlp, compare_against_monte_carlo
@@ -47,7 +46,7 @@ if __name__ == "__main__":
             width=256,
             depth=8,
             flop_budget=68_000_000_000,
-            api_version="2.0",
+            api_version="1.0",
             submission_dir=str(Path(__file__).resolve().parent),
         )
     )

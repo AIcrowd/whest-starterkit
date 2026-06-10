@@ -52,6 +52,7 @@ for budget rules.
 | `flop_budget` | `int` | FLOP cap for the estimator |
 | `api_version` | `str` | Contract version string |
 | `scratch_dir` | `str \| None` | Optional writable directory for caching across calls (subprocess runner; otherwise typically `None`) |
+| `submission_dir` | `str \| None` | Folder your submission was extracted into — locally, your estimator's folder; populated by `whest validate` / `whest run` and on the grader. Load shipped files (e.g. `weights.npz`) from here. See [how-to/ship-weights.md](../how-to/ship-weights.md). |
 
 ## Input object quick reference
 

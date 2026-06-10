@@ -83,7 +83,7 @@ See the full worked example at [`examples/04_shipped_weights.py`](../../examples
 
 | Cap | Limit |
 |-----|-------|
-| Total submission size | 50 MB |
+| Total submission size | 50 MiB (the CLI error reports this as ~52 MB) |
 | Total file count | 50 files |
 
 If your folder contains large scratch files, cached datasets, or other
@@ -92,7 +92,6 @@ artefacts you don't want to ship, list them in `.whestignore` next to
 
 ```
 # .whestignore
-__pycache__/
 *.egg-info/
 scratch/
 debug_weights.pkl

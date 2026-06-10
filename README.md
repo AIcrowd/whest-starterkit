@@ -46,6 +46,7 @@ uv run python estimator.py --baseline mean_propagation
 ```bash-test
 uv run python examples/02_mean_propagation.py
 uv run python examples/03_covariance_propagation.py
+uv run python examples/04_shipped_weights.py
 ```
 
 See [examples/README.md](examples/README.md) for the curriculum table.

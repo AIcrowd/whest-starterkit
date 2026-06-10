@@ -7,6 +7,7 @@ Read in order. Each file is a complete, runnable Stage 1 estimator.
 | [01_random.py](01_random.py) | introductory | ~0.29 (random baseline) | The `BaseEstimator` interface and the contract: `predict(mlp, budget) -> fnp.ndarray of shape (depth, width)` |
 | [02_mean_propagation.py](02_mean_propagation.py) | easy | ~0.003 | First-order analytical: propagate per-neuron mean and diagonal variance through ReLU layers |
 | [03_covariance_propagation.py](03_covariance_propagation.py) | medium | ~0.0007 | Track full covariance, not just diagonal variance — costlier but more accurate |
+| [04_shipped_weights.py](04_shipped_weights.py) | easy | n/a (zeros baseline) | Ship a precomputed `weights.npz` next to your estimator and load it via `submission_dir` in `setup()` |
 
 ## Run any example
 
