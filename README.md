@@ -53,13 +53,44 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 
 ## 🪜 Climb the Ladder (Stages 2-5)
 
-| Stage | Command | What it adds |
-|---|---|---|
-| [1: Iterate locally](docs/getting-started/stage-1-standalone.md) | `uv run python estimator.py` | The math. Estimator vs Monte Carlo. |
-| [2: Validate the contract](docs/getting-started/stage-2-validate.md) | `uv run whest validate --estimator estimator.py` | Contract correctness (shapes, types). |
-| [3: Run on the public set](docs/getting-started/stage-3-run-local.md) | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner local` | Real scoring against the public Mini split (100 MLPs), in-process, debuggable with `pdb`. |
-| [4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner subprocess` | Isolation; closer to grader environment. |
-| [5: Package your submission](docs/getting-started/stage-5-package.md) | `uv run whest package --estimator estimator.py --output submission.tar.gz` | Submission artifact. |
+Each rung adds one more layer of harness rigor — climb when you're ready. Per-stage walkthroughs live in the [Tutorial](docs/getting-started/).
+
+**Stage 1 — [Iterate locally](docs/getting-started/stage-1-standalone.md)** · the math: estimator vs Monte Carlo.
+
+```bash
+uv run python estimator.py
+```
+
+**Stage 2 — [Validate the contract](docs/getting-started/stage-2-validate.md)** · contract correctness (shapes, types).
+
+```bash
+uv run whest validate --estimator estimator.py
+```
+
+**Stage 3 — [Run on the public set](docs/getting-started/stage-3-run-local.md)** · real scoring against the public Mini split (100 MLPs), in-process, debuggable with `pdb`.
+
+```bash
+uv run whest run --estimator estimator.py \
+    --dataset hf://aicrowd/arc-whestbench-public-2026 \
+    --split mini \
+    --runner local
+```
+
+**Stage 4 — [Subprocess runner](docs/getting-started/stage-4-run-subprocess.md)** · isolation; closer to the grader environment.
+
+```bash
+uv run whest run --estimator estimator.py \
+    --dataset hf://aicrowd/arc-whestbench-public-2026 \
+    --split mini \
+    --runner subprocess
+```
+
+**Stage 5 — [Package and Submit](docs/getting-started/stage-5-package.md)** · build the submission artifact, then ship it (run `whest login` once first — see [Submit to AIcrowd](#-submit-to-aicrowd) below).
+
+```bash
+uv run whest package --estimator estimator.py   # build & inspect the tarball
+uv run whest submit  --estimator estimator.py   # ship it (also packages, in one step)
+```
 
 ## 🏁 Submit to AIcrowd
 
@@ -101,7 +132,7 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 - [Stage 2: Validate the contract](docs/getting-started/stage-2-validate.md) — Class resolves, `setup()` runs, shape, finite values.
 - [Stage 3: Run locally](docs/getting-started/stage-3-run-local.md) — Real scoring against the grader's MLP suite, in-process.
 - [Stage 4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) — Catches state-bleed, RNG re-use, dirty imports.
-- [Stage 5: Package your submission](docs/getting-started/stage-5-package.md) — Build the AIcrowd submission tarball.
+- [Stage 5: Package and Submit](docs/getting-started/stage-5-package.md) — Build the AIcrowd submission tarball and ship it.
 
 </details>
 
