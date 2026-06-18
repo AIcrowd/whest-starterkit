@@ -56,7 +56,7 @@ This loads `examples/02_mean_propagation.py` and runs both estimators on the sam
 
 You're ready for Stage 2 once your estimator's MSE is comfortably below
 the zeros floor and `estimator_flops` stays under whatever budget you'd
-target downstream (Stage 3's grader default is `6.8e10`).
+target downstream (Stage 3's phase-1 grader default is `2.72e11`; the `v1-warmup` round used `6.8e10`).
 
 ## ✅ When you're ready
 

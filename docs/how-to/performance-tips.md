@@ -6,7 +6,7 @@ This page lists concrete patterns for reducing FLOP usage in your estimator.
 
 ## Matmul dominates your budget
 
-A single `fnp.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width=256, that is ~33M FLOPs per matmul. In an 8-layer network, 8 matmuls cost ~268M FLOPs — well within the 6.8e10 default budget, but the cost dominates for any moderately-sized estimator.
+A single `fnp.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width=256, that is ~33M FLOPs per matmul. In a 32-layer network, 32 matmuls cost ~1.07B FLOPs — well within the 2.72e11 default budget, but the cost dominates for any moderately-sized estimator.
 
 **Tip:** If you only need diagonal information (per-neuron variance), avoid full matrix-matrix multiplies. Diagonal propagation uses matrix-vector products: O(n^2) per layer instead of O(n^3).
 
@@ -53,8 +53,8 @@ Use `flops.budget_summary()` inside a `BudgetContext` to see exactly where your 
 ```python
 import flopscope as flops
 
-with flops.BudgetContext(flop_budget=68_000_000_000) as budget:
-    result = estimator.predict(mlp, budget=68_000_000_000)
+with flops.BudgetContext(flop_budget=272_000_000_000) as budget:
+    result = estimator.predict(mlp, budget=272_000_000_000)
     flops.budget_summary()
 ```
 

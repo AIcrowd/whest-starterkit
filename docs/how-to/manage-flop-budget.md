@@ -33,8 +33,8 @@ Wrap your estimator logic in a `BudgetContext` to see how many FLOPs it consumes
 ```python
 import flopscope as flops
 
-with flops.BudgetContext(flop_budget=68_000_000_000) as budget:
-    result = estimator.predict(mlp, budget=68_000_000_000)
+with flops.BudgetContext(flop_budget=272_000_000_000) as budget:
+    result = estimator.predict(mlp, budget=272_000_000_000)
 
 print(f"FLOPs used: {budget.flops_used:,}")
 print(f"FLOPs remaining: {budget.flops_remaining:,}")
@@ -45,10 +45,10 @@ If you also want a wall-clock guardrail while debugging locally, set
 
 ```python
 with flops.BudgetContext(
-    flop_budget=68_000_000_000,
+    flop_budget=272_000_000_000,
     wall_time_limit_s=2.0,
 ) as budget:
-    result = estimator.predict(mlp, budget=68_000_000_000)
+    result = estimator.predict(mlp, budget=272_000_000_000)
 ```
 
 ## Get a per-operation breakdown
@@ -60,8 +60,8 @@ consume the most FLOPs:
 ```python
 import flopscope as flops
 
-with flops.BudgetContext(flop_budget=68_000_000_000) as budget:
-    result = estimator.predict(mlp, budget=68_000_000_000)
+with flops.BudgetContext(flop_budget=272_000_000_000) as budget:
+    result = estimator.predict(mlp, budget=272_000_000_000)
     print(budget.summary())
 
 flops.budget_summary()
@@ -109,7 +109,7 @@ The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_m
 | `fnp.stack(rows, axis=0)` | 1 | 2,048 | 0.1% |
 | **Total per `predict()`** | — | **2,715,648** | — |
 
-The full ~2.7 M FLOPs spends only ~0.004% of the default 6.8e10 grader budget, so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
+The full ~2.7 M FLOPs spends only ~0.004% of the warmup 6.8e10 budget (the same ~0.004% holds at phase-1's ~11M FLOPs against the 2.72e11 budget), so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
 
 Two takeaways:
 

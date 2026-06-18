@@ -26,7 +26,7 @@ You don't need to create `BudgetContext` yourself — something else opens it fo
 |---|---|---|
 | 1 — `python estimator.py` | `local_engine.compare_against_monte_carlo` (default `estimator_budget=1e9`) | [local_engine.py](../../local_engine.py) |
 | 2 — `whest validate` | the validator (small probe budget on a width=4, depth=2 MLP) | the `whestbench` CLI |
-| 3 — `whest run --runner local` | the in-process harness (default `--flop-budget 6.8e10`) | the `whestbench` CLI |
+| 3 — `whest run --runner local` | the in-process harness (default `--flop-budget 2.72e11`) | the `whestbench` CLI |
 | 4 — `whest run --runner subprocess` | the subprocess worker (same default) | the `whestbench` CLI |
 | Grader (after you submit) | the harness inside the grader's sandboxed container | (runs server-side on AIcrowd) |
 

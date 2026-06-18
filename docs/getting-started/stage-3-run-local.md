@@ -12,7 +12,7 @@ Stage 2 confirms the contract. Stage 3 runs the **real scoring pipeline** (the s
 uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local
 ```
 
-`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~250 MB, cached) it scores in seconds. The FLOP budget is `6.8e10` (68B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
+`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~250 MB, cached) it scores in seconds. The FLOP budget is `2.72e11` (272B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8 at a `6.8e10` budget). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
 
 You'll see a Rich-rendered report with five panels:
 
@@ -42,7 +42,7 @@ With the zeros template, the **raw** MSE rows (`final_layer_mse` ≈ 0.83, `all_
 
 ## FLOP-budget callout: Stage 1 vs Stage 3
 
-Stage 1's `local_engine.compare_against_monte_carlo` runs your `predict()` under `estimator_budget=1e9`. Stage 3's `whest run` uses the grader default `flop_budget=6.8e10` — about **68× larger**. So Stage 1 is the *tighter* budget here: if your estimator fits in Stage 1, it has ample headroom at the grader budget, and budget exhaustion is unlikely to be why a Stage-1-good estimator scores differently in Stage 3.
+Stage 1's `local_engine.compare_against_monte_carlo` runs your `predict()` under `estimator_budget=1e9`. Stage 3's `whest run` uses the phase-1 grader default `flop_budget=2.72e11` — about **272× larger**. So Stage 1 is the *tighter* budget here: if your estimator fits in Stage 1, it has ample headroom at the grader budget, and budget exhaustion is unlikely to be why a Stage-1-good estimator scores differently in Stage 3.
 
 ## Why a different score than Stage 1?
 

@@ -57,8 +57,8 @@ Profile your FLOP usage:
 ```python
 import flopscope as flops
 
-with flops.BudgetContext(flop_budget=68_000_000_000) as budget:
-    result = estimator.predict(mlp, budget=68_000_000_000)
+with flops.BudgetContext(flop_budget=272_000_000_000) as budget:
+    result = estimator.predict(mlp, budget=272_000_000_000)
     flops.budget_summary()
 ```
 

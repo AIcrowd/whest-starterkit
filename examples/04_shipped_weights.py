@@ -48,7 +48,7 @@ if __name__ == "__main__":
         SetupContext(
             width=256,
             depth=32,
-            flop_budget=68_000_000_000,
+            flop_budget=272_000_000_000,
             api_version="1.0",
             submission_dir=str(Path(__file__).resolve().parent),
         )
