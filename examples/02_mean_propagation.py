@@ -115,5 +115,5 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from local_engine import build_mlp, compare_against_monte_carlo
 
-    mlp = build_mlp(width=256, depth=8, seed=0)
+    mlp = build_mlp(width=256, depth=32, seed=0)  # phase-1 competition shape (warmup round used depth=8)
     compare_against_monte_carlo(Estimator(), mlp)

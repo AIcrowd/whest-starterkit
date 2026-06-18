@@ -12,7 +12,7 @@ Returns a square MLP with He-initialized weights — `N(0, 2/width)` per element
 
 ```python
 from local_engine import build_mlp
-mlp = build_mlp(width=256, depth=8, seed=0)
+mlp = build_mlp(width=256, depth=32, seed=0)  # phase-1 competition shape; the warmup round used depth=8
 ```
 
 Constraints: `width >= 1`, `depth >= 1`. Otherwise raises `ValueError`.

@@ -16,7 +16,7 @@ For day-to-day estimator work, you almost never need to bake your own. The AIcro
 
 ## 🚀 Do this now (HF Hub, no bake required)
 
-The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026) and contains two splits:
+The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The Phase 1 MLPs are **256×32** (width 256, depth 32); the earlier `v1-warmup` round used 256×8. The dataset contains two splits:
 
 | Split | Size | Use for |
 |---|---:|---|
@@ -63,7 +63,7 @@ from datasets import load_dataset
 mini = load_dataset("aicrowd/arc-whestbench-public-2026",
                     revision="v1-phase1", split="mini")
 print(mini[0]["mlp_name"])     # e.g. "krista-wright"
-print(mini[0]["weights"])      # (depth=8, width=256, width=256) float64
+print(mini[0]["weights"])      # (depth=32, width=256, width=256) float64  — warmup round was depth=8
 
 # full is a separate config; pass the config name explicitly
 full = load_dataset("aicrowd/arc-whestbench-public-2026",
@@ -89,7 +89,7 @@ whest dataset bake \
     --n-mlps 10 \
     --n-samples 1_000_000 \
     --width 256 \
-    --depth 8
+    --depth 32
 # Produces:
 #   ./my-eval/
 #   ├── data/public-00000-of-00001.parquet
@@ -135,7 +135,7 @@ whest dataset bake \
     --n-mlps 1000 \
     --n-samples 1_000_000_000 \
     --width 256 \
-    --depth 8
+    --depth 32
 ```
 
 > ⚠️ **`--device` does nothing without `--torch`.** Running `whest dataset bake --device cuda` *without* `--torch` silently falls back to the slow CPU path and ignores your GPU. Always pass `--torch` for a GPU bake.
@@ -161,7 +161,7 @@ python -c "import json, secrets; json.dump([secrets.randbits(63) for _ in range(
 
 # Each GPU/host bakes one slice (0-indexed). Run these concurrently.
 whest dataset bake --torch --device cuda --mlp-seeds seeds.json \
-    --n-mlps 1000 --n-samples 1_000_000_000 --width 256 --depth 8 \
+    --n-mlps 1000 --n-samples 1_000_000_000 --width 256 --depth 32 \
     --slice 0/4 --output ./shard-0
 # ...repeat with --slice 1/4, 2/4, 3/4 on the other devices...
 

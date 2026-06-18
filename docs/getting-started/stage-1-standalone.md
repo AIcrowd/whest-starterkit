@@ -14,7 +14,7 @@ Iterate here until `predict()` converges, then climb to Stage 2 to confirm the c
 uv run python estimator.py
 ```
 
-You should see a table like:
+You should see a table like the following. *(This sample capture is from the 256×8 warmup round; the phase-1 competition is 256×32, so your shape line will read `depth=32` and the FLOP/MSE figures will be larger.)*
 
 ```
 --- Your estimator ---
