@@ -1,0 +1,31 @@
+# Files excluded from the submission tarball (`whest package` / `whest submit`).
+# The grader only runs your `Estimator` (estimator.py) + any modules it imports
+# at scoring time. Everything below is local-only tooling/docs and would
+# otherwise trip the 50-file submission cap.
+
+# Version control / CI / envs
+.git/
+.github/
+.venv/
+.python-version
+
+# Caches & build artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local-iteration helpers — used by `python estimator.py`, NOT by the grader
+local_engine.py
+examples/
+tests/
+
+# Docs, assets, and project scaffolding
+docs/
+assets/
+scripts/
+Makefile
+README.md
+pyproject.toml
+uv.lock
