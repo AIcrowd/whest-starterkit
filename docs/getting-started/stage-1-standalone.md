@@ -50,9 +50,9 @@ This loads `examples/02_mean_propagation.py` and runs both estimators on the sam
 
 | Estimator | MSE on the default MLP | Status |
 |---|---|---|
-| Zeros template (default) | ~0.74 | floor — natural variance of the activations |
-| `--baseline mean_propagation` | ~0.0005 | ~1400x better; first-order analytical |
-| `--baseline covariance_propagation` | ~0.00002 | ~20x better than mean; tracks neuron correlations |
+| Zeros template (default) | ~1.2 | floor — natural variance of the activations |
+| `--baseline mean_propagation` | ~0.0017 | ~700x better; first-order analytical |
+| `--baseline covariance_propagation` | ~0.0001 | ~20x better than mean; tracks neuron correlations |
 
 You're ready for Stage 2 once your estimator's MSE is comfortably below
 the zeros floor and `estimator_flops` stays under whatever budget you'd

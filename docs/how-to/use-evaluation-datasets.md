@@ -20,8 +20,8 @@ The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`
 
 | Split | Size | Use for |
 |---|---:|---|
-| `mini` | 100 MLPs (~250 MB) | Day-to-day iteration. Downloads in seconds. |
-| `full` | 1,000 MLPs (~1.4 GB) | Final lock-in check before you submit. |
+| `mini` | 100 MLPs (~850 MB) | Day-to-day iteration. Downloaded once, then served from cache. |
+| `full` | 1,000 MLPs (~8.5 GB) | Final lock-in check before you submit. |
 
 `mini` is the **default split** — `whest run --dataset hf://...` without `--split` picks it automatically.
 
@@ -39,7 +39,7 @@ whest run \
     --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1
 ```
 
-The CLI prints something like `Using default split 'mini' (from metadata.default_split)`, downloads ~250 MB on the first run (cached for every subsequent run), and runs your estimator against 100 MLPs. Typical end-to-end wall time after the cache is warm: under 5 seconds.
+The CLI prints something like `Using default split 'mini' (from metadata.default_split)`, downloads ~850 MB on the first run (cached for every subsequent run), and runs your estimator against 100 MLPs. Subsequent runs reuse the cache, so there is no re-download.
 
 ### 2. Lock in your numbers against full
 
@@ -173,7 +173,7 @@ Each shard writes a *partial* dataset (its `metadata.json` carries `is_partial: 
 
 ## ✅ Expected outcome
 
-- `whest run --dataset hf://...@v1-phase1` (no `--split`) auto-resolves to `mini`, downloads ~250 MB on first call, scores in seconds on subsequent calls.
+- `whest run --dataset hf://...@v1-phase1` (no `--split`) auto-resolves to `mini`, downloads ~850 MB on first call, then runs from cache on subsequent calls.
 - `whest run --dataset hf://...@v1-phase1 --split full` deliberately switches to the 1,000-MLP split.
 - Re-running with the same dataset + estimator gives identical scores (the bake is deterministic).
 

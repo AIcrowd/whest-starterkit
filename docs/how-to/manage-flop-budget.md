@@ -116,7 +116,7 @@ Two takeaways:
 - **`matmul` dominates.** ~77% of `predict()` cost is the two matmuls per layer (the pointwise ReLU-moment terms — `multiply` — are the visible ~20% remainder). Halving the matmul count (e.g., switching to a diagonal-only formulation, or fusing into a single `einsum` like `examples/03_covariance_propagation.py` does for the symmetric cov-update) buys you most of that back.
 - **Reductions, sqrt, and divides are free in practice.** Don't twist your code to avoid them; the cost is in the tens of FLOPs per layer.
 
-The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` lands at ~404 M FLOPs per `predict()` (~0.6% of the grader budget) — ~150× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance), but still leaving plenty of headroom.
+The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` lands at ~1.6 B FLOPs per `predict()` (~0.6% of the grader budget) — ~150× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance), but still leaving plenty of headroom.
 
 ## Optimization tips
 

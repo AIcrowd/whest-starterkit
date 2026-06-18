@@ -30,7 +30,7 @@ Run against the published evaluation dataset on HuggingFace (skips sampling — 
 whest run \
     --estimator estimator.py \
     --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1
-# auto-resolves to the `mini` split (100 MLPs, ~250 MB cached after first call)
+# auto-resolves to the `mini` split (100 MLPs, ~850 MB cached after first call)
 ```
 
 Or bake a custom local dataset once and reuse it:

@@ -12,7 +12,7 @@ Stage 2 confirms the contract. Stage 3 runs the **real scoring pipeline** (the s
 uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local
 ```
 
-`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~250 MB, cached) it scores in seconds. The FLOP budget is `2.72e11` (272B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8 at a `6.8e10` budget). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
+`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~850 MB, cached) later runs reuse it with no re-download. The FLOP budget is `2.72e11` (272B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8 at a `6.8e10` budget). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
 
 You'll see a Rich-rendered report with five panels:
 
@@ -25,20 +25,20 @@ You'll see a Rich-rendered report with five panels:
 ```
 ╭──────────────────────── Final Score ────────────────────────╮
 │ Adjusted Final-Layer Score  [adjusted_final_layer_score]     │
-│    ≈ 0.083   ← primary score (what the leaderboard ranks on) │
-│ Raw Final-Layer MSE         [final_layer_mse]       ≈ 0.83   │
-│ All-Layers MSE              [all_layers_mse]        ≈ 0.65   │
+│    ≈ 0.091   ← primary score (what the leaderboard ranks on) │
+│ Raw Final-Layer MSE         [final_layer_mse]       ≈ 0.91   │
+│ All-Layers MSE              [all_layers_mse]        ≈ 0.82   │
 │ ───────                                                      │
-│ Best MLP   [best_mlp_adjusted_final_layer_score]    ≈ 0.037  │
-│ Worst MLP  [worst_mlp_adjusted_final_layer_score]   ≈ 0.18   │
+│ Best MLP   [best_mlp_adjusted_final_layer_score]    ≈ 0.018  │
+│ Worst MLP  [worst_mlp_adjusted_final_layer_score]   ≈ 0.66   │
 │ ───────                                                      │
 │ Mean Score Multiplier     [mean_score_multiplier]   ≈ 0.10   │
-│ Mean Compute Utilization  [mean_compute_utilization] ≈ 5e-6  │
+│ Mean Compute Utilization  [mean_compute_utilization] ≈ 1e-6  │
 │ Failed MLPs               [n_failed_mlps]          0 of 100   │
 ╰ per-MLP score = final_layer_mse × max(0.1, C_m / flop_budget) ╯
 ```
 
-With the zeros template, the **raw** MSE rows (`final_layer_mse` ≈ 0.83, `all_layers_mse` ≈ 0.65) reflect the natural variance of the ReLU activations. But the metric you are ranked on is `adjusted_final_layer_score`: because the zeros template spends almost no compute (~5e-6 of the budget), its multiplier sits at the 0.1 floor, so the leaderboard score is about `0.83 × 0.1 ≈ 0.083`. Because the Mini split is fixed, these numbers are reproducible — no `--seed` needed. (`adjusted_final_layer_score` is the mean across MLPs of `final_layer_mse × max(0.1, C_m / flop_budget)`; the raw `final_layer_mse` / `all_layers_mse` carry no multiplier.) See [score-report-fields.md](../reference/score-report-fields.md) for the full schema.
+With the zeros template, the **raw** MSE rows (`final_layer_mse` ≈ 0.91, `all_layers_mse` ≈ 0.82) reflect the natural variance of the ReLU activations. But the metric you are ranked on is `adjusted_final_layer_score`: because the zeros template spends almost no compute (~1e-6 of the budget), its multiplier sits at the 0.1 floor, so the leaderboard score is about `0.91 × 0.1 ≈ 0.091`. Because the Mini split is fixed, these numbers are reproducible — no `--seed` needed. (`adjusted_final_layer_score` is the mean across MLPs of `final_layer_mse × max(0.1, C_m / flop_budget)`; the raw `final_layer_mse` / `all_layers_mse` carry no multiplier.) See [score-report-fields.md](../reference/score-report-fields.md) for the full schema.
 
 ## FLOP-budget callout: Stage 1 vs Stage 3
 

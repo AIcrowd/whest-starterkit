@@ -235,7 +235,7 @@ Verify: check `flops_used > 0` in score report.
 
 ## Every MLP failed (n_failed_mlps == n_mlps)
 
-Symptom: the suite-level `failure_breakdown` shows every MLP carrying at least one failure flag (`n_failed_mlps == n_mlps`), and the `adjusted_final_layer_score` is dominated by `MSE(0, Y_m) × 1.0` across the board (typically lands near `0.5`, the raw `final_layer_mse` of zero predictions at the default activation scale).
+Symptom: the suite-level `failure_breakdown` shows every MLP carrying at least one failure flag (`n_failed_mlps == n_mlps`), and the `adjusted_final_layer_score` is dominated by `MSE(0, Y_m) × 1.0` across the board (typically lands near `0.91`, the raw `final_layer_mse` of zero predictions at the default activation scale).
 
 > **Note:** this is the post-merge replacement for the older "score is `inf`" symptom. Since whestbench PR #39 (May 2026) failures produce finite scores at the zero-prediction × 1.0 multiplier — there is no longer an `inf` path.
 
