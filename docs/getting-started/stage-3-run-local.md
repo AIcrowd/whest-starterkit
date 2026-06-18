@@ -9,7 +9,7 @@ Stage 2 confirms the contract. Stage 3 runs the **real scoring pipeline** (the s
 ## 🚀 Run it
 
 ```bash
-uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner local
+uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local
 ```
 
 `--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~250 MB, cached) it scores in seconds. The FLOP budget is `6.8e10` (68B) and the MLP shape is the competition size (width=256, depth=8). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*

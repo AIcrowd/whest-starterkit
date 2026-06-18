@@ -29,5 +29,5 @@ prompt "uv run whest validate --estimator estimator.py"
 uv run whest validate --estimator estimator.py
 echo
 
-prompt "uv run whest run --estimator examples/03_covariance_propagation.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner local"
-uv run whest run --estimator examples/03_covariance_propagation.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner local
+prompt "uv run whest run --estimator examples/03_covariance_propagation.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local"
+uv run whest run --estimator examples/03_covariance_propagation.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local

@@ -71,7 +71,7 @@ uv run whest validate --estimator estimator.py
 
 ```bash
 uv run whest run --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026 \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 \
     --split mini \
     --runner local
 ```
@@ -80,7 +80,7 @@ uv run whest run --estimator estimator.py \
 
 ```bash
 uv run whest run --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026 \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 \
     --split mini \
     --runner subprocess
 ```

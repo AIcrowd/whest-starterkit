@@ -14,7 +14,7 @@ Stage 3 runs in your interpreter. Stage 4 spawns each estimator call in a fresh 
 ## 🚀 Run it
 
 ```bash
-uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026 --split mini --runner subprocess
+uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner subprocess
 ```
 
 Same score format as Stage 3. If your score drops noticeably, you've found a bug masked by in-process state.

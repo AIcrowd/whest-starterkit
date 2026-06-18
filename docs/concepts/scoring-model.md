@@ -196,7 +196,7 @@ The table below shows the **raw-MSE diagnostics** from the bundled example estim
 - **Covariance propagation** is another ~20x better, but costs O(width^3) per layer (~404M FLOPs at width=256, still <1% of budget). The cubic cost grows fast — by around width≈1400 it would consume the whole 6.8e10 budget.
 - The **leaderboard score** (`adjusted_final_layer_score`) is not shown directly: it scales each estimator's `final_layer_mse` by `max(0.1, C_m / budget)`. Every bundled example spends <1% of the budget, so all of them bottom out at the **0.1 floor** — each one's ranked score is exactly its `final_layer_mse ÷ 10`.
 
-To reproduce: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-warmup` (e.g. `examples/02_mean_propagation.py`)
+To reproduce: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1` (e.g. `examples/02_mean_propagation.py`)
 
 These numbers are reproducible: the `mini` split fixes the 100 MLPs and bakes ground truth at N=1e9, so re-running yields the same values (the `random_estimator` row uses `--seed 42`).
 
