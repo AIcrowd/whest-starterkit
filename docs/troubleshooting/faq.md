@@ -62,7 +62,7 @@ parameter. flopscope reports:
 
 - `flopscope_backend_time_s`: time spent inside counted flopscope calls
 - `flopscope_overhead_time_s`: time spent inside flopscope's own dispatch
-- `residual_wall_time_s`: wall time outside flopscope backend and dispatch work
+- `residual_wall_time_s`: participant Python (loops, control flow), GC, and Python-callback op time; as of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual
 
 WhestBench can then zero predictions if `residual_wall_time_s` exceeds the
 configured `--residual-wall-time-limit`.

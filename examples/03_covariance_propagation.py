@@ -52,10 +52,10 @@ class Estimator(BaseEstimator):
 
     Seeding (whestbench contract -- see
     ``docs/reference/estimator-contract.md``): this estimator is deterministic,
-    but it carries the canonical seeding scaffold so every bundled example
-    shows the pattern. ``self._setup_rng`` is the submission-level RNG seeded
-    from ``ctx.seed`` inside ``setup``; the ``_rng`` line at the top of
-    ``predict`` is the per-MLP RNG seeded from ``mlp.seed``. Both are unused
+    but it carries the canonical seeding scaffold so the propagation examples
+    (01–03) all show the pattern. ``self._setup_rng`` is the submission-level
+    RNG seeded from ``ctx.seed`` inside ``setup``; the ``_rng`` line at the top
+    of ``predict`` is the per-MLP RNG seeded from ``mlp.seed``. Both are unused
     here because the algorithm is purely analytical.
     """
 

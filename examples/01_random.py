@@ -7,8 +7,8 @@ Demonstrates the canonical contract surface (``setup`` / ``predict`` /
   one-time setup RNG seeded from the grader-supplied ``ctx.seed``. Used for
   random precompute that should be deterministic across MLPs and across
   regrades (here: nothing -- this baseline has no setup-time precompute,
-  but the scaffold is present so every bundled example demonstrates the
-  pattern).
+  but the scaffold is present so the propagation examples (01–03) all
+  demonstrate the pattern).
 * ``rng = fnp.random.default_rng(mlp.seed)`` inside ``predict`` -- per-MLP
   RNG seeded from the grader-supplied ``mlp.seed``. This is the seed
   whose determinism the grader checks under regrade. Submissions that

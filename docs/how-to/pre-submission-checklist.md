@@ -37,7 +37,7 @@ checks; each one maps to a single command or a one-line confirmation.
       etc. — anything you `import`. Test with
       `uv pip install --target /tmp/probe -r requirements.txt && rm -rf /tmp/probe`
       to confirm every name resolves.
-- [ ] No filesystem reads from outside `SetupContext.scratch_dir`. The
+- [ ] No filesystem reads from outside `SetupContext.submission_dir` (your shipped files) and `SetupContext.scratch_dir`. The
       grader can't see your laptop.
 - [ ] No network calls in `setup()` or `predict()`. The grader has no
       outbound network.
@@ -59,7 +59,8 @@ checks; each one maps to a single command or a one-line confirmation.
       depth-1 layers) is the most common silent bug.
 - [ ] If you ship a `setup()`: it's idempotent and stays under the ~5s
       `setup_timeout_s`. Heavy precompute belongs in
-      `SetupContext.scratch_dir`.
+      `SetupContext.scratch_dir` — or precompute offline and ship the artifact
+      next to your estimator (see [how-to/ship-weights.md](./ship-weights.md)).
 - [ ] No `print()` left in `predict()`. The grader runs many MLPs;
       stdout flooding is a reliable way to lose `residual_wall_time_s`.
 
@@ -75,8 +76,8 @@ uv run whest submit --estimator estimator.py --watch
 `whest submit` packages, uploads, and creates the submission in one step.
 Prefer to inspect the artifact first? Build it with
 `uv run whest package --estimator estimator.py --output submission.tar.gz`, check
-`tar tf submission.tar.gz` (it should contain `estimator.py` and
-`manifest.json`), then
+`tar tf submission.tar.gz` (it should contain `estimator.py`, `manifest.json`,
+and any helper modules or weight files you keep in the folder), then
 `uv run whest submit submission.tar.gz`.
 
 ## ➡️ See also

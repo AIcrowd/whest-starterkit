@@ -84,7 +84,7 @@ Row `i` is your estimate of expected neuron values after layer `i`.
 
 ## Computational model
 
-FLOP usage is tracked analytically by flopscope. Your estimator imports flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`) and uses its primitives, which report exact FLOP counts. The leaderboard ranks on **effective compute** `C_m = F_m + λ·R_m`, where `F_m` is analytical FLOPs and `R_m` is the residual wall-time bucket (Python-side work not inside a flopscope kernel) at `λ = 1e11` FLOPs/sec. If `C_m > flop_budget` (or wall-time / residual-wall-time caps trip), the affected MLP's predictions are zeroed and the budget multiplier is forced to 1.0. See [Scoring Model](./scoring-model.md) for the full formula.
+FLOP usage is tracked analytically by flopscope. Your estimator imports flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`) and uses its primitives, which report exact FLOP counts. The leaderboard ranks on **effective compute** `C_m = F_m + λ·R_m`, where `F_m` is analytical FLOPs and `R_m` is the residual wall-time bucket (Python-side work not inside a flopscope kernel) at λ (the configured residual-penalty rate, default `1e11` FLOPs/sec). If `C_m > flop_budget` (or wall-time / residual-wall-time caps trip), the affected MLP's predictions are zeroed and the budget multiplier is forced to 1.0. See [Scoring Model](./scoring-model.md) for the full formula.
 
 ## Ground truth
 

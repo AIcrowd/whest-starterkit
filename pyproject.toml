@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 dependencies = [
-    "flopscope>=0.5.0",
+    "flopscope>=0.7.0",
     "whestbench>=0.10.0",
 ]
 
@@ -17,6 +17,16 @@ dev = [
     "pytest>=8.2.0",
     "ruff>=0.6.0",
 ]
+
+# INTERIM git pins — the kit tracks the exact commits the grader runs:
+# whestbench main 2bb7986 (folder submissions + SetupContext.submission_dir +
+# configurable lambda; post-#81/#82, no release tag yet) and flopscope main
+# 0fb5c516 (v0.7.0 + budget-integrity; 0.8.0 version bump deferred to release).
+# Swap back to plain PyPI floors when the releases land: delete this
+# [tool.uv.sources] block, restore the floors, and run `uv lock`.
+[tool.uv.sources]
+whestbench = { git = "https://github.com/AIcrowd/whestbench.git", rev = "2bb7986e7495d902432b2655a9a724b9adc853aa" }
+flopscope = { git = "https://github.com/AIcrowd/flopscope.git", rev = "0fb5c516bed279fefcf3d8365d123efaf8b3477e" }
 
 [tool.ruff]
 line-length = 100

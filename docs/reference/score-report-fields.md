@@ -58,7 +58,7 @@ Each entry in `per_mlp`:
 | `wall_time_s` | `float` | Total elapsed wall-clock time measured for this MLP's estimator context |
 | `flopscope_backend_time_s` | `float` | Wall time inside counted flopscope numpy kernels — the participant's actual numpy compute |
 | `flopscope_overhead_time_s` | `float` | Wall time inside flopscope's own dispatch code (wrapper preambles, FLOP bookkeeping, namespace push/pop). Framework cost, not participant cost. |
-| `residual_wall_time_s` | `float` | Wall time inside the predict context that is neither flopscope backend execution nor flopscope dispatch — i.e. participant Python (loops, control flow), GC, uninstrumented numpy. `R_m` in the scoring formula. |
+| `residual_wall_time_s` | `float` | Wall time inside the predict context that is neither flopscope backend execution nor flopscope dispatch — i.e. participant Python (loops, control flow), GC, and Python-callback op time. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual. `R_m` in the scoring formula. |
 | `final_layer_mse` | `float` | MSE of your final-layer predictions vs ground truth (no multiplier) |
 | `all_layers_mse` | `float` | MSE of your all-layer predictions vs ground truth (no multiplier) |
 | `breakdowns` | `dict \| null` | Per-MLP breakdown container. Currently includes estimator-only data under `estimator`. Sampling is aggregate-only. |
@@ -87,7 +87,7 @@ adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)   for valid ru
 adjusted_final_layer_score = final_layer_mse × 1.0                 for failures (no compute discount)
 
 C_m = F_m + λ · R_m                       (effective compute, FLOPs + FLOP-equivalents)
-λ   = 1e11 FLOPs/sec                      (residual-wall-time conversion rate)
+λ   = residual-wall-time conversion rate (default 1e11 FLOPs/sec, contest-configured)
 ```
 
 Where `F_m` is the analytical FLOPs counted by flopscope (`flops_used`), `R_m` is the residual wall-time bucket (`residual_wall_time_s` — neither flopscope-backend nor flopscope-overhead), and `B` is `flop_budget`. The `max(0.1, …)` floor caps the discount at 10× so an arbitrarily cheap-but-wrong submission cannot dominate the ranking.
@@ -104,7 +104,7 @@ wall_time_s = flopscope_backend_time_s + flopscope_overhead_time_s + residual_wa
 
 - `flopscope_backend_time_s` — numpy kernels actually crunching numbers via `flopscope.numpy.*`.
 - `flopscope_overhead_time_s` — flopscope's own dispatch (wrapper preambles, FLOP bookkeeping, namespace push/pop).
-- `residual_wall_time_s` — everything else inside the wall window: participant Python, GC, uninstrumented numpy.
+- `residual_wall_time_s` — participant Python (loops, control flow), GC, and Python-callback op time; as of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual.
 
 The decomposition holds at every level: per-MLP, aggregated across MLPs, and per namespace inside `breakdowns`.
 
@@ -128,7 +128,7 @@ Each breakdown summary also includes timing totals:
 
 - `flopscope_backend_time_s` - accumulated time inside counted flopscope operations
 - `flopscope_overhead_time_s` - accumulated time inside flopscope's own dispatch
-- `residual_wall_time_s` - everything else (participant Python, GC, uninstrumented numpy)
+- `residual_wall_time_s` - participant Python (loops, control flow), GC, and Python-callback op time; as of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual.
 
 For `results.breakdowns.*`, those values are aggregated across all evaluated
 MLPs.

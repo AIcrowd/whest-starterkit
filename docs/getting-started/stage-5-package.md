@@ -16,7 +16,9 @@ You've climbed the ladder. Now ship it.
 uv run whest package --estimator estimator.py --output submission.tar.gz
 ```
 
-This produces `submission.tar.gz` containing your `estimator.py`, the resolved `whestbench` version, and any imports your estimator needs (auto-detected).
+This bundles **your estimator's entire folder** (minus `.whestignore` entries and built-in ignores) into `submission.tar.gz`. Before writing the archive, `whest package` shows a file/size preview and asks for confirmation; pass `--yes` / `-y` to skip the prompt in CI. The submission must stay within **50 MiB** and **50 files** — use `.whestignore` to exclude scratch files, caches, or large artefacts you don't need on the grader.
+
+Helper modules and data files (e.g. `weights.npz`) kept next to `estimator.py` ship automatically — no extra flags needed. See [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md) for the full walkthrough.
 
 ## 📤 Submit to AIcrowd
 
@@ -29,8 +31,8 @@ First, log in once with your AIcrowd API key (grab it from your
 uv run whest login
 ```
 
-Then submit. `whest submit` packages `estimator.py` and uploads it to the
-challenge in one step (you can also submit a prebuilt tarball):
+Then submit. `whest submit` packages your estimator's folder and uploads it to
+the challenge in one step (you can also submit a prebuilt tarball):
 
 ```bash
 # package + submit in one go
@@ -51,7 +53,7 @@ the AIcrowd challenge submission page.
 
 ## What's in the artifact
 
-- `estimator.py` — verbatim copy of yours
+- Every non-ignored file in your estimator's folder (helper modules, `weights.npz`, and any other data files you keep next to `estimator.py`) — collected automatically; no extra flags needed
 - `manifest.json` — entrypoint, whestbench/flopscope/numpy versions, Python version, per-file SHA-256, and package timestamp
 - `requirements.txt` — only when your estimator pulls in extra packages (frozen from your `uv.lock`)
 
@@ -67,7 +69,7 @@ What happens once `whest submit` (or a portal upload) accepts your
    MLP suite (same `width`, `depth`, `flop_budget` as the public
    defaults; same `n_mlps` order of magnitude), in an isolated
    subprocess inside a sandboxed container. No network, no GPU,
-   no access to the local filesystem outside `SetupContext.scratch_dir`.
+   no access to the local filesystem outside `SetupContext.submission_dir` (your shipped files) and `SetupContext.scratch_dir`.
 3. **Your `setup()` runs once.** If it raises, the run is recorded as a
    failed submission with the traceback surfaced in the AIcrowd UI.
 4. **`predict()` is called per MLP.** Errors per call are captured but
@@ -90,5 +92,5 @@ submission ID — that's the quickest path to a human.
 | Stage | What you should see | Action if not |
 |---|---|---|
 | Local Stage 4 score | ≈ leaderboard score within ~1–2% | Check Stage 4 vs Stage 3 first — drift between them surfaces the same bugs that the grader will hit |
-| `submission.tar.gz` size | Typically 2–10 KB without external deps; up to ~few MB with bundled wheels | If much larger, audit `requirements.txt` |
+| `submission.tar.gz` size | Typically 2–10 KB for a pure-Python estimator; tens of MB if you ship weight files (50 MiB cap enforced by `whest package`) | If unexpectedly large, check for scratch files and use `.whestignore` to exclude them |
 | Grader runtime | A few minutes for the default suite | Slower than that suggests `residual_wall_time_s` issues — see [score-report-fields.md](../reference/score-report-fields.md) |
