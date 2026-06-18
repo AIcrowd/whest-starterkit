@@ -42,7 +42,7 @@ With the zeros template, the **raw** MSE rows (`final_layer_mse` ≈ 0.83, `all_
 
 ## FLOP-budget callout: Stage 1 vs Stage 3
 
-Stage 1's `local_engine.compare_against_monte_carlo` runs your `predict()` under `estimator_budget=1e9`. Stage 3's `whest run` uses the phase-1 grader default `flop_budget=2.72e11` — about **272× larger**. So Stage 1 is the *tighter* budget here: if your estimator fits in Stage 1, it has ample headroom at the grader budget, and budget exhaustion is unlikely to be why a Stage-1-good estimator scores differently in Stage 3.
+Stage 1's `local_engine.compare_against_monte_carlo` runs your `predict()` under `estimator_budget=4e9` (the `v1-warmup` round used `1e9`; scaled 4× with the deeper MLPs). Stage 3's `whest run` uses the phase-1 grader default `flop_budget=2.72e11` — about **68× larger**. So Stage 1 is the *tighter* budget here: if your estimator fits in Stage 1, it has ample headroom at the grader budget, and budget exhaustion is unlikely to be why a Stage-1-good estimator scores differently in Stage 3.
 
 ## Why a different score than Stage 1?
 

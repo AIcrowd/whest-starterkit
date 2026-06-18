@@ -81,7 +81,7 @@ def compare_against_monte_carlo(
     estimator: BaseEstimator,
     mlp: MLP,
     sample_counts: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000),
-    estimator_budget: int = int(1e9),
+    estimator_budget: int = int(4e9),
     sampling_budget: int = int(1e12),
     seed: int = 0,
 ) -> None:
