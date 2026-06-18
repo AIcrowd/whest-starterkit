@@ -14,19 +14,19 @@ Iterate here until `predict()` converges, then climb to Stage 2 to confirm the c
 uv run python estimator.py
 ```
 
-You should see a table like the following. *(This sample capture is from the 256×8 warmup round; the phase-1 competition is 256×32, so your shape line will read `depth=32` and the FLOP/MSE figures will be larger.)*
+You should see a table like:
 
 ```
 --- Your estimator ---
-MLP: width=256 depth=8 seed=0
+MLP: width=256 depth=32 seed=0
 
  n_samples | sampling_flops | estimator_flops |        MSE
 ----------------------------------------------------------
-        10 |     10,551,808 |               0 |   0.706450
-       100 |    105,499,648 |               0 |   0.718928
-     1,000 |  1,054,978,048 |               0 |   0.739125
-    10,000 | 10,549,762,048 |               0 |   0.735092
-   100,000 | 105,497,602,048 |               0 |   0.737172
+        10 |     42,071,040 |               0 |   1.217108
+       100 |    420,710,400 |               0 |   1.192599
+     1,000 |  4,207,104,000 |               0 |   1.214506
+    10,000 | 42,071,040,000 |               0 |   1.201126
+   100,000 | 420,710,400,000 |               0 |   1.206404
 ```
 
 The stub `predict()` returns all zeros, so `estimator_flops` is `0` and the MSE

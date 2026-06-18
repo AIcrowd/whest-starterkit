@@ -93,23 +93,23 @@ If `budget_exhausted` is `true`, your predictions were discarded. You need to re
 
 ## Worked walkthrough: mean propagation, line by line
 
-The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on a `width=256, depth=8` MLP — **the warmup round's shape**. ⚠️ The Phase 1 grader is **256×32** (4× the depth), so depth-linear totals are roughly 4× higher (~11M FLOPs total); the exact per-operation re-profile is pending. Numbers below are aggregated across all 8 layers; per-layer cost is roughly the row total divided by 8. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.7.0).
+The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the phase-1 competition shape (`width=256, depth=32`; the warmup round used 256×8). Numbers are aggregated across all 32 layers; per-layer cost is roughly the row total divided by 32. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.8.0).
 
 | Operation in `predict()` | Calls | FLOPs (total) | % of `predict()` total |
 |---|---:|---:|---:|
-| `mu_pre = w.T @ mu` and `var_pre = (w*w).T @ var` (`matmul`) | 16 | 2,093,056 | **77.1%** |
-| `mu_pre * Phi_alpha + sigma_pre * phi_alpha` etc. (`multiply`) | 64 | 538,624 | 19.8% |
-| `flops.stats.norm.pdf(alpha)` | 8 | 32,768 | 1.2% |
-| `flops.stats.norm.cdf(alpha)` | 8 | 32,768 | 1.2% |
-| `mu_pre * Phi_alpha + ...` etc. (`add`) | 24 | 6,144 | 0.2% |
-| `fnp.maximum(var_pre, 1e-12)` (`maximum`) | 16 | 4,096 | 0.2% |
-| `fnp.sqrt(var_pre)` | 8 | 2,048 | 0.1% |
-| `mu_pre / sigma_pre` (`true_divide`) | 8 | 2,048 | 0.1% |
-| `ez2 - mu*mu` (`subtract`) | 8 | 2,048 | 0.1% |
-| `fnp.stack(rows, axis=0)` | 1 | 2,048 | 0.1% |
-| **Total per `predict()`** | — | **2,715,648** | — |
+| `mu_pre = w.T @ mu` and `var_pre = (w*w).T @ var` (`matmul`) | 64 | 8,372,224 | **74.7%** |
+| `mu_pre * Phi_alpha + sigma_pre * phi_alpha` etc. (`multiply`) | 256 | 2,154,496 | 19.2% |
+| `flops.stats.norm.cdf(alpha)` | 32 | 393,216 | 3.5% |
+| `flops.stats.norm.pdf(alpha)` | 32 | 221,184 | 2.0% |
+| `mu_pre * Phi_alpha + ...` etc. (`add`) | 96 | 24,576 | 0.2% |
+| `fnp.maximum(var_pre, 1e-12)` (`maximum`) | 64 | 16,384 | 0.1% |
+| `fnp.sqrt(var_pre)` | 32 | 8,192 | 0.1% |
+| `mu_pre / sigma_pre` (`true_divide`) | 32 | 8,192 | 0.1% |
+| `ez2 - mu*mu` (`subtract`) | 32 | 8,192 | 0.1% |
+| `fnp.stack(rows, axis=0)` | 1 | 0 | 0.0% |
+| **Total per `predict()`** | — | **11,206,656** | — |
 
-The full ~2.7 M FLOPs spends only ~0.004% of the warmup 6.8e10 budget (the same ~0.004% holds at phase-1's ~11M FLOPs against the 2.72e11 budget), so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
+The full ~11.2 M FLOPs spends only ~0.004% of the 2.72e11 grader budget, so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
 
 Two takeaways:
 

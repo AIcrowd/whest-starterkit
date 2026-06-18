@@ -48,7 +48,7 @@ if __name__ == "__main__":
         "or 'covariance_propagation'.",
     )
     parser.add_argument("--width", type=int, default=256)
-    parser.add_argument("--depth", type=int, default=8)
+    parser.add_argument("--depth", type=int, default=32)  # phase-1 competition shape (warmup was 8)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 

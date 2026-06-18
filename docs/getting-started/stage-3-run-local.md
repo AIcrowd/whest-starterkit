@@ -65,13 +65,11 @@ def predict(self, mlp: MLP, budget: int) -> fnp.ndarray:
 
 ## ✅ Expected outcome
 
-> ⚠️ The MSE figures below are from the **256×8 warmup** round. Phase 1 is **256×32** (a deeper network), so the absolute MSE magnitudes will differ — these calibration numbers are pending a 256×32 re-run.
-
 | Estimator | Typical raw `final_layer_mse` (public Mini split, 100 MLPs) |
 |---|---|
-| Zeros template | ~0.83 (the all-zeros accuracy floor) |
-| `02_mean_propagation` | ~7.5e-04 |
-| `03_covariance_propagation` | ~3.7e-05 |
+| Zeros template | ~0.91 (the all-zeros accuracy floor) |
+| `02_mean_propagation` | ~9.5e-04 |
+| `03_covariance_propagation` | ~8.4e-05 |
 
 These are the **raw** final-layer MSEs (the accuracy signal). Your leaderboard `adjusted_final_layer_score` scales each by the compute multiplier `max(0.1, C_m / flop_budget)` — and since these all use <1% of the budget, the ranked number is exactly one-tenth of the value shown (the 0.1 floor).
 
