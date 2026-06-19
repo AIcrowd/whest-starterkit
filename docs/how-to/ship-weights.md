@@ -12,22 +12,32 @@ scalar, a learned projection matrix, a lookup table) and load it inside
 
 ## (a) Splitting code across modules
 
-`whest package` bundles your estimator's **entire folder**. If you keep helper
-modules next to `estimator.py`, they ship automatically and are importable on
-the grader with the same import paths as locally:
+To ship more than one file, package the **folder** — point `--estimator` at the
+directory, not at `estimator.py`:
+
+```bash
+uv run whest package --estimator . --output submission.tar.gz
+```
+
+Folder mode bundles every non-ignored file in the folder, so helper modules and
+data files next to `estimator.py` ship and import on the grader with the same
+paths as locally:
 
 ```
 my-submission/
   estimator.py       ← entry point
-  helper.py          ← imported by estimator.py → ships automatically
+  helper.py          ← imported by estimator.py → ships (folder mode)
   layers.py          ← same
-  weights.npz        ← data file → ships automatically
+  weights.npz        ← data file → ships (folder mode)
 ```
 
-No extra flags needed — the packaging step collects every non-ignored file in
-the folder. `whest package` also warns you if a `.py` file in the folder is
-**not** reachable by import from `estimator.py` (likely a scratch file you
-forgot to exclude).
+`whest package` lists every file it will ship and asks you to confirm before
+writing, and warns if a `.py` file isn't reachable by import from `estimator.py`
+(likely a scratch file you forgot to exclude).
+
+> ⚠ Packaging the file alone — `whest package --estimator estimator.py` — ships
+> **only `estimator.py`**; `helper.py` and `weights.npz` would be left out. For a
+> multi-file submission, always point `--estimator` at the folder.
 
 ---
 
@@ -102,37 +112,40 @@ debug_weights.pkl
 
 `whest init` creates a starter `.whestignore` for you. The built-in ignore list
 already excludes common non-submission artefacts (`.git/`, `__pycache__/`,
-`*.pyc`, etc.), so you only need to add project-specific entries.
+`*.pyc`, etc.) and **all credential files** (`.env`, `*.pem`, `*.key`, private
+keys) for security, so you only need to add project-specific entries.
 
 ---
 
 ## (e) Package preview, `--yes`, and dry run
 
-Before packaging, `whest package` shows a file/size preview and asks for
-confirmation:
+Folder mode gives you **full visibility** before anything ships: `whest package`
+lists every file and asks you to confirm:
 
 ```
-● Packaging estimator.py → submission-20260610-120000.tar.gz
-  Files to bundle (3 files, 42.3 KB):
-    estimator.py  (1.2 KB)
-    helper.py     (0.9 KB)
-    weights.npz   (40.2 KB)
-  Package these 3 files (42.3 KB)? [y/N]
+Packaging folder ./ → submission-20260610-120000.tar.gz
+Everything in this folder will be submitted, except .gitignore / .whestignore
+matches and credential files (excluded for security).
+Submitting 3 files (42.3 KB):
+  estimator.py  (1.2 KB)
+  helper.py     (0.9 KB)
+  weights.npz   (40.2 KB)
+Submit all 3 files (42.3 KB)? [y/N]
 ```
 
 Skip the prompt in CI with `--yes` / `-y`:
 
 ```bash
-whest package --estimator estimator.py --yes
+whest package --estimator . --yes
 ```
 
 To preview **without** building the archive or uploading anything:
 
 ```bash
-whest submit --estimator estimator.py --dry-run
+whest submit --estimator . --dry-run
 ```
 
-This shows the full manifest (files, sizes, versions) and then stops.
+This shows the full file list, sizes, and versions, then stops.
 
 ---
 
