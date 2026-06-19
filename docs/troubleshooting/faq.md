@@ -38,6 +38,16 @@ flopscope enforces the budget regardless — if your operations exceed it, `Budg
 
 Yes. `setup()` runs before any `predict()` calls and is not under a FLOP budget. Use it for one-time preparation that does not depend on the specific MLP (e.g., lookup tables, configuration).
 
+## I added a helper module or weights file, but it didn't end up in my submission.
+
+`whest package --estimator estimator.py` (and `whest submit --estimator estimator.py`) ship **only that one file**. To ship more than one file, keep them in a folder and point `--estimator` at the **folder**:
+
+```bash
+uv run whest package --estimator . --output submission.tar.gz
+```
+
+You'll see the full list of files before anything is sent, and credential files like `.env` are never included. See [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md).
+
 However, `setup()` does have a time limit (`setup_timeout_s`, typically 5 seconds).
 
 ## How do I set a time limit on my estimator code?
