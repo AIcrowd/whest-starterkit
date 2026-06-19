@@ -92,6 +92,8 @@ uv run whest package --estimator estimator.py   # build & inspect the tarball
 uv run whest submit  --estimator estimator.py   # ship it (also packages, in one step)
 ```
 
+> These ship **only `estimator.py`** — the common case. Embedding weights or splitting across modules? Point `--estimator` at a folder instead: see [Stage 5 → Embedding weights or multiple modules](docs/getting-started/stage-5-package.md#-embedding-weights-or-multiple-modules-power-users).
+
 ## 🏁 Submit to AIcrowd
 
 Climbed to Stage 5? Ship it from the CLI. Log in once with your

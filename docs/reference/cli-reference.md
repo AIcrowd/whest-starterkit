@@ -13,5 +13,6 @@ The `whest` CLI is shipped by [whestbench](https://github.com/AIcrowd/whestbench
 | `whest validate` | Check estimator contract | 2 |
 | `whest run --runner local` | Score in-process | 3 |
 | `whest run --runner subprocess` | Score in subprocess | 4 |
-| `whest package` | Build submission tarball | 5 |
+| `whest package` | Build submission archive — a **file** ships just that file, a **folder** ships the whole folder | 5 |
+| `whest submit` | Package (if `--estimator` given) and upload to AIcrowd | 5 |
 | `whest doctor` | Diagnose environment issues | any |
