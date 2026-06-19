@@ -41,27 +41,37 @@ writing, and warns if a `.py` file isn't reachable by import from `estimator.py`
 
 ---
 
-## (b) Authoring `weights.npz` offline
+## (b) Authoring weights offline with `flopscope.Module`
 
-Offline compute is free — only `predict()`-time FLOPs count toward your score.
-Pre-compute anything expensive outside the challenge runner:
+flopscope only loads **pickle-free** array weights: `fnp.load` and
+`flopscope.Module` both use `np.load(allow_pickle=False)`, so a pickled model
+(`torch.save`, `joblib`, `pickle`) will **not** load on the grader. Author your
+weights as a `flopscope.Module` — public array attributes are saved and restored
+automatically:
 
 ```python
-import numpy as np
+import flopscope
+import flopscope.numpy as fnp
 
-scale = np.float32(2.0)           # replace with your real computation
-np.savez("weights.npz", scale=scale)
+class Weights(flopscope.Module):
+    def __init__(self) -> None:
+        self.scale = fnp.ones(())     # public array attribute → saved & restored
+
+# Offline compute is free — only predict()-time FLOPs count toward your score.
+w = Weights()
+w.scale = fnp.asarray(2.0)            # replace with your real precomputation
+w.save("weights.npz")                 # plain .npz, no pickle
 ```
 
-Plain NumPy `.npz` is the recommended format: no special dependencies, no
-pickle, loads without registered weights classes.
+`.save()` writes a plain `.npz`; nested `Module`s and lists/tuples/dicts of arrays
+are flattened automatically. (For a single bare array you can also `np.savez` /
+`fnp.load` directly, but `Module` keeps multi-array weights structured and reloads
+them into a typed object.)
 
 **Designing the weights themselves** — which operations are free vs FLOP-counted,
 and the full `fnp` module surface (array creation, RNG, reductions, matmul,
 einsum) — is covered in the [Flopscope Primer](../reference/flopscope-primer.md)
-and [Code Patterns](../reference/code-patterns.md). The offline generation above
-can use plain NumPy/SciPy (it's free); reach for `flopscope.numpy` (`fnp`) when
-you want an operation FLOP-counted exactly as it will be at `predict()` time.
+and [Code Patterns](../reference/code-patterns.md).
 
 ---
 
@@ -74,24 +84,28 @@ constructing a `Path` from it — it is `None` outside the runner context:
 
 ```python
 from pathlib import Path
+import flopscope
 import flopscope.numpy as fnp
 from whestbench import BaseEstimator, SetupContext
 
+class Weights(flopscope.Module):
+    def __init__(self) -> None:
+        self.scale = fnp.ones(())
+
 class Estimator(BaseEstimator):
     def setup(self, context: SetupContext) -> None:
-        scale = None
+        self._weights = None
         if context.submission_dir is not None:
             weights_path = Path(context.submission_dir) / "weights.npz"
             if weights_path.exists():
-                scale = fnp.load(str(weights_path))["scale"]  # 0 FLOPs to load
-        self._scale = scale if scale is not None else fnp.ones(())
+                self._weights = Weights.from_file(str(weights_path))  # 0 FLOPs
 ```
 
-`fnp.load` (flopscope's NumPy-compatible load) costs **0 FLOPs** — loading
-data does not count against your budget. **Pass a `str` path, not a `Path`** —
-the grader's `flopscope-client` requires a string filename. (The full flopscope
-in your local venv also accepts a `Path`, so a `Path` appears to work under
-`whest validate` but fails on the grader — always wrap with `str(...)`.)
+`from_file` (and `fnp.load`) cost **0 FLOPs** — loading data does not count
+against your budget. **Pass a `str` path, not a `Path`** — the grader's
+`flopscope-client` requires a string filename. (The full flopscope in your local
+venv also accepts a `Path`, so a `Path` appears to work under `whest validate` but
+fails on the grader — always wrap with `str(...)`.)
 
 See the full worked example at [`examples/04_shipped_weights.py`](../../examples/04_shipped_weights.py).
 
