@@ -56,6 +56,13 @@ np.savez("weights.npz", scale=scale)
 Plain NumPy `.npz` is the recommended format: no special dependencies, no
 pickle, loads without registered weights classes.
 
+**Designing the weights themselves** — which operations are free vs FLOP-counted,
+and the full `fnp` module surface (array creation, RNG, reductions, matmul,
+einsum) — is covered in the [Flopscope Primer](../reference/flopscope-primer.md)
+and [Code Patterns](../reference/code-patterns.md). The offline generation above
+can use plain NumPy/SciPy (it's free); reach for `flopscope.numpy` (`fnp`) when
+you want an operation FLOP-counted exactly as it will be at `predict()` time.
+
 ---
 
 ## (c) Loading in `setup()` via `submission_dir`

@@ -43,7 +43,9 @@ writes anything, `whest`:
 - **never includes credential files** (`.env`, `*.pem`, keys, …);
 - honors `.gitignore` / `.whestignore` — add patterns there to drop scratch or large artefacts. The 50 MiB / 50 file caps still apply.
 
-Full walkthrough: [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md).
+Full walkthrough — including how to compute `weights.npz` and which `flopscope`
+ops you can use — see [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md)
+and the [Flopscope Primer](../reference/flopscope-primer.md).
 
 ## 📤 Submit to AIcrowd
 
