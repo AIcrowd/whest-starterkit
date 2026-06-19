@@ -1,10 +1,21 @@
 <div align="center">
-  <img src="assets/logo/logo.png" alt="ARC Whitebox Estimation Challenge logo" style="height: 120px;">
+  <img src="assets/logo/logo.png" alt="ARC WhiteBox Estimation Challenge 2026 logo" style="height: 120px;">
 </div>
 
-# Whitebox Estimation — Starter Kit
+# ARC WhiteBox Estimation Challenge 2026 - Starter Kit
 
-[![CI](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml)
+<div align="center">
+
+<a href="https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026"><img alt="Challenge" src="https://img.shields.io/badge/AIcrowd-Challenge_Page-f0524d?style=for-the-badge"></a>
+<a href="https://github.com/AIcrowd/whestbench"><img alt="whestbench" src="https://img.shields.io/badge/GitHub-AIcrowd%2Fwhestbench-181717?style=for-the-badge&logo=github&logoColor=white"></a>
+<a href="https://github.com/AIcrowd/whest-starterkit"><img alt="Starter Kit" src="https://img.shields.io/badge/Starter_Kit-whest--starterkit-f57c00?style=for-the-badge&logo=github&logoColor=white"></a>
+<a href="https://aicrowd.github.io/whestbench-explorer/"><img alt="MLP Explorer" src="https://img.shields.io/badge/MLP_Explorer-Interactive-7e57c2?style=for-the-badge"></a>
+<a href="https://github.com/AIcrowd/flopscope"><img alt="flopscope" src="https://img.shields.io/badge/FLOP_Tracking-flopscope-009688?style=for-the-badge&logo=github&logoColor=white"></a>
+<a href="https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026/tree/v1-phase1"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97-View_on_HF_Hub-ffd54f?style=for-the-badge"></a>
+<br>
+<a href="https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg"></a>
+
+</div>
 
 <div align="center">
   <img src="assets/demo.gif" alt="whest-starterkit first 5 minutes" width="720">
