@@ -56,24 +56,15 @@ whest run --estimator estimator.py --runner local --format json
 
 `--json` still works as an alias, but `--format rich|plain|json` is the canonical output selector across the CLI.
 
-Package submission artifact:
+Package submission artifact (single file — the common case):
 
 ```bash
-whest package --estimator estimator.py --output ./submission.tar.gz --yes
+whest package --estimator estimator.py --output ./submission.tar.gz
 ```
 
-`whest package` bundles your estimator's whole folder (minus `.whestignore` entries and built-in ignores), previews the file list and sizes, and asks for confirmation before writing the archive (pass `--yes` / `-y` to skip the prompt in CI or scripts). It enforces the 50 MiB / 50-file caps — use `.whestignore` to exclude scratch files or large artefacts you don't need on the grader. For shipping precomputed weight files, see [Ship Weights and Multi-File Submissions](./ship-weights.md).
+A **file** argument ships **only that file**; a **folder** argument (`--estimator .`) ships every file in that folder. Either way `whest package` previews exactly what will be submitted and (in folder mode) asks for confirmation before writing — pass `--yes` / `-y` to skip the prompt in CI or scripts. Credential files (`.env`, `*.pem`, keys, …) are never included. The 50 MiB / 50-file caps apply; use `.whestignore` to exclude scratch or large artefacts.
 
-Optional files during packaging:
-
-```bash
-whest package \
-  --estimator estimator.py \
-  --requirements requirements.txt \
-  --submission-metadata submission.yaml \
-  --approach APPROACH.md \
-  --output ./submission.tar.gz
-```
+Shipping helper modules, `requirements.txt`, or precomputed weights? Keep them in the folder and package the folder — they ship by being present, no extra flags. See [Ship Weights and Multi-File Submissions](./ship-weights.md).
 
 ## Useful `whest run` flags
 

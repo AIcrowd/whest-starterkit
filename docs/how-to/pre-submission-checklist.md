@@ -76,9 +76,13 @@ uv run whest submit --estimator estimator.py --watch
 `whest submit` packages, uploads, and creates the submission in one step.
 Prefer to inspect the artifact first? Build it with
 `uv run whest package --estimator estimator.py --output submission.tar.gz`, check
-`tar tf submission.tar.gz` (it should contain `estimator.py`, `manifest.json`,
-and any helper modules or weight files you keep in the folder), then
-`uv run whest submit submission.tar.gz`.
+`tar tf submission.tar.gz` (it should contain `estimator.py` and `manifest.json`),
+then `uv run whest submit submission.tar.gz`.
+
+Shipping weights or extra modules? Package the **folder** instead
+(`uv run whest package --estimator . --output submission.tar.gz`) — it lists every
+file and asks you to confirm, and credential files like `.env` are never
+included. See [Ship Weights](./ship-weights.md).
 
 ## ➡️ See also
 
