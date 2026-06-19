@@ -10,15 +10,40 @@ You've climbed the ladder. Now ship it.
 > [Pre-Submission Checklist](../how-to/pre-submission-checklist.md) — it's
 > one screen, all commands, and catches the bugs the grader will hit.
 
-## 🚀 Run it
+## 🚀 Package it
+
+Most submissions are a single, self-contained `estimator.py`. Package that file:
 
 ```bash
 uv run whest package --estimator estimator.py --output submission.tar.gz
 ```
 
-This bundles **your estimator's entire folder** (minus `.whestignore` entries and built-in ignores) into `submission.tar.gz`. Before writing the archive, `whest package` shows a file/size preview and asks for confirmation; pass `--yes` / `-y` to skip the prompt in CI. The submission must stay within **50 MiB** and **50 files** — use `.whestignore` to exclude scratch files, caches, or large artefacts you don't need on the grader.
+This ships **only `estimator.py`** (plus a generated `manifest.json`). Before writing the archive, `whest` prints exactly what it's bundling.
 
-Helper modules and data files (e.g. `weights.npz`) kept next to `estimator.py` ship automatically — no extra flags needed. See [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md) for the full walkthrough.
+> **`whest package --estimator <path>` — the path you give decides what ships:**
+> - **A file** (`--estimator estimator.py`) ships **only that file**. This is the default, and all you need for a single-file estimator like this kit's.
+> - **A folder** (`--estimator .`) ships **every file in that folder** — for embedding weights or splitting across modules (see below).
+>
+> **Credential files never ship**, in either mode — `.env`, `*.pem`, `*.key`, `id_*`, `.aws/`, … are always excluded for security, because your submission goes to a public leaderboard.
+
+## 📦 Embedding weights or multiple modules (power users)
+
+Pre-computed `weights.npz`, or an estimator split across modules? Ship the whole
+folder instead — **safely, with full visibility**:
+
+```bash
+uv run whest package --estimator . --output submission.tar.gz
+```
+
+Folder mode bundles every file in the folder (this kit's `.whestignore` already
+keeps `docs/`, `tests/`, `examples/`, and local-only tooling out). Before it
+writes anything, `whest`:
+
+- **lists every file it will ship** and asks `[y/N]` to confirm (pass `--yes` to skip the prompt in CI) — nothing ships by surprise;
+- **never includes credential files** (`.env`, `*.pem`, keys, …);
+- honors `.gitignore` / `.whestignore` — add patterns there to drop scratch or large artefacts. The 50 MiB / 50 file caps still apply.
+
+Full walkthrough: [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md).
 
 ## 📤 Submit to AIcrowd
 
@@ -31,11 +56,13 @@ First, log in once with your AIcrowd API key (grab it from your
 uv run whest login
 ```
 
-Then submit. `whest submit` packages your estimator's folder and uploads it to
-the challenge in one step (you can also submit a prebuilt tarball):
+Then submit. `whest submit --estimator estimator.py` packages your single file
+and uploads it in one step, showing the same preview first. (Power users
+embedding weights: point `--estimator` at `.` to ship the folder.) You can also
+submit a prebuilt tarball:
 
 ```bash
-# package + submit in one go
+# package + submit your single-file estimator
 uv run whest submit --estimator estimator.py
 
 # or submit a tarball you already built
@@ -53,9 +80,13 @@ the AIcrowd challenge submission page.
 
 ## What's in the artifact
 
-- Every non-ignored file in your estimator's folder (helper modules, `weights.npz`, and any other data files you keep next to `estimator.py`) — collected automatically; no extra flags needed
+Single file (`--estimator estimator.py`):
+- `estimator.py` — verbatim copy of yours
 - `manifest.json` — entrypoint, whestbench/flopscope/numpy versions, Python version, per-file SHA-256, and package timestamp
 - `requirements.txt` — only when your estimator pulls in extra packages (frozen from your `uv.lock`)
+
+Folder (`--estimator .`): every non-ignored file in the folder (helper modules,
+`weights.npz`, …) plus `manifest.json` and, when needed, `requirements.txt`.
 
 ## After submission
 
