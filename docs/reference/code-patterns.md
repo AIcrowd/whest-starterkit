@@ -174,15 +174,10 @@ def norm_cdf(x):
     return fnp.where(x >= 0, cdf, 1.0 - cdf)
 ```
 
-Alternatively, if you add `scipy` to your `requirements.txt`:
-
-```python
-# Optional: requires scipy as a user-provided dependency
-from scipy.special import ndtr
-
-def norm_cdf(x):
-    return fnp.array(ndtr(fnp.asarray(x, dtype=fnp.float64)).astype(fnp.float32))
-```
+> Use the pure-flopscope version above. The grader sandbox does **not** provide
+> `scipy` (or any third-party PyPI package) — only `flopscope`, the `whestbench`
+> API, and the Python standard library are importable — and only flopscope
+> operations are FLOP-counted.
 
 ### ReLU expectation (E[max(0, z)] where z ~ N(mu, sigma^2))
 

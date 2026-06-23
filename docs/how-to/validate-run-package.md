@@ -64,7 +64,7 @@ whest package --estimator estimator.py --output ./submission.tar.gz
 
 A **file** argument ships **only that file**; a **folder** argument (`--estimator .`) ships every file in that folder. Either way `whest package` previews exactly what will be submitted and (in folder mode) asks for confirmation before writing — pass `--yes` / `-y` to skip the prompt in CI or scripts. Credential files (`.env`, `*.pem`, keys, …) are never included. The 50 MiB / 50-file caps apply; use `.whestignore` to exclude scratch or large artefacts.
 
-Shipping helper modules, `requirements.txt`, or precomputed weights? Keep them in the folder and package the folder — they ship by being present, no extra flags. See [Ship Weights and Multi-File Submissions](./ship-weights.md).
+Shipping helper modules or precomputed weights? Keep them in the folder and package the folder — they ship by being present, no extra flags. (Third-party PyPI packages can't be shipped — the grader installs nothing beyond `flopscope` and the `whestbench` API, so do that work offline and ship the result as data.) See [Ship Weights and Multi-File Submissions](./ship-weights.md).
 
 ## Useful `whest run` flags
 
@@ -81,7 +81,7 @@ These all show up in `whest run --help` but get lost there. Reach for them when:
 | `--max-threads N` | Pin the BLAS thread pool size so `wall_time_s` is comparable across machines. Useful when triaging a "fast on my laptop, slow in CI" report. |
 | `--detail {raw,full}` | `raw` strips Rich formatting (handy for `tee`-ing logs); `full` adds the per-MLP raw arrays. |
 | `--wall-time-limit S` | Cap each `predict()` call's wall time. Useful when local debugging hangs on a numerical edge case. |
-| `--residual-wall-time-limit S` | Cap time spent outside flopscope ops (Python plumbing, scipy calls). Surfaces "looks fast in FLOPs but Python is the bottleneck" issues. |
+| `--residual-wall-time-limit S` | Cap time spent outside flopscope ops (Python plumbing, loops, control flow). Surfaces "looks fast in FLOPs but Python is the bottleneck" issues. |
 | `--debug` + `--fail-fast` | First exception → halt + raw traceback. Combine for the fastest "what broke?" loop. |
 
 ## ✅ Expected outcome

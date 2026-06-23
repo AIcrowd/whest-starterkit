@@ -85,19 +85,29 @@ the AIcrowd challenge submission page.
 Single file (`--estimator estimator.py`):
 - `estimator.py` — verbatim copy of yours
 - `manifest.json` — entrypoint, whestbench/flopscope/numpy versions, Python version, per-file SHA-256, and package timestamp
-- `requirements.txt` — only when your estimator pulls in extra packages (frozen from your `uv.lock`)
 
 Folder (`--estimator .`): every non-ignored file in the folder (helper modules,
-`weights.npz`, …) plus `manifest.json` and, when needed, `requirements.txt`.
+`weights.npz`, …) plus `manifest.json`.
+
+> **No third-party packages on the grader.** Your estimator runs in a
+> locked-down sandbox that provides only `flopscope` (incl.
+> `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`, `MLP`,
+> `SetupContext`), and the Python standard library — there is no
+> `requirements.txt` install step, so `numpy`, `scipy`, `torch`, … are not
+> importable. Do anything that needs them **offline** and ship the result as a
+> pickle-free `.npz` (see [Ship Weights](../how-to/ship-weights.md)).
 
 ## After submission
 
 What happens once `whest submit` (or a portal upload) accepts your
 `submission.tar.gz`:
 
-1. **AIcrowd unpacks the artifact** into a clean grader container that
-   pre-installs the runner’s `whestbench` release plus the contents of
-   your `requirements.txt`.
+1. **AIcrowd unpacks the artifact** and runs your estimator in a locked-down
+   sandbox that provides **only** `flopscope` (incl. `flopscope.numpy as fnp`),
+   the `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the
+   Python standard library. There is **no third-party package install step** —
+   a `requirements.txt` has no effect, and `numpy`/`scipy`/`torch` are not
+   importable (do that work offline; see [Ship Weights](../how-to/ship-weights.md)).
 2. **The grader runs your estimator** against a held-out
    MLP suite (same `width`, `depth`, `flop_budget` as the public
    defaults; same `n_mlps` order of magnitude), in an isolated

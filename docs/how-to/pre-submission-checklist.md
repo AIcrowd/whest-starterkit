@@ -32,11 +32,16 @@ checks; each one maps to a single command or a one-line confirmation.
 
 ## Reproducibility
 
-- [ ] **`requirements.txt`** lists every non-flopscope, non-whestbench
-      import your estimator pulls in. `scipy`, `numpy`-only utilities
-      etc. — anything you `import`. Test with
-      `uv pip install --target /tmp/probe -r requirements.txt && rm -rf /tmp/probe`
-      to confirm every name resolves.
+- [ ] **Only sandbox-available imports.** At grading time your estimator can
+      import **only** `flopscope` (incl. `flopscope.numpy as fnp`), the
+      `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the Python
+      standard library — there is no `requirements.txt` install, so `numpy`,
+      `scipy`, `torch`, … are not available. Your local venv *has* them, so a
+      local run won't flag a stray `import`; grep your estimator and route all
+      array math through `flopscope.numpy as fnp`. Heavier work (a
+      PyTorch-trained model, a scipy routine) goes **offline** → ship a
+      pickle-free `.npz`, loaded in `setup()` — see
+      [ship-weights.md](./ship-weights.md).
 - [ ] No filesystem reads from outside `SetupContext.submission_dir` (your shipped files) and `SetupContext.scratch_dir`. The
       grader can't see your laptop.
 - [ ] No network calls in `setup()` or `predict()`. The grader has no

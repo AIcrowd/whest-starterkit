@@ -4,11 +4,11 @@
 
 ## Can I use numpy directly?
 
-All computation must go through flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`). flopscope wraps numpy with analytical FLOP counting — your score depends on the FLOP cost of your operations, and only flopscope tracks those costs.
+No — plain `import numpy` is **not available** in the grader sandbox (by design). All array math goes through flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`), which wraps numpy with analytical FLOP counting. Your score depends on the FLOP cost of your operations, and only flopscope tracks those costs — so flopscope is both the only array path and the only one that counts.
 
-## Can I use scipy?
+## Can I use scipy (or PyTorch, or any other PyPI package)?
 
-Yes. scipy is not part of flopscope, so you import it separately as your own dependency. Common usage: `scipy.special.ndtr` for the standard normal CDF. Add `scipy` to your `requirements.txt` when packaging.
+No. At grading time your estimator runs in a locked-down sandbox whose only importable libraries are `flopscope` (incl. `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the Python standard library. There is **no `requirements.txt` install step** — third-party packages (`scipy`, `numpy`, `torch`, …) are not installed and won't import. For the standard normal CDF, use the pure-flopscope `norm_cdf` recipe in [Code Patterns](../reference/code-patterns.md#standard-normal-cdf). For anything heavier (e.g. a model trained with PyTorch), do the work **offline** before packaging and ship the result as a pickle-free `.npz`, loaded in `setup()` via `fnp.load(str(path))` (0 FLOPs) — see [Ship Weights](../how-to/ship-weights.md).
 
 ## Why is one MLP scoring much worse than the others?
 
@@ -109,7 +109,7 @@ Almost always one of three things:
 
 1. **Module-level state survives between predict() calls in-process.** Your Stage 3 (`--runner local`) iteration accidentally caches results between MLPs (lookup tables, RNG state, memoized partials). Stage 4 (`--runner subprocess`) and the grader run each MLP in a fresh process — that state is gone, and your score collapses. **Fix:** move state to instance attributes (`self._...`) populated in `setup()`, or use the `SetupContext.scratch_dir` for cross-call caching that's recomputed deterministically.
 
-2. **Imports that work in-process fail in a clean subprocess.** A relative import, a missing `requirements.txt` entry, or a side-effecting top-level statement. **Fix:** run `uv run whest run --estimator estimator.py --runner subprocess` locally before submitting, and read the "Estimator Errors" panel.
+2. **Imports that work locally fail in the grader sandbox.** Two flavors: (a) a helper module that didn't ship (you packaged the single file instead of the folder) or a side-effecting top-level statement — caught by running `uv run whest run --estimator estimator.py --runner subprocess` locally before submitting, then reading the "Estimator Errors" panel; (b) an `import` of a package the grader doesn't provide. The sandbox has **only** `flopscope`, the `whestbench` API, and the Python stdlib — no `numpy`/`scipy`/`torch`. Your local venv *does* have those, so a local run won't flag them; the fix is to not import them (use `flopscope.numpy as fnp`, and precompute heavier work offline — see [Ship Weights](../how-to/ship-weights.md)).
 
 3. **Numerical non-determinism without a seed.** Random MLP generation, Monte-Carlo ground truth, or your estimator's own RNG. **Fix:** add `--seed N` to your local runs to compare apples-to-apples, and avoid time-based seeds in your estimator.
 

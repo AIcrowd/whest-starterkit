@@ -101,9 +101,9 @@ whest validate --estimator estimator.py
 
 Symptom: `ModuleNotFoundError` when loading your file.
 
-Why it happens: your estimator imports a module not installed in the environment.
+Why it happens: your estimator imports something the grader sandbox doesn't provide. At grading time only `flopscope` (incl. `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the Python standard library are importable — there is **no `requirements.txt` install step**, so third-party packages (`numpy`, `scipy`, `torch`, …) are not available. (A missing *helper module* is different: it ships if you package the folder — `--estimator .` — instead of the single file.)
 
-Fix now: add missing dependencies to `requirements.txt`. For flopscope, use `import flopscope as flops` and `import flopscope.numpy as fnp`.
+Fix now: for all array math use `import flopscope as flops` and `import flopscope.numpy as fnp` (not `import numpy`). Ship multi-file estimators as a folder. For work that genuinely needs a third-party library (a PyTorch-trained model, a scipy routine), compute it **offline** before packaging and ship the result as a pickle-free `.npz`, loaded in `setup()` — see [Ship Weights](../how-to/ship-weights.md). Note: `whest validate` runs in your local venv (which *has* numpy/scipy/torch), so it will **not** reproduce a grader-only missing-package error — the only fix is to not import those packages.
 
 Verify:
 
@@ -227,7 +227,7 @@ whest validate --estimator estimator.py
 
 Symptom: operations work but FLOP budget is not consumed (shows 0 flops_used).
 
-Why it happens: you are using `import numpy as np` instead of `import flopscope.numpy as fnp`. Numpy operations are not FLOP-tracked.
+Why it happens: you are using `import numpy as np` instead of `import flopscope.numpy as fnp`. Numpy operations are not FLOP-tracked. (This is the *local* symptom — your venv has numpy, so it runs silently untracked. On the grader `import numpy` fails outright, since the sandbox has no numpy — see [Import error in estimator](#import-error-in-estimator). Either way, `np.*` is wrong; use `fnp.*`.)
 
 Fix now: replace all `np.*` calls with `fnp.*` equivalents. See [Code Patterns](../reference/code-patterns.md).
 
