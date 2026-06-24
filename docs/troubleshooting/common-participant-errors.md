@@ -33,6 +33,8 @@ Exact follow-up:
 whest run --estimator estimator.py --runner local --debug
 ```
 
+> **Develop against the flopscope client.** The grader runs the flopscope *client* — a numpy-compatible proxy, not raw numpy. If you write and test all your array code against `flopscope.numpy` (`import flopscope.numpy as fnp`) and run with `--runner subprocess` before submitting, any API-parity gap (a method or operator the proxy doesn't support, an immutability rejection) surfaces locally instead of silently failing on the grader. Most of the failures below are exactly these gaps — caught early if you never reach for plain numpy.
+
 ## Estimator returned wrong shape
 
 Symptom: error mentions expected shape `(depth, width)`.
@@ -111,6 +113,30 @@ Verify:
 whest validate --estimator estimator.py
 ```
 
+## Packaging / submission rejected (`IMPORT_FAILED`)
+
+Symptom: your submission is rejected before any MLP runs, with a message such as `IMPORT_FAILED`, a `manifest.json` schema / `api_version` error, `'estimator.py' sha256 mismatch`, or "tarball missing manifest.json".
+
+Why it happens: the grader unpacks your archive and checks it against the `manifest.json` it expects — entrypoint, declared versions, and a SHA-256 for every file. A hand-rolled or hand-edited archive (wrong layout, a file changed after the manifest was generated, a missing or stale manifest) fails this gate, so nothing is graded.
+
+Fix now: never assemble the tarball yourself. Re-run the provided packaging command so the manifest and file hashes are generated together and stay in sync:
+
+```bash
+# single-file estimator
+uv run whest package --estimator estimator.py --output submission.tar.gz
+
+# multi-file estimator (weights, helper modules) — point at the folder
+uv run whest package --estimator . --output submission.tar.gz
+```
+
+`whest` prints exactly what it bundled before writing the archive; if a file you expected isn't listed, fix that *before* submitting. See [Stage 5: Package Your Submission](../getting-started/stage-5-package.md) and the [Pre-Submission Checklist](../how-to/pre-submission-checklist.md).
+
+Verify:
+
+```bash
+tar tf submission.tar.gz   # should list estimator.py (+ your files) and manifest.json
+```
+
 ## Import error in estimator
 
 Symptom: `ModuleNotFoundError` when loading your file.
@@ -156,6 +182,18 @@ whest run --estimator estimator.py --debug --fail-fast
 ```
 
 The traceback in the panel (or the raw stack from `--fail-fast`) points directly at the line in your estimator that raised.
+
+## Setup failed (`SETUP_FAILED`)
+
+Symptom: `SETUP_FAILED: <Exception>` — the submission is rejected before any MLP is scored.
+
+Why it happens: your estimator's `setup()` raised. Unlike a `predict()` failure (which is isolated to a single MLP and zero-scored), an exception in `setup()` rejects the **whole** submission — there is nothing to grade if setup never completes. Common causes: a weights/`.npz` file that didn't ship or loads with the wrong path, an assertion or config read that's brittle on the grader, or work that's fine locally but trips on a sandbox difference.
+
+Fix now: make `setup()` exception-proof. Load files via the path the framework gives you, guard fallible work defensively (try/except with a sane fallback), and keep it lightweight — heavy work belongs in `predict()` (it also avoids the [setup timeout](#setup-timeout)). Reproduce locally with the isolated runner before submitting:
+
+```bash
+whest run --estimator estimator.py --runner subprocess --debug
+```
 
 ## Setup timeout
 
@@ -246,6 +284,65 @@ Why it happens: you are using `import numpy as np` instead of `import flopscope.
 Fix now: replace all `np.*` calls with `fnp.*` equivalents. See [Code Patterns](../reference/code-patterns.md).
 
 Verify: check `flops_used > 0` in score report.
+
+## No numpy in the sandbox (`No module named 'numpy'` / `name 'np' is not defined`)
+
+Symptom: on the grader, `ModuleNotFoundError: No module named 'numpy'` — or, if your `import numpy as np` was wrapped in a `try`/`except` that swallowed it, a later `NameError: name 'np' is not defined` at the first `np.*` call.
+
+Why it happens: the grading sandbox does **not** ship raw numpy. It provides `flopscope.numpy` (a FLOP-counting, numpy-compatible proxy) instead. `import numpy` simply has nothing to import, so it raises — and a swallowed import leaves `np` undefined, which surfaces as a `NameError` further down. (See also the broader [Import error in estimator](#import-error-in-estimator) for the full list of what the sandbox does and doesn't provide.)
+
+Fix now: import the flopscope array module and write all array code against it:
+
+```python
+import flopscope.numpy as fnp     # or: import flopscope.numpy as np
+```
+
+Bind it to `np` if you don't want to rename every call site — but do not `import numpy` and do not silently `except ImportError` around it.
+
+Verify:
+
+```bash
+whest run --estimator estimator.py --runner subprocess
+```
+
+## flopscope arrays are immutable
+
+Symptom: `flopscope arrays are immutable, so item assignment ... is not supported`, or `in-place add (arr += x) is not supported` (and similar for other in-place operators).
+
+Why it happens: arrays produced by `flopscope.numpy` are read-only proxies. Mutating ops — `arr[i] = v`, `arr[mask] = v`, `arr += x`, `arr *= x` — are rejected by design, on the grader and (with the client) locally.
+
+Fix now: build new arrays functionally instead of mutating in place:
+
+- replace `arr[i] = v` / `arr[mask] = v` with `fnp.where(mask, v, arr)`, or rebuild via slicing + `fnp.concatenate`,
+- replace `arr += x` with `arr = arr + x` (and likewise `*=`, `-=`, `/=`),
+- set a diagonal with `fnp.fill_diagonal(M, v)` (cheap — `min(m, n)` FLOP) instead of indexed assignment.
+
+See [Code Patterns](../reference/code-patterns.md) for the functional equivalents.
+
+Verify:
+
+```bash
+whest run --estimator estimator.py --runner subprocess
+```
+
+## Reduction `axis` must be an int or tuple, not a list
+
+Symptom: `TypeError: 'list' object cannot be interpreted as an integer` from a reduction such as `sum`, `mean`, `max`, or `prod`.
+
+Why it happens: numpy itself only accepts `axis=<int>`, `axis=<tuple>`, or `axis=None` for reductions — a `list` axis is rejected. flopscope mirrors numpy exactly, so passing a list fails the same way it would in plain numpy.
+
+Fix now: pass a tuple, not a list:
+
+```python
+a.sum(axis=(0, 1))     # correct
+a.sum(axis=[0, 1])     # TypeError
+```
+
+Verify:
+
+```bash
+whest run --estimator estimator.py --runner local --debug
+```
 
 ## Every MLP failed (n_failed_mlps == n_mlps)
 
