@@ -33,7 +33,7 @@ Exact follow-up:
 whest run --estimator estimator.py --runner local --debug
 ```
 
-> **Develop against the flopscope client.** The grader runs the flopscope *client* — a numpy-compatible proxy, not raw numpy. If you write and test all your array code against `flopscope.numpy` (`import flopscope.numpy as fnp`) and run with `--runner subprocess` before submitting, any API-parity gap (a method or operator the proxy doesn't support, an immutability rejection) surfaces locally instead of silently failing on the grader. Most of the failures below are exactly these gaps — caught early if you never reach for plain numpy.
+> **Local runs use the full flopscope; the grader uses the flopscope *client*.** `whest run` (both `--runner local` and `--runner subprocess`) executes against the full, locally-installed `flopscope` package, while the grader runs the lighter flopscope *client* — a numpy-compatible proxy. The two are designed to match, so the single best habit is to write all array code against `flopscope.numpy` (`import flopscope.numpy as fnp`) and never reach for plain numpy. Be aware, though, that a few client-only parity gaps can pass locally and surface **only** in grading — the local runner does not exercise the client/server split. Most of the failures documented below are exactly those gaps; when the grader reports one, the fix is on this page.
 
 ## Estimator returned wrong shape
 
@@ -183,9 +183,9 @@ whest run --estimator estimator.py --debug --fail-fast
 
 The traceback in the panel (or the raw stack from `--fail-fast`) points directly at the line in your estimator that raised.
 
-## Setup failed (`SETUP_FAILED`)
+## Setup failed (`SETUP_ERROR` / `SETUP_FAILED`)
 
-Symptom: `SETUP_FAILED: <Exception>` — the submission is rejected before any MLP is scored.
+Symptom: locally, `whest run` prints `Error [setup:SETUP_ERROR]: Estimator setup failed.`; on the grader it is reported as `SETUP_FAILED: <Exception>`. Either way, the submission is rejected before any MLP is scored.
 
 Why it happens: your estimator's `setup()` raised. Unlike a `predict()` failure (which is isolated to a single MLP and zero-scored), an exception in `setup()` rejects the **whole** submission — there is nothing to grade if setup never completes. Common causes: a weights/`.npz` file that didn't ship or loads with the wrong path, an assertion or config read that's brittle on the grader, or work that's fine locally but trips on a sandbox difference.
 
