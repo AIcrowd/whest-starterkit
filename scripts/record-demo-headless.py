@@ -37,7 +37,7 @@ CSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # (displayed command, shell command to run | None, output filename | None, tail_lines | None)
 # `None` run command = display-only step (e.g. `cd`). Mirrors scripts/record-demo.sh.
 STEPS = [
-    (f"git clone {CLONE_URL}", f"git clone --quiet {CLONE_URL} .", None, None),
+    (f"git clone {CLONE_URL}", f"git clone --quiet {CLONE_URL} whest-starterkit", None, None),
     ("cd whest-starterkit", None, None, None),
     ("uv sync", "uv sync", "02_sync.out", 6),
     ("uv run python estimator.py", "uv run python estimator.py", "03_python.out", None),
@@ -71,11 +71,16 @@ def capture(capture_dir: Path) -> None:
     """Run the sequence in a fresh clone, writing each step's output to capture_dir."""
     capture_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp())
-    # Step 1 clones into `work`; subsequent steps run there.
-    rundir = work
-    for _disp, cmd, outfile, tail in STEPS:
+    # Step 1 clones into `work/whest-starterkit` (mirroring what a bare
+    # `git clone <url>`, with no destination arg, produces) rather than directly
+    # into the raw mkdtemp — this keeps the scratch tempdir's opaque OS-assigned
+    # name out of tool output that echoes the cwd (e.g. uv's `file://...`
+    # self-reference for the local package). Subsequent steps run there.
+    clone_dir = work / "whest-starterkit"
+    for i, (_disp, cmd, outfile, tail) in enumerate(STEPS):
         if cmd is None:
             continue
+        rundir = work if i == 0 else clone_dir
         res = subprocess.run(cmd, shell=True, cwd=rundir, env=_env(),
                              capture_output=True, text=True)
         # stderr before stdout: progress/log lines stream to stderr while a command
@@ -90,7 +95,7 @@ def capture(capture_dir: Path) -> None:
             out = "\n".join(out.splitlines()[-tail:]) + "\n"
         if outfile:
             (capture_dir / outfile).write_text(out, encoding="utf-8")
-    # nothing else needed; clone left in `work` (a tempdir)
+    # nothing else needed; clone left in `clone_dir` (under a tempdir)
 
 
 def clean(s: str) -> str:

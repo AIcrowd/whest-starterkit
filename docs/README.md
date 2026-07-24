@@ -27,7 +27,7 @@ Pick the line that sounds like you.
 
 ### "I have a working estimator. I want a better score."
 
-[algorithm-ideas](how-to/algorithm-ideas.md) → [code-patterns](reference/code-patterns.md) (the ReLU expectation and where it breaks) → [manage-flop-budget](how-to/manage-flop-budget.md) (the FLOP walkthrough table) → [advanced/profile-simulation](advanced/profile-simulation.md).
+[algorithm-ideas](how-to/algorithm-ideas.md) → [code-patterns](reference/code-patterns.md) (the ReLU expectation and where it breaks) → [manage-flop-budget](how-to/manage-flop-budget.md) (the FLOP walkthrough table, `whest run --profile`).
 
 ### "My score regressed after a change."
 
@@ -52,7 +52,7 @@ Pick the line that sounds like you.
 | Understand the math | [concepts/problem-setup.md](concepts/problem-setup.md), [concepts/scoring-model.md](concepts/scoring-model.md), [concepts/ground-truth.md](concepts/ground-truth.md) |
 | Know what success looks like at each stage | the **Expected outcome** callout at the bottom of each [stage doc](getting-started/), and the [example benchmarks](concepts/scoring-model.md#example-estimator-benchmarks) |
 | Improve my score (0.5 → 0.005) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
-| Push from 0.005 → 0.0005 | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [advanced/profile-simulation.md](advanced/profile-simulation.md) |
+| Push from 0.005 → 0.0005 | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
 | Debug a broken estimator | [troubleshooting/common-participant-errors.md](troubleshooting/common-participant-errors.md), [troubleshooting/faq.md](troubleshooting/faq.md), [how-to/debugging-checklist.md](how-to/debugging-checklist.md) |
 | Sanity-check before submitting | [how-to/pre-submission-checklist.md](how-to/pre-submission-checklist.md) |
 | Look up the precise contract | [reference/estimator-contract.md](reference/estimator-contract.md), [reference/score-report-fields.md](reference/score-report-fields.md), [reference/local-engine-api.md](reference/local-engine-api.md), [reference/cli-reference.md](reference/cli-reference.md) |

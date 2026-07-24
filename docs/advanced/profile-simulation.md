@@ -90,6 +90,6 @@ This command reports wall-clock timing only — it does not report FLOP counts. 
 
 ## ➡️ Next step
 
-- [CLI Reference: profile-simulation](../reference/cli-reference.md#whest-profile-simulation) — full flag reference
+- [CLI Reference](../reference/cli-reference.md) — points to the upstream `whest` CLI reference for the full flag list
 - [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md) — pre-create datasets for faster iteration
 - [Validate, Run, and Package](../how-to/validate-run-package.md) — score your estimator

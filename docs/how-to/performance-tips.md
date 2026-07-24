@@ -46,8 +46,8 @@ for w in mlp.weights:
     scale = fnp.sqrt(2.0 / mlp.width)  # recomputed every layer
     ...
 
-# Do this (free):
-scale = fnp.sqrt(2.0 / mlp.width)  # computed once
+# Do this (computed once):
+scale = fnp.sqrt(2.0 / mlp.width)  # computed once, ~2 FLOPs total — not free, but trivial
 for w in mlp.weights:
     ...
 ```

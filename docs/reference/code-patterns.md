@@ -65,7 +65,7 @@ for the rationale.
 > and views are free but `ones`/`eye`/`stack`/`concatenate`/copies now bill
 > 1×/element; gathers and 3-arg `where` bill 4×/element; sorts bill
 > ≈4·N·⌈log₂N⌉ (per comparison). Full audited tables:
-> [flopscope cost model](https://aicrowd.github.io/flopscope/docs/reference/cost-model).
+> [flopscope cost model](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/).
 
 | What you want | Code | FLOP cost | Notes |
 |---|---|---|---|
@@ -135,7 +135,7 @@ class Estimator(BaseEstimator):
 
 Do **not** call `fnp.random.seed(ctx.seed)` — that mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
 
-Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract: Reproducibility](./estimator-contract.md#reproducibility-under-the-grader-seed).
+Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract](./estimator-contract.md).
 
 ### Standard normal PDF and CDF (built-in)
 

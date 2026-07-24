@@ -79,7 +79,7 @@ charged = flop_cost × weight × dtype_rate × complex_factor
 The weight and rate tables above are a summary. The audited, authoritative
 per-op reference (including complex factors, accumulator-widening rules for
 integer reductions, and per-family formulas) is flopscope's
-[cost model reference](https://aicrowd.github.io/flopscope/docs/reference/cost-model)
+[cost model reference](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/)
 — and `ctx.summary()` on your own run is always ground truth.
 `tests/test_flopscope_cost_docs.py` in this kit pins the claims made on this
 page so a future flopscope bump flags them.

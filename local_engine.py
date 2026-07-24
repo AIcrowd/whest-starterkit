@@ -144,5 +144,6 @@ def compare_against_monte_carlo(
     for n in sample_counts:
         with flops.BudgetContext(flop_budget=sampling_budget, quiet=True) as mc_ctx:
             sampled = monte_carlo_layer_means(mlp, n, seed=seed)
-        mse = float(fnp.mean((est_pred - sampled) ** 2))
+        diff = est_pred - sampled
+        mse = float(fnp.mean(diff * diff))
         print(row(f"{n:,}", f"{mc_ctx.flops_used:,}", f"{estimator_flops:,}", f"{mse:.6f}"))

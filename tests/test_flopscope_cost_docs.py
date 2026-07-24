@@ -83,3 +83,36 @@ def test_deduct_requires_dtypes_and_applies_rate():
 def test_unsupported_dtype_error_exists_and_is_type_error():
     """Troubleshooting: UnsupportedDtypeError is catchable as TypeError."""
     assert issubclass(flops.errors.UnsupportedDtypeError, TypeError)
+
+
+def test_matmul_bills_mults_and_adds():
+    """Primer: matmul bills M*N*(2K-1) at float32 (random operands; structure discounts excluded)."""
+    rng = fnp.random.default_rng(0)
+    a = fnp.array(rng.standard_normal((10, 256), dtype=fnp.float32))
+    b = fnp.array(rng.standard_normal((256, 256), dtype=fnp.float32))
+    assert _cost(lambda: a @ b) == 10 * 256 * (2 * 256 - 1)
+
+
+def test_example_predict_totals_pinned():
+    """manage-flop-budget/algorithm-ideas/scoring-model/problem-setup cite these exact totals."""
+    import importlib.util
+    from pathlib import Path
+
+    from local_engine import build_mlp
+
+    mlp = build_mlp(width=256, depth=32, seed=0)
+    totals = {}
+    for name, expected in [
+        ("02_mean_propagation", 20_333_056),
+        ("03_covariance_propagation", 3_232_298_432),
+    ]:
+        path = Path(__file__).resolve().parent.parent / "examples" / f"{name}.py"
+        spec = importlib.util.spec_from_file_location(name, path)
+        mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(mod)
+        est = mod.Estimator()
+        with flops.BudgetContext(flop_budget=10**13, quiet=True) as ctx:
+            est.predict(mlp, 10**13)
+        totals[name] = ctx.flops_used
+        assert ctx.flops_used == expected, f"{name}: {ctx.flops_used:,} != {expected:,}"
