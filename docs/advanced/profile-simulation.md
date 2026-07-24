@@ -4,15 +4,15 @@
 
 ## 🎯 When to use this page
 
-The starter kit uses flopscope as its single simulation backend — analytical FLOP counting replaces wall-clock timing across multiple backends. The `profile-simulation` command lets you verify FLOP accounting correctness and explore how FLOP costs scale with network size.
+The starter kit uses flopscope as its single simulation backend. The `profile-simulation` command lets you verify the backend computes correct values and see how its wall-clock cost scales with network size.
 
-> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and FLOP scaling. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
+> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and timing. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
 
 Use this page when you want to:
 
-- **Verify flopscope is installed and correct** — the profiler runs a pre-flight correctness check before reporting FLOP data.
-- **Understand FLOP scaling** — see how FLOP costs grow with width, depth, and budget so you can calibrate your estimator's budget usage.
-- **Collect reproducible profiling data** — JSON output includes correctness results and FLOP accounting across network sizes.
+- **Verify flopscope is installed and correct** — the profiler runs a pre-flight correctness check before timing anything.
+- **Triage performance problems** — e.g. "fast on my laptop, slow in CI" — compare median wall-clock time for `run_mlp` and `sample_layer_statistics` across widths, depths, and sample counts.
+- **Collect reproducible timing data** — JSON output includes correctness results and per-configuration timing (median time, raw per-iteration times, warmup time) across network sizes, plus hardware/library-version metadata.
 
 ## 🚀 Do this now
 
@@ -22,7 +22,7 @@ Use this page when you want to:
 whest profile-simulation --preset quick
 ```
 
-This finishes in seconds and gives you a first look at FLOP accounting correctness and scaling.
+This finishes in seconds and gives you a first look at correctness and timing across a couple of network sizes.
 
 ### 2. Run the standard profile
 
@@ -30,7 +30,7 @@ This finishes in seconds and gives you a first look at FLOP accounting correctne
 whest profile-simulation
 ```
 
-The default `standard` preset tests two widths (64, 256) and three depths (4, 32, 128). It gives a reliable picture of FLOP cost scaling across network sizes.
+The default `standard` preset tests two widths (64, 256) and three depths (4, 32, 128). It gives a reliable picture of how run time scales across network sizes.
 
 ### 3. Save results for comparison
 
@@ -38,7 +38,7 @@ The default `standard` preset tests two widths (64, 256) and three depths (4, 32
 whest profile-simulation --output results.json
 ```
 
-The JSON file contains correctness results and FLOP accounting data across all tested configurations.
+The JSON file contains correctness results and per-configuration timing data (median time, raw per-iteration times, warmup time) across all tested configurations, plus hardware and library-version metadata.
 
 ## Choosing presets
 
@@ -55,8 +55,11 @@ Use `quick` for a fast sanity check and `standard` for development decisions.
 
 The terminal table shows:
 
-- **Pre-flight Correctness Check** — PASS or FAIL for the flopscope backend. A FAIL indicates a version mismatch or installation problem.
-- **FLOP Accounting Results** — one row per (width, depth) combination showing the total FLOPs reported by flopscope for a forward pass.
+- **Hardware** — platform, CPU, RAM, and Python/NumPy versions, for reproducibility across machines.
+- **Correctness** — PASS or FAIL for the flopscope backend. A FAIL indicates a version mismatch or installation problem.
+- **Detail** — one row per (backend, width, depth, n_samples) combination, with median wall-clock time for `run_mlp` and `sample_layer_statistics`.
+
+Add `--verbose` for the full **Timing Results** table: one row per (backend, operation, width, depth, n_samples) combination, with columns for median time, speedup vs NumPy, and status.
 
 ## Common workflows
 
@@ -70,18 +73,20 @@ whest profile-simulation --preset quick --debug
 
 The error message will indicate whether the issue is a numerical tolerance failure or a missing dependency.
 
-### Export FLOP data for estimator calibration
+### Export timing data across machines or code changes
 
 ```bash
-whest profile-simulation --preset exhaustive --output flop_data.json
+whest profile-simulation --preset exhaustive --output timing_data.json
 ```
 
-Use the FLOP counts in the JSON to understand how much budget your estimator consumes per layer, and tune your budget-allocation logic accordingly.
+Compare the `timing` array's `median_time` field between two JSON files to see whether a code change, dependency bump, or a different machine affected simulation performance.
+
+This command reports wall-clock timing only — it does not report FLOP counts. To see how many FLOPs your *estimator* consumes, wrap it in a `flopscope.BudgetContext` and call `ctx.summary()` — see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
 
 ## ✅ Expected outcome
 
-- The terminal displays a formatted table with correctness and FLOP accounting results.
-- If `--output` is provided, a JSON file is written with full profiling data.
+- The terminal displays a formatted table with correctness and timing results.
+- If `--output` is provided, a JSON file is written with hardware info, correctness results, and per-configuration timing data.
 
 ## ➡️ Next step
 
