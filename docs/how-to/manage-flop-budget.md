@@ -8,7 +8,7 @@ Use this page to understand how FLOP budgets work and how to optimize your estim
 
 ## Why FLOPs, not wall-clock time
 
-This challenge scores estimators by **analytical FLOP count**, not execution time. Every mathematical operation your estimator performs is tracked by [flopscope](https://github.com/AIcrowd/flopscope) — a NumPy-compatible library that counts floating-point operations deterministically from tensor shapes.
+This challenge scores estimators by **analytical FLOP count**, not execution time. Every mathematical operation your estimator performs is tracked by [flopscope](https://github.com/AIcrowd/flopscope) — a NumPy-compatible library that counts floating-point operations deterministically from tensor shapes and dtypes.
 
 This means your score is **hardware-independent**: the same estimator produces the same FLOP count on a laptop and a GPU cluster. You can focus on algorithmic efficiency rather than hardware tuning.
 
@@ -18,13 +18,17 @@ For the full flopscope API and cost model, see the [flopscope documentation](htt
 
 | Category | Examples | Cost |
 |----------|----------|------|
-| **Free (0 FLOPs)** | `fnp.array()`, `fnp.zeros()`, `fnp.ones()`, `fnp.reshape()`, `fnp.transpose()`, indexing, `fnp.concatenate()`, `fnp.stack()` | No budget impact |
-| **Pointwise (1 FLOP/element)** | `fnp.add()`, `fnp.multiply()`, `fnp.exp()`, `fnp.sqrt()`, `fnp.maximum()` | Output element count |
+| **Free (0 FLOPs)** | `fnp.zeros()`, `fnp.empty()`, views (`.T`/`fnp.transpose()`, basic slicing), `fnp.asarray()` on an existing flopscope array (no copy), `fnp.random.default_rng(seed)` construction | No budget impact |
+| **Pointwise (1 FLOP/element)** | `fnp.add()`, `fnp.multiply()`, `fnp.sqrt()`, `fnp.maximum()`, comparisons — **and data movement that used to be free**: `fnp.ones()`/`full()`/`eye()` fills, `fnp.array()`/copying `fnp.asarray()`, `.copy()`, `.astype()`, `reshape()`/`ravel()`, `fnp.stack()`, `fnp.concatenate()`, `tile()`, `repeat()` | Output element count |
 | **Reductions** | `fnp.sum()`, `fnp.mean()`, `fnp.max()` | Input element count |
+| **Transcendental (16 FLOP/element)** | `fnp.exp()`, `fnp.log()`, trig, and `x ** y` power (including `x ** 2`) | Output element count × 16 |
 | **Matrix operations** | `fnp.matmul()`, `fnp.einsum()` | Depends on dimensions — typically dominates your budget |
-| **Random samplers** | `rng.standard_normal()`, `rng.uniform()` (where `rng = fnp.random.default_rng(seed)`); same for module-level `fnp.random.standard_normal()` etc. and `fnp.random.RandomState(seed)` | Calibrated per method (default ~16 FLOPs/element for `standard_normal`) |
+| **Random samplers** | `rng.standard_normal()`, `rng.uniform()` (where `rng = fnp.random.default_rng(seed)`); same for module-level `fnp.random.standard_normal()` etc. and `fnp.random.RandomState(seed)` | Calibrated per method (`standard_normal`: 16 FLOPs/element at float32, **32/element at the float64 default**) |
 
-**Key insight:** `fnp.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs. For width-256 networks, a single matmul costs ~33M FLOPs. Most of your budget goes to matrix operations.
+**Key insights:**
+
+- `fnp.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs. For width-256 networks, a single matmul costs ~33M FLOPs (float32; float64 doubles it). Most of your budget goes to matrix operations.
+- Every cost above is also scaled by a `dtype_rate`: 1.0× for 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128). NumPy promotion decides the billing dtype from your operands, so one stray float64 array upgrades the whole expression — see the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs) for the full weight/dtype-rate table.
 
 ## Check your budget usage
 
@@ -93,30 +97,32 @@ If `budget_exhausted` is `true`, your predictions were discarded. You need to re
 
 ## Worked walkthrough: mean propagation, line by line
 
-The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the phase-1 competition shape (`width=256, depth=32`; the warmup round used 256×8). Numbers are aggregated across all 32 layers; per-layer cost is roughly the row total divided by 32. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.8.0).
+The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the phase-1 competition shape (`width=256, depth=32`; the warmup round used 256×8). Numbers are aggregated across all 32 layers; per-layer cost is roughly the row total divided by 32. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.9.1).
 
 | Operation in `predict()` | Calls | FLOPs (total) | % of `predict()` total |
 |---|---:|---:|---:|
-| `mu_pre = w.T @ mu` and `var_pre = (w*w).T @ var` (`matmul`) | 64 | 8,372,224 | **74.7%** |
-| `mu_pre * Phi_alpha + sigma_pre * phi_alpha` etc. (`multiply`) | 256 | 2,154,496 | 19.2% |
-| `flops.stats.norm.cdf(alpha)` | 32 | 393,216 | 3.5% |
-| `flops.stats.norm.pdf(alpha)` | 32 | 221,184 | 2.0% |
-| `mu_pre * Phi_alpha + ...` etc. (`add`) | 96 | 24,576 | 0.2% |
-| `fnp.maximum(var_pre, 1e-12)` (`maximum`) | 64 | 16,384 | 0.1% |
-| `fnp.sqrt(var_pre)` | 32 | 8,192 | 0.1% |
-| `mu_pre / sigma_pre` (`true_divide`) | 32 | 8,192 | 0.1% |
-| `ez2 - mu*mu` (`subtract`) | 32 | 8,192 | 0.1% |
-| `fnp.stack(rows, axis=0)` | 1 | 0 | 0.0% |
-| **Total per `predict()`** | — | **11,206,656** | — |
+| `mu_pre = w.T @ mu` and `var_pre = (w*w).T @ var` (`matmul`) | 64 | 16,744,448 | **82.4%** |
+| `mu_pre * Phi_alpha + sigma_pre * phi_alpha` etc. (`multiply`) | 256 | 2,211,840 | 10.9% |
+| `flops.stats.norm.cdf(alpha)` | 32 | 786,432 | 3.9% |
+| `flops.stats.norm.pdf(alpha)` | 32 | 442,368 | 2.2% |
+| `mu_pre * Phi_alpha + ...` etc. (`add`) | 96 | 49,152 | 0.2% |
+| `fnp.maximum(var_pre, 1e-12)` (`maximum`) | 64 | 32,768 | 0.2% |
+| `fnp.sqrt(var_pre)` | 32 | 16,384 | 0.1% |
+| `mu_pre / sigma_pre` (`true_divide`) | 32 | 16,384 | 0.1% |
+| `ez2 - mu*mu` (`subtract`) | 32 | 16,384 | 0.1% |
+| `fnp.stack(rows, axis=0)` | 1 | 16,384 | 0.1% |
+| `var = fnp.ones(width)` (`ones`) | 1 | 512 | 0.0% |
+| `mu = fnp.zeros(width)` (`zeros`) | 1 | 0 | 0.0% |
+| **Total per `predict()`** | — | **20,333,056** | — |
 
-The full ~11.2 M FLOPs spends only ~0.004% of the 2.72e11 grader budget, so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
+The full ~20.3 M FLOPs spends only ~0.0075% of the 2.72e11 grader budget, so mean propagation lands well below the multiplier floor at this shape — see [Scoring Model](../concepts/scoring-model.md#example-estimator-benchmarks).
 
 Two takeaways:
 
-- **`matmul` dominates.** ~77% of `predict()` cost is the two matmuls per layer (the pointwise ReLU-moment terms — `multiply` — are the visible ~20% remainder). Halving the matmul count (e.g., switching to a diagonal-only formulation, or fusing into a single `einsum` like `examples/03_covariance_propagation.py` does for the symmetric cov-update) buys you most of that back.
-- **Reductions, sqrt, and divides are free in practice.** Don't twist your code to avoid them; the cost is in the tens of FLOPs per layer.
+- **`matmul` dominates.** ~82% of `predict()` cost is the two matmuls per layer (the pointwise ReLU-moment terms — `multiply` — are the visible ~11% remainder). Halving the matmul count (e.g., switching to a diagonal-only formulation, or fusing into a single `einsum` like `examples/03_covariance_propagation.py` does for the symmetric cov-update) buys you most of that back.
+- **Sqrt, divides, and clamps stay cheap.** Don't twist your code to avoid them: `sqrt`, `true_divide`, and `maximum` each cost ~512 FLOPs per call here (256 elements × the float64 dtype rate this walkthrough happens to run at, since `mu`/`var` start from `fnp.zeros(width)`/`fnp.ones(width)` with no explicit `dtype=`) — trivial next to the matmuls.
 
-The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` lands at ~1.6 B FLOPs per `predict()` (~0.6% of the grader budget) — ~150× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance), but still leaving plenty of headroom.
+The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` lands at ~3.2 B FLOPs per `predict()` (~1.2% of the grader budget, re-profiled the same way under flopscope 0.9.1) — ~159× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance, and it inherits the same float64 default), but still leaving plenty of headroom.
 
 ## Optimization tips
 
@@ -124,7 +130,7 @@ The same pattern holds for `examples/03_covariance_propagation.py`, where the `O
 
 2. **Diagonal approximations save FLOPs.** Mean propagation uses diagonal variance (`O(width^2)` per layer) instead of full covariance propagation (`O(width^3)` per layer). Choose the right level of approximation for your budget.
 
-3. **Array creation is free.** `fnp.array()`, `fnp.zeros()`, `fnp.ones()`, `fnp.eye()` cost 0 FLOPs. Precompute and store intermediate values freely.
+3. **Only `fnp.zeros()`/`fnp.empty()` and no-copy views are free.** Since flopscope 0.9, `fnp.array()`, `fnp.ones()`, and `fnp.eye()` each bill 1 FLOP per element at float32 (2× that at the float64 default) — `eye` bills only its diagonal length, not the full matrix. They're still cheap next to any matmul, but calling them inside a hot loop is no longer free — prefer `fnp.zeros()` or a no-copy `fnp.asarray()` for placeholders you'll overwrite anyway.
 
 4. **Pick one strategy per estimator.** Use either mean propagation or full covariance as your default implementation, then optimize it for the fixed budget.
 
