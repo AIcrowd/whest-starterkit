@@ -63,7 +63,8 @@ for the rationale.
 > (× a complex factor for complex dtypes). Practical rules: stay in float32
 > (float64 bills 2×); write `x * x` not `x ** 2` (power is 16-tier); `zeros`
 > and views are free but `ones`/`eye`/`stack`/`concatenate`/copies now bill
-> 1×/element; sorts, gathers, and 3-arg `where` bill 4×. Full audited tables:
+> 1×/element; gathers and 3-arg `where` bill 4×/element; sorts bill
+> ≈4·N·⌈log₂N⌉ (per comparison). Full audited tables:
 > [flopscope cost model](https://aicrowd.github.io/flopscope/docs/reference/cost-model).
 
 | What you want | Code | FLOP cost | Notes |

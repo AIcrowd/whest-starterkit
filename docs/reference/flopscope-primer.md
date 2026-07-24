@@ -64,7 +64,8 @@ charged = flop_cost × weight × dtype_rate × complex_factor
 |------|-----------|------|
 | **Free** (weight 0) | `fnp.zeros`, `fnp.empty`, views (`.T`, basic slicing), `fnp.asarray` on an existing flopscope array (no copy), `fnp.random.default_rng(seed)` construction | 0 |
 | **1× per element** | `+`, `-`, `*`, `/`, comparisons, `fnp.maximum`, `fnp.sqrt`, reductions (`sum`, `mean`, `var`, `max`, …), **and data movement that used to be free**: `fnp.ones`/`full`/`eye` fills, `fnp.array`/`asarray` copies, `.copy()`, `.astype()`, `reshape`/`ravel` (billed even when NumPy would return a view), `stack`, `concatenate`, `tile`, `repeat` | N elements (`eye`: diagonal length written) |
-| **4× per element** | Gathers (`take`, fancy `arr[int_idx]`), value-ordering (`sort`, `argsort`, `unique`, `searchsorted`), 3-arg `fnp.where` | 4·N |
+| **4× per element** | Gathers (`take`, fancy `arr[int_idx]`), 3-arg `fnp.where` | 4·N |
+| **Sorting/search** (weight 4, per comparison) | `sort`, `argsort`, `unique`, `searchsorted` | ≈4·N·⌈log₂N⌉ |
 | **16× per element** | Transcendentals: `fnp.exp`, `fnp.log`, trig, and **`x ** y` power — including `x ** 2`** | 16·N |
 | **Matmul** | `@`, `fnp.matmul`, `fnp.einsum` | `M·N·(2K−1)` for `(M,K) @ (K,N)` |
 | **Random samplers** | `rng.standard_normal(...)` 16/element at float32 (32 at the float64 default), `rng.uniform(...)` 6/element (always float64 — no `dtype=` arg; calibrated float32 base rate 3) | calibrated per method |

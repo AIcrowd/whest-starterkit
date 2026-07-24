@@ -41,6 +41,11 @@ def test_pow2_bills_16x_elementwise_multiply():
     assert _cost(lambda: V32**2) == 16 * _cost(lambda: V32 * V32)
 
 
+def test_sort_bills_comparison_count_not_flat_4x():
+    """Primer/code-patterns: sorts bill ≈4·N·ceil(log2 N) (per comparison), not flat 4×N."""
+    assert _cost(lambda: fnp.sort(V32)) == 4 * 1000 * 10  # N=1000, ceil(log2 N)=10
+
+
 def test_rng_draw_dtype_pricing():
     """Primer: standard_normal is 16/elem at float32, 32/elem at float64 (default)."""
     rng = fnp.random.default_rng(0)
