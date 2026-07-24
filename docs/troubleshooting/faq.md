@@ -119,6 +119,16 @@ Almost always one of three things:
 
 If your Stage 3 and Stage 4 scores agree but the grader still disagrees, suspect Python-version or BLAS-version drift — `uv run whest doctor` will surface the relevant runtime info.
 
+## Did the scoring formula change in whestbench 0.13.0?
+
+No. `adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)`,
+λ = 1e11, the 2.72e11 budget, and the 256×32 shape are all unchanged. What
+changed is the *meter*: flopscope 0.9 re-priced ops (float64 2×,
+transcendentals 16×, formerly-free data movement now billed), so `F_m` — and
+therefore `C_m` and the multiplier — can move for the same code. Leaderboard
+scores are re-evaluated under the new meter; local scores from 0.12.x kits are
+not comparable.
+
 ## ➡️ Next step
 
 - [Common Participant Errors](./common-participant-errors.md)

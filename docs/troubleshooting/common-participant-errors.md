@@ -85,6 +85,35 @@ Verify:
 whest run --estimator estimator.py --json
 ```
 
+## My FLOP counts jumped after updating the kit (flopscope 0.9 / whestbench 0.13)
+
+Symptom: the same estimator reports ~2× `flops_used` after `uv sync`, or a
+run that used to fit now hits `budget_exhausted`.
+
+Why it happens: flopscope 0.9 re-priced the cost model (billing is now
+`flop_cost × weight × dtype_rate`): float64 bills 2× float32, transcendentals
+(`exp`, `log`, `x ** y`) bill 16×, gathers and 3-arg `where` bill 4×/element
+(sorts bill ≈4·N·⌈log₂N⌉), and formerly-free ops (`ones`, `eye`, `stack`,
+`concatenate`, copies, `astype`) now bill 1×/element. Your math didn't get
+slower — the meter got honest. Scores produced under whestbench 0.12.x are not
+comparable to 0.13.x.
+
+Fix now: keep estimator state in float32 (`dtype=fnp.float32` on `zeros`/
+`ones`/RNG draws); replace `x ** 2` with `x * x`; check `ctx.summary()` for
+which ops dominate. If you use exotic dtypes and see `UnsupportedDtypeError`,
+move to a standard float dtype. A `CostFallbackWarning` means flopscope
+over-charged (never under-charged) a structure-priced op it couldn't bound.
+
+Verify:
+
+```bash
+uv run whest run --estimator estimator.py --profile
+```
+
+The per-namespace breakdown shows the re-priced ops; utilization
+(`mean_compute_utilization`) tells you whether the jump matters (below 0.1
+you're still at the multiplier floor and your score is unchanged).
+
 ## Result array too large
 
 Symptom: on the **grading server** (not local runs), a per-MLP failure whose message reads `result array too large: N bytes exceeds 4294967296 byte limit` — or `array too large: …` for an input you build. It can also fail your submission at the **smoke test**, before grading starts.
