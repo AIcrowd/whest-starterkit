@@ -115,6 +115,7 @@ these places:
 
 - `results.breakdowns.estimator` - aggregated estimator breakdown across all evaluated MLPs
 - `results.breakdowns.sampling` - aggregated sampling breakdown across all evaluated MLPs
+- `results.breakdowns.sampling.time_source` - `"bake"` for `--dataset` runs (whestbench ≥ 0.13): the sampling timings were measured on the dataset bake machine, not in your run. The run-report panel says the same and no longer shows a sampling Residual Wall Time row — the estimator panel's residual row is the only live-measured (and billed) residual time.
 - `results.per_mlp[].breakdowns.estimator` - one normalized estimator breakdown per MLP
 
 Namespace normalization rules:
