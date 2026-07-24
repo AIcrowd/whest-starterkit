@@ -74,6 +74,12 @@ The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), 
 
 > **Tip — prepared-Arrow fast path.** When you load via `whestbench.load_dataset(...)` (or via `whest run --dataset hf://...`), WhestBench prefers a pre-built `prepared/<split>/` Arrow artifact published alongside the parquet. It downloads only that subtree and memory-maps it via `datasets.Dataset.load_from_disk()`, skipping the parquet→arrow conversion that the bare `datasets.load_dataset(...)` path runs on first use. End-to-end this is ~18% faster on `mini` and ~60% faster on `full`, with a ~33% smaller cache footprint. You'll see a one-line stderr notice (`whestbench: using prepared Arrow split 'mini' from ...`) when the fast path fires. Falls back silently to the parquet path if anything goes wrong.
 
+> **Prefetch without a local copy (whestbench ≥ 0.13).** `whest dataset download
+> aicrowd/arc-whestbench-public-2026 --revision v1-phase1` with no `--output`
+> fetches into the Hugging Face hub cache only — a later
+> `whest run --dataset hf://…` is then a pure cache hit. Pass `--output DIR`
+> when you additionally want the files materialised into a directory.
+
 ## 🛠 Bake your own (rare)
 
 You only need this when:
