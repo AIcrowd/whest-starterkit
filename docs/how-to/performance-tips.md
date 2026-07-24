@@ -4,9 +4,20 @@
 
 This page lists concrete patterns for reducing FLOP usage in your estimator.
 
+## Stay in float32
+
+Since flopscope 0.9, every op's cost is also scaled by a `dtype_rate`: 1.0× for
+32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128).
+NumPy promotion decides the billing dtype from your operands, so a single
+stray float64 array upgrades an entire expression to the 2× rate — including
+matmuls. `fnp.zeros()`/`fnp.ones()`/RNG draws all default to float64 when you
+don't pass `dtype=`. This is usually the single biggest lever on your FLOP
+total: pass `dtype=fnp.float32` when you create arrays and don't need the
+extra precision.
+
 ## Matmul dominates your budget
 
-A single `fnp.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width=256, that is ~33M FLOPs per matmul. In a 32-layer network, 32 matmuls cost ~1.07B FLOPs — well within the 2.72e11 default budget, but the cost dominates for any moderately-sized estimator.
+A single `fnp.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs — exactly `n · n · (2n − 1)`. For width=256 **in float32**, that is ~33M FLOPs per matmul (33,488,896). In a 32-layer network, 32 matmuls cost ~1.07B FLOPs — well within the 2.72e11 default budget, but the cost dominates for any moderately-sized estimator. The same matmuls in float64 cost exactly 2× (~67M/matmul, ~2.14B for the network) — see [Stay in float32](#stay-in-float32) above.
 
 **Tip:** If you only need diagonal information (per-neuron variance), avoid full matrix-matrix multiplies. Diagonal propagation uses matrix-vector products: O(n^2) per layer instead of O(n^3).
 
@@ -14,12 +25,14 @@ A single `fnp.matmul(A, B)` on two (n, n) matrices costs O(n^3) FLOPs. For width
 
 These cost 0 FLOPs in flopscope:
 
-- `fnp.zeros()`, `fnp.ones()`, `fnp.eye()`, `fnp.array()`
-- `fnp.reshape()`, `fnp.transpose()`
-- `fnp.concatenate()`, `fnp.stack()`
-- Indexing: `x[0]`, `x[:, 3]`, `fnp.diag(M)`
+- `fnp.zeros()`, `fnp.empty()`
+- Views: `.T` / `fnp.transpose()`, basic indexing and slicing (`x[0]`, `x[:, 3]`)
+- `fnp.diag()`, `fnp.diagonal()`
+- `fnp.asarray()` on an existing flopscope array (no copy), `fnp.random.default_rng(seed)` construction
 
-Precompute anything you can using free ops. Store intermediate values in variables — there is no memory cost in FLOP terms.
+**Since flopscope 0.9, these look free but aren't — they bill 1×/element (2× at float64):** `fnp.ones()`, `fnp.eye()`, `fnp.full()`, `fnp.array()` (and any copying `asarray`), `.copy()`, `.astype()`, `fnp.reshape()`/`.reshape()` (billed even where NumPy itself would return a view), `fnp.concatenate()`, `fnp.stack()`, `tile()`, `repeat()`. Cheap next to a matmul, but no longer zero — don't reach for them as a "free" replacement for real computation.
+
+Precompute anything you can using the still-free ops above; for the billed ones, computing once outside a per-layer loop still beats recomputing every iteration. There is no separate memory cost in FLOP terms — flopscope only meters compute, not allocation.
 
 ## Precompute outside the layer loop
 

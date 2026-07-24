@@ -78,7 +78,14 @@ def capture(capture_dir: Path) -> None:
             continue
         res = subprocess.run(cmd, shell=True, cwd=rundir, env=_env(),
                              capture_output=True, text=True)
-        out = res.stdout + res.stderr
+        # stderr before stdout: progress/log lines stream to stderr while a command
+        # runs, the payoff (report, table, "Next:" hint) prints to stdout last. Verified
+        # empirically per step: `uv sync` is stderr-only, `estimator.py`/`whest validate`
+        # are stdout-only (so this ordering is a no-op for them) — only `whest run
+        # --dataset` splits across both (whestbench routes `[run] ...` progress and
+        # warnings to stderr), where naive stdout-then-stderr concatenation buried the
+        # Final Score panel under 100+ lines of `[run] scoring: N/100` spam.
+        out = res.stderr + res.stdout
         if tail:
             out = "\n".join(out.splitlines()[-tail:]) + "\n"
         if outfile:
