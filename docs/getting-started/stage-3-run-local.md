@@ -71,7 +71,7 @@ def predict(self, mlp: MLP, budget: int) -> fnp.ndarray:
 | `02_mean_propagation` | ~9.5e-04 |
 | `03_covariance_propagation` | ~8.4e-05 |
 
-These are the **raw** final-layer MSEs (the accuracy signal). Your leaderboard `adjusted_final_layer_score` scales each by the compute multiplier `max(0.1, C_m / flop_budget)` — and since these all use <1% of the budget, the ranked number is exactly one-tenth of the value shown (the 0.1 floor).
+These are the **raw** final-layer MSEs (the accuracy signal). Your leaderboard `adjusted_final_layer_score` scales each by the compute multiplier `max(0.1, C_m / flop_budget)` — and since these all use at most ~1.2% of the budget (far below the 10% floor threshold), the ranked number is exactly one-tenth of the value shown (the 0.1 floor).
 
 (Same ballpark as the Stage 1 table because the math and shape are the same
 (width=256, depth=32); they differ because Stage 3 scores the 100 fixed Mini MLPs

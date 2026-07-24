@@ -181,7 +181,7 @@ The leaderboard `adjusted_final_layer_score` is the **mean of these per-MLP `adj
 
 ## Example estimator benchmarks
 
-The table below shows the **raw-MSE diagnostics** from the bundled example estimators run against the **public release dataset** — [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026), `mini` split (100 MLPs, 256×32, N=1e9 baked ground truth) — at the 2.72e11 FLOP budget. These are the unscaled `final_layer_mse` / `all_layers_mse` values; the leaderboard `adjusted_final_layer_score` multiplies `final_layer_mse` by `max(0.1, C_m / budget)` (≤ 1.0). Every bundled example spends well under 1% of the budget, so each one bottoms out at the **0.1 floor** — its ranked score is exactly `final_layer_mse ÷ 10`. Use these as calibration points for your own estimator.
+The table below shows the **raw-MSE diagnostics** from the bundled example estimators run against the **public release dataset** — [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026), `mini` split (100 MLPs, 256×32, N=1e9 baked ground truth) — at the 2.72e11 FLOP budget. These are the unscaled `final_layer_mse` / `all_layers_mse` values; the leaderboard `adjusted_final_layer_score` multiplies `final_layer_mse` by `max(0.1, C_m / budget)` (≤ 1.0). Every bundled example spends at most ~1.2% of the budget — far below the 10% floor threshold — so each one bottoms out at the **0.1 floor** — its ranked score is exactly `final_layer_mse ÷ 10`. Use these as calibration points for your own estimator.
 
 | Estimator | `final_layer_mse` | `all_layers_mse` | Approach |
 |-----------|-----------|---------------|----------|
@@ -193,8 +193,8 @@ The table below shows the **raw-MSE diagnostics** from the bundled example estim
 
 - The **zeros baseline** (`estimator.py`, ~0.91) and the **random estimator** (~0.75) give you the "doing nothing" scale — their MSE reflects the natural magnitude of the ground-truth activations.
 - **Mean propagation** is ~1000x more accurate than zeros — a huge improvement from a simple analytical formula at ~20M FLOPs (well under 1% of budget).
-- **Covariance propagation** is another ~11x better, but costs O(width^3) per layer (~3.2B FLOPs at width=256/depth=32, still <1% of budget). The cubic cost grows fast — by around width≈1400 it would consume the whole 2.72e11 budget.
-- The **leaderboard score** (`adjusted_final_layer_score`) is not shown directly: it scales each estimator's `final_layer_mse` by `max(0.1, C_m / budget)`. Every bundled example spends <1% of the budget, so all of them bottom out at the **0.1 floor** — each one's ranked score is exactly its `final_layer_mse ÷ 10`.
+- **Covariance propagation** is another ~11x better, but costs O(width^3) per layer (~3.2B FLOPs at width=256/depth=32, ~1.2% of budget). The cubic cost grows fast — by around width≈1120 it would consume the whole 2.72e11 budget.
+- The **leaderboard score** (`adjusted_final_layer_score`) is not shown directly: it scales each estimator's `final_layer_mse` by `max(0.1, C_m / budget)`. Every bundled example spends at most ~1.2% of the budget — far below the 10% floor threshold — so all of them bottom out at the **0.1 floor** — each one's ranked score is exactly its `final_layer_mse ÷ 10`.
 
 To reproduce: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1` (e.g. `examples/02_mean_propagation.py`)
 
