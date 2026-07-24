@@ -59,30 +59,37 @@ for the rationale.
 
 ## Operation costs
 
+> **flopscope 0.9 billing model.** Costs are `flop_cost × weight × dtype_rate`
+> (× a complex factor for complex dtypes). Practical rules: stay in float32
+> (float64 bills 2×); write `x * x` not `x ** 2` (power is 16-tier); `zeros`
+> and views are free but `ones`/`eye`/`stack`/`concatenate`/copies now bill
+> 1×/element; sorts, gathers, and 3-arg `where` bill 4×. Full audited tables:
+> [flopscope cost model](https://aicrowd.github.io/flopscope/docs/reference/cost-model).
+
 | What you want | Code | FLOP cost | Notes |
 |---|---|---|---|
 | Create zeros | `fnp.zeros((n, n))` | 0 | Free |
-| Create ones | `fnp.ones(n)` | 0 | Free |
-| Identity matrix | `fnp.eye(n)` | 0 | Free |
-| Wrap existing data | `fnp.array(data)` | 0 | Free |
+| Create ones | `fnp.ones(n)` | 1 per element | Billed since 0.9 |
+| Identity matrix | `fnp.eye(n)` | n (diagonal only) | Billed since 0.9 |
+| Wrap existing data | `fnp.asarray(data)` | 0 | Free if no copy needed; `fnp.array()` always copies |
 | Matrix multiply | `fnp.matmul(A, B)` | O(m x n x k) | Dominates budgets |
 | Element-wise add | `fnp.add(a, b)` | 1 per element | |
 | Element-wise multiply | `fnp.multiply(a, b)` | 1 per element | |
 | Element-wise divide | `fnp.divide(a, b)` | 1 per element | |
 | ReLU | `fnp.maximum(x, 0.0)` | 1 per element | |
 | Square root | `fnp.sqrt(x)` | 1 per element | |
-| Exponential | `fnp.exp(x)` | 1 per element | |
-| Logarithm | `fnp.log(x)` | 1 per element | |
+| Exponential | `fnp.exp(x)` | 16 per element | Transcendental — 16x tier |
+| Logarithm | `fnp.log(x)` | 16 per element | Transcendental — 16x tier |
 | Transpose | `fnp.transpose(W)` | 0 | Free |
-| Reshape | `fnp.reshape(x, shape)` | 0 | Free |
+| Reshape | `fnp.reshape(x, shape)` | 1 per element | Billed since 0.9 (materializes) |
 | Extract diagonal | `fnp.diag(M)` | 0 | Free |
-| Set diagonal | `fnp.fill_diagonal(M, v)` | 0 | Free, in-place |
+| Set diagonal | `fnp.fill_diagonal(M, v)` | n (diagonal only) | Billed since 0.9, in-place |
 | Outer product | `fnp.outer(a, b)` | n x m | |
 | Sum | `fnp.sum(x, axis=0)` | input size | |
 | Mean | `fnp.mean(x, axis=0)` | input size | |
 | Max | `fnp.max(x)` | input size | |
-| Stack arrays | `fnp.stack(rows, axis=0)` | 0 | Free |
-| Concatenate | `fnp.concatenate([a, b])` | 0 | Free |
+| Stack arrays | `fnp.stack(rows, axis=0)` | 1 per element | Billed since 0.9 |
+| Concatenate | `fnp.concatenate([a, b])` | 1 per element | Billed since 0.9 |
 | Index/slice | `x[0]`, `x[:, 3]` | 0 | Free |
 
 ## Common patterns
