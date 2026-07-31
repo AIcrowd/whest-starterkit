@@ -97,7 +97,7 @@ If `budget_exhausted` is `true`, your predictions were discarded. You need to re
 
 ## Worked walkthrough: mean propagation, line by line
 
-The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the phase-1 competition shape (`width=256, depth=32`; the warmup round used 256×8). Numbers are aggregated across all 32 layers; per-layer cost is roughly the row total divided by 32. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.9.1).
+The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the phase-1 competition shape (`width=256, depth=32`; the warmup round used 256×8). Numbers are aggregated across all 32 layers; per-layer cost is roughly the row total divided by 32. Reproduce with `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.10.0).
 
 | Operation in `predict()` | Calls | FLOPs (total) | % of `predict()` total |
 |---|---:|---:|---:|
@@ -122,7 +122,7 @@ Two takeaways:
 - **`matmul` dominates.** ~82% of `predict()` cost is the two matmuls per layer (the pointwise ReLU-moment terms — `multiply` — are the visible ~11% remainder). Halving the matmul count (e.g., switching to a diagonal-only formulation, or fusing into a single `einsum` like `examples/03_covariance_propagation.py` does for the symmetric cov-update) buys you most of that back.
 - **Sqrt, divides, and clamps stay cheap.** Don't twist your code to avoid them: `sqrt`, `true_divide`, and `maximum` each cost ~512 FLOPs per call here (256 elements × the float64 dtype rate this walkthrough happens to run at, since `mu`/`var` start from `fnp.zeros(width)`/`fnp.ones(width)` with no explicit `dtype=`) — trivial next to the matmuls.
 
-The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` lands at ~3.2 B FLOPs per `predict()` (~1.2% of the grader budget, re-profiled the same way under flopscope 0.9.1) — ~159× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance, and it inherits the same float64 default), but still leaving plenty of headroom.
+The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum` — plus the per-layer `as_symmetric()` re-validation that keeps its symmetric rate under flopscope ≥ 0.10.0 — lands at ~3.3 B FLOPs per `predict()` (~1.2% of the grader budget, re-profiled the same way under flopscope 0.10.0) — ~160× more expensive than mean propagation (its full covariance is genuinely heavier than mean propagation's diagonal variance, and it inherits the same float64 default), but still leaving plenty of headroom.
 
 ## Optimization tips
 

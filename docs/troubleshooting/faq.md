@@ -119,15 +119,20 @@ Almost always one of three things:
 
 If your Stage 3 and Stage 4 scores agree but the grader still disagrees, suspect Python-version or BLAS-version drift — `uv run whest doctor` will surface the relevant runtime info.
 
-## Did the scoring formula change in whestbench 0.13.0?
+## Did the scoring formula change in whestbench 0.14.0?
 
 No. `adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)`,
 λ = 1e11, the 2.72e11 budget, and the 256×32 shape are all unchanged. What
-changed is the *meter*: flopscope 0.9 re-priced ops (float64 2×,
-transcendentals 16×, formerly-free data movement now billed), so `F_m` — and
-therefore `C_m` and the multiplier — can move for the same code. Leaderboard
-scores are re-evaluated under the new meter; local scores from 0.12.x kits are
-not comparable.
+changed is the *meter*, twice in recent releases: whestbench 0.13.0 adopted
+flopscope 0.9 (float64 2×, transcendentals 16×, formerly-free data movement
+now billed), and whestbench 0.14.0 adopts flopscope 0.10 — `out=`
+destinations are now priced, symmetry-tag discounts are voided when the
+tagged buffer is written (re-validate with `as_symmetric()` to keep them, as
+`examples/03_covariance_propagation.py` shows), and `einsum(..., out=)` now
+follows NumPy's casting rules, so calls that used to silently truncate raise
+`TypeError`. `F_m` — and therefore `C_m` and the multiplier — can move for
+the same code. Leaderboard scores are re-evaluated under the new meter;
+local scores from 0.13.x kits are not comparable.
 
 ## ➡️ Next step
 

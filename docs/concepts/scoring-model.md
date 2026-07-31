@@ -187,13 +187,13 @@ The table below shows the **raw-MSE diagnostics** from the bundled example estim
 |-----------|-----------|---------------|----------|
 | `random_estimator` | ~0.75 | ~0.62 | Returns random values — the interface walkthrough. The bundled [`estimator.py`](../../estimator.py) at the repo root is the true (all-zeros) baseline (~0.91); running `uv run whest init <dir>` in a fresh directory produces the same template. |
 | `mean_propagation` | ~9.5e-04 | ~8.2e-04 | Diagonal variance, O(depth x width^2), ~20M FLOPs. ~1000x better than the zeros baseline. |
-| `covariance_propagation` | ~8.4e-05 | ~5.6e-05 | Full covariance, O(depth x width^3), ~3.2B FLOPs. ~11x better again than mean propagation. |
+| `covariance_propagation` | ~8.4e-05 | ~5.6e-05 | Full covariance, O(depth x width^3), ~3.3B FLOPs. ~11x better again than mean propagation. |
 
 **How to read these numbers:**
 
 - The **zeros baseline** (`estimator.py`, ~0.91) and the **random estimator** (~0.75) give you the "doing nothing" scale — their MSE reflects the natural magnitude of the ground-truth activations.
 - **Mean propagation** is ~1000x more accurate than zeros — a huge improvement from a simple analytical formula at ~20M FLOPs (well under 1% of budget).
-- **Covariance propagation** is another ~11x better, but costs O(width^3) per layer (~3.2B FLOPs at width=256/depth=32, ~1.2% of budget). The cubic cost grows fast — by around width≈1120 it would consume the whole 2.72e11 budget.
+- **Covariance propagation** is another ~11x better, but costs O(width^3) per layer (~3.3B FLOPs at width=256/depth=32, ~1.2% of budget). The cubic cost grows fast — by around width≈1120 it would consume the whole 2.72e11 budget.
 - The **leaderboard score** (`adjusted_final_layer_score`) is not shown directly: it scales each estimator's `final_layer_mse` by `max(0.1, C_m / budget)`. Every bundled example spends at most ~1.2% of the budget — far below the 10% floor threshold — so all of them bottom out at the **0.1 floor** — each one's ranked score is exactly its `final_layer_mse ÷ 10`.
 
 To reproduce: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1` (e.g. `examples/02_mean_propagation.py`)

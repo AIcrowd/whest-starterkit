@@ -20,7 +20,7 @@ whest doctor
 ------------
   [OK]    Python version         3.10.20 satisfies >=3.10
   [OK]    uv on PATH             /Users/mohanty/.local/bin/uv
-  [OK]    whest install mode     tool-installed · 0.13.0
+  [OK]    whest install mode     tool-installed · 0.14.0
   [WARN]  BLAS thread pool       no BLAS pool detected
                                  threadpoolctl detected no BLAS pool; numpy may be using a fallback. Usually harmless.
   [OK]    Free disk in CWD       73.3 GiB free

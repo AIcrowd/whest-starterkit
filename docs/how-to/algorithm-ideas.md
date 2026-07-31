@@ -41,7 +41,7 @@ Track per-neuron means and variances through each layer using the ReLU expectati
 
 Track the full covariance matrix between neurons. More accurate because it captures correlations that diagonal methods ignore.
 
-**FLOP cost:** O(depth x width^3) — matrix-matrix products per layer. For width=256, depth=32: ~3.2B FLOPs (at the warmup shape 256×8, ~800M under the current cost model). Much more expensive.
+**FLOP cost:** O(depth x width^3) — matrix-matrix products per layer. For width=256, depth=32: ~3.3B FLOPs (at the warmup shape 256×8, ~820M under the current cost model), including the per-layer `as_symmetric()` re-validation that keeps the big einsum on flopscope's symmetric rate. Much more expensive.
 
 **When to use:** When the FLOP budget is large relative to width^2, and accuracy matters more than speed. Best for narrow networks or shallow depths.
 
