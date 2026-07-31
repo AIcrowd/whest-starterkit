@@ -82,8 +82,11 @@ class Estimator(BaseEstimator):
 
         # --- Step 1: initialise the input distribution ---
         # Input is modelled as standard multivariate normal: mu=0, cov=I.
+        # Tag the covariance as symmetric from the start: as_symmetric()
+        # validates the buffer and attaches the tag that earns the symmetric
+        # contraction rate in Step 3 (costing 7n-1 FLOPs, n = width^2).
         mu = fnp.zeros(width)  # shape (width,)
-        cov = fnp.eye(width)  # shape (width, width)
+        cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))  # (width, width)
         log_scale = 0.0  # tracks accumulated log of rescaling factor
 
         rows = []
@@ -104,11 +107,10 @@ class Estimator(BaseEstimator):
             # Pre-activation mean:         mu_pre  = W^T mu
             # Pre-activation covariance:   cov_pre = W^T cov W
             #
-            # Use einsum (not the chained matmul `w.T @ cov @ w`) so flopscope
-            # detects that the two `w` operands are the same tensor and tags
-            # cov_pre as symmetric. Symmetry then flows through the post-ReLU
-            # outer-product update below (line ~140), so the resulting `cov`
-            # is also tagged symmetric — no SymmetryLossWarning to suppress.
+            # Use einsum (not the chained matmul `w.T @ cov @ w`) so the whole
+            # sandwich is a single contraction over the symmetric-tagged `cov`
+            # (see Steps 1 and 7b) — flopscope bills it at the symmetric rate,
+            # the single biggest saving in this estimator (~24% per layer).
             # See https://github.com/AIcrowd/whestbench/issues/27 for the
             # background.
             mu_pre = w.T @ mu
@@ -141,10 +143,23 @@ class Estimator(BaseEstimator):
             gain = fnp.array(gain_np.astype(fnp.float32))
 
             # Off-diagonal approximation:  cov_post[i,j] ≈ gain[i]*gain[j]*cov_pre[i,j]
+            # This elementwise update and the diagonal write below discard the
+            # symmetry tag: since flopscope 0.10.0 a write into (or derivation
+            # from) a tagged buffer voids the tag rather than letting a stale
+            # claim keep its discount. The one-time SymmetryLossWarning here is
+            # expected — Step 7b below is the remedy it names.
             cov = fnp.multiply(fnp.outer(gain, gain), cov_pre)
 
             # Replace the diagonal with the exact marginal variances.
             fnp.fill_diagonal(cov, var_post)
+
+            # --- Step 7b: re-validate and re-tag the covariance ---
+            # as_symmetric() re-checks the written buffer really is symmetric
+            # and re-attaches the tag (7n-1 FLOPs, n = width^2), so the next
+            # layer's einsum bills at the symmetric rate again — repaying the
+            # validation ~70x at this shape. Re-validate-after-write is the
+            # supported symmetry idiom under flopscope >= 0.10.0.
+            cov = flops.as_symmetric(cov, symmetry=(0, 1))
 
             # --- Step 8: record mean in original (unscaled) coordinates ---
             scale_factor = float(fnp.exp(log_scale))

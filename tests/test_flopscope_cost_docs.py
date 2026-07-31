@@ -2,7 +2,7 @@
 and docs/reference/code-patterns.md state in prose.
 
 If a flopscope upgrade breaks one of these, the corresponding doc sentence is
-stale — fix both together. Numbers verified against flopscope 0.9.1.
+stale — fix both together. Numbers verified against flopscope 0.10.0.
 """
 
 from __future__ import annotations
@@ -66,8 +66,8 @@ def test_zeros_and_views_free_fills_and_movement_billed():
 def test_deduct_requires_dtypes_and_applies_rate():
     """Primer: deduct() requires dtypes= (pass () for dtype-neutral); dtype rate applies.
 
-    Real 0.9.1 signature: deduct(op_name, *, flop_cost, subscripts, shapes,
-    dtypes, complex_factor_override=None) — verified 2026-07-24.
+    Real 0.10.0 signature: deduct(op_name, *, flop_cost, subscripts, shapes,
+    dtypes, complex_factor_override=None) — verified 2026-07-31.
     """
     with flops.BudgetContext(flop_budget=10**9, quiet=True) as ctx:
         with pytest.raises(TypeError):
@@ -104,7 +104,7 @@ def test_example_predict_totals_pinned():
     totals = {}
     for name, expected in [
         ("02_mean_propagation", 20_333_056),
-        ("03_covariance_propagation", 3_232_298_432),
+        ("03_covariance_propagation", 3_262_575_998),
     ]:
         path = Path(__file__).resolve().parent.parent / "examples" / f"{name}.py"
         spec = importlib.util.spec_from_file_location(name, path)
