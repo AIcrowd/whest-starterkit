@@ -84,7 +84,9 @@ class Estimator(BaseEstimator):
         # Input is modelled as standard multivariate normal: mu=0, cov=I.
         # Tag the covariance as symmetric from the start: as_symmetric()
         # validates the buffer and attaches the tag that earns the symmetric
-        # contraction rate in Step 3 (costing 7n-1 FLOPs, n = width^2).
+        # contraction rate in Step 3.  It bills 7n-1 per element-pass with
+        # n = width^2, doubled by the float64 default that fnp.eye() picks:
+        # 917,502 FLOPs at width 256.
         mu = fnp.zeros(width)  # shape (width,)
         cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))  # (width, width)
         log_scale = 0.0  # tracks accumulated log of rescaling factor
@@ -155,10 +157,11 @@ class Estimator(BaseEstimator):
 
             # --- Step 7b: re-validate and re-tag the covariance ---
             # as_symmetric() re-checks the written buffer really is symmetric
-            # and re-attaches the tag (7n-1 FLOPs, n = width^2), so the next
-            # layer's einsum bills at the symmetric rate again — repaying the
-            # validation ~70x at this shape. Re-validate-after-write is the
-            # supported symmetry idiom under flopscope >= 0.10.0.
+            # and re-attaches the tag (917,502 FLOPs at width 256, float64), so
+            # the next layer's einsum bills at the symmetric rate again:
+            # 100,597,504 instead of the dense 133,955,584, a 33,358,080 saving
+            # that repays the validation ~36x at this shape. Re-validate-after-
+            # write is the supported symmetry idiom under flopscope >= 0.10.0.
             cov = flops.as_symmetric(cov, symmetry=(0, 1))
 
             # --- Step 8: record mean in original (unscaled) coordinates ---

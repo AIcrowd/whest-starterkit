@@ -12,7 +12,7 @@ Stage 2 confirms the contract. Stage 3 runs the **real scoring pipeline** (the s
 uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 --split mini --runner local
 ```
 
-`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~850 MB, cached) later runs reuse it with no re-download. The FLOP budget is `2.72e11` (272B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8 at a `6.8e10` budget). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with width²·256 = 16,777,216 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
+`--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step — after the first download (~850 MB, cached) later runs reuse it with no re-download. The FLOP budget is `2.72e11` (272B) and the MLP shape is the competition size (width=256, depth=32 — the `v1-warmup` round used 256×8 at a `6.8e10` budget). *(Omit `--dataset` and `whest run` instead generates a fresh random 10-MLP suite on the fly, computing ground truth with 2,560,000 Monte-Carlo samples — slower and not reproducible. Fine for a quick `pdb` poke; use the Mini split for real scoring.)*
 
 You'll see a Rich-rendered report with five panels:
 

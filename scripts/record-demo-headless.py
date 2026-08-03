@@ -63,6 +63,15 @@ AGG_ARGS = ["--theme", "monokai", "--font-size", "14", "--last-frame-duration", 
 
 def _env() -> dict:
     e = dict(os.environ)
+    # Drop the recorder's own virtualenv from the child environment. If VIRTUAL_ENV
+    # points somewhere other than the clone's `.venv` (it always does — we record
+    # from a checkout, the demo runs in a tempdir clone), every `uv` invocation
+    # prefixes its output with a `warning: \`VIRTUAL_ENV=<abs path>\` does not match
+    # the project environment path` line. That bakes the maintainer's local
+    # filesystem path into a public asset. Same motivation as the tempdir-name
+    # handling in capture() below.
+    for var in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT"):
+        e.pop(var, None)
     e.update(TERM="xterm-256color", FORCE_COLOR="1", CLICOLOR_FORCE="1", COLUMNS="90")
     return e
 
@@ -106,6 +115,10 @@ def clean(s: str) -> str:
     for line in s.split("\n"):
         plain = CSI.sub("", line)
         if "Importing estimator.py and running setup/predict checks" in plain:
+            continue
+        # Safety net for the leak _env() prevents at the source: never let an
+        # absolute path from the recording machine reach a committed asset.
+        if "VIRTUAL_ENV=" in plain:
             continue
         if any("⠀" <= ch <= "⣿" for ch in plain):  # braille spinner glyphs
             continue

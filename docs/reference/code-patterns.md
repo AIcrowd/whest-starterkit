@@ -48,10 +48,25 @@ The canonical example is the covariance update inside a linear layer:
 # downstream multiplies emit SymmetryLossWarning:
 cov_pre = w.T @ cov @ w
 
-# Use einsum so flopscope sees both `w` operands are the same tensor
-# and tags cov_pre as symmetric. Symmetry then flows downstream:
-cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)
+# Use einsum (not the chained `w.T @ cov @ w`) so the whole sandwich is one
+# contraction over a symmetric-tagged `cov`. Since flopscope 0.10.0 you must
+# also re-tag after any write into cov — a write voids the tag rather than
+# letting a stale claim keep its discount.
+cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))
+for w in mlp.weights:
+    cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)   # symmetric rate
+    ...
+    cov = fnp.multiply(fnp.outer(gain, gain), cov_pre)  # <- voids the tag
+    fnp.fill_diagonal(cov, var_post)                    # <- and so does this
+    cov = flops.as_symmetric(cov, symmetry=(0, 1))      # re-validate, ~7n FLOPs
 ```
+
+The one-time `SymmetryLossWarning` you see on the first write is **expected** —
+it is the signal that the tag is gone and that you need the re-validation. At
+width 256 the re-tag costs 917,502 FLOPs and saves 33,358,080 on the next
+layer's einsum, so it repays itself ≈36×. (Both figures are at the float64
+default; `as_symmetric` bills `7n-1` per element-pass with `n = width²`, and
+float64 bills 2×.)
 
 See `examples/03_covariance_propagation.py` for the full pattern in
 context, and [whestbench#27](https://github.com/AIcrowd/whestbench/issues/27)

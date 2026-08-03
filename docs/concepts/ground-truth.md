@@ -21,7 +21,7 @@ Because ground truth is estimated by sampling, it has finite precision. With k s
 
     standard_error ≈ sigma / sqrt(k)
 
-The official leaderboard datasets bake their ground truth with **N = 1,000,000,000 samples per MLP** — the same process as the public release, [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The floor this puts on your score (what a *perfect* estimator would still incur) is `avg_variance / N`, where `avg_variance` is the dataset's measured per-neuron final-layer activation variance (≈ 0.18). That works out to a ground-truth MSE floor of **≈ 2e-10** — orders of magnitude below any meaningful estimator gap (covariance propagation is ~`8.4e-5`, roughly 10^5× higher). (Running `whest run` *without* `--dataset` instead generates ground truth on the fly at the lower-precision local default of 16,777,216 samples (width²·256), where the floor rises to ~`1.1e-8` — fine for quick iteration, but noisier.) Your MSE never reaches exactly zero, but against the official datasets the target is effectively exact.
+The official leaderboard datasets bake their ground truth with **N = 1,000,000,000 samples per MLP** — the same process as the public release, [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The floor this puts on your score (what a *perfect* estimator would still incur) is `avg_variance / N`, where `avg_variance` is the dataset's measured per-neuron final-layer activation variance (≈ 0.18). That works out to a ground-truth MSE floor of **≈ 2e-10** — orders of magnitude below any meaningful estimator gap (covariance propagation is ~`8.4e-5`, roughly 10^5× higher). (Running `whest run` *without* `--dataset` instead generates ground truth on the fly at the lower-precision local default of 2,560,000 samples, where the floor rises to ~`7e-8` — fine for quick iteration, but noisier.) Your MSE never reaches exactly zero, but against the official datasets the target is effectively exact.
 
 ## What this means for your estimator
 
@@ -33,7 +33,7 @@ The official leaderboard datasets bake their ground truth with **N = 1,000,000,0
 
 The number of ground truth samples is set in the contest configuration (`ContestSpec`), which defines all evaluation parameters: width, depth, FLOP budget, number of MLPs, and ground truth sample count. You can override some of these via CLI flags (e.g., `--n-mlps`, `--flop-budget`, `--n-samples`).
 
-- `ground_truth_samples`: forward passes used to estimate ground truth. `whest run` without `--dataset` generates these on the fly and defaults to `width * width * 256` (16,777,216 at width 256); the official baked datasets use **N = 1,000,000,000**.
+- `ground_truth_samples`: forward passes used to estimate ground truth. `whest run` without `--dataset` generates these on the fly and defaults to `100 * 100 * 256 = 2,560,000`; the official baked datasets use **N = 1,000,000,000**.
 
 Higher values produce more accurate ground truth but take longer to compute. The contest organizer balances this tradeoff.
 
