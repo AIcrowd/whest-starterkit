@@ -16,3 +16,4 @@ The `whest` CLI is shipped by [whestbench](https://github.com/AIcrowd/whestbench
 | `whest package` | Build submission archive — a **file** ships just that file, a **folder** ships the whole folder | 5 |
 | `whest submit` | Package (if `--estimator` given) and upload to AIcrowd | 5 |
 | `whest doctor` | Diagnose environment issues | any |
+| `whest profile-simulation` | Benchmark backend correctness/timing | any |

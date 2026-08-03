@@ -15,8 +15,9 @@ import flopscope as flops
 import flopscope.numpy as fnp
 
 with flops.BudgetContext(flop_budget=1_000_000) as ctx:
-    x = fnp.ones(100)
-    y = x @ fnp.eye(100)  # matmul: 100 * 100 * 100 = 1M FLOPs
+    x = fnp.ones((100, 100), dtype=fnp.float32)  # fill: 10,000 FLOPs (billed since 0.9)
+    w = fnp.ones((100, 100), dtype=fnp.float32)  # fill: 10,000 FLOPs (billed since 0.9)
+    y = x @ w                                     # matmul: 100·100·(2·100−1) ≈ 2M FLOPs
     # BudgetExhaustedError raised here if budget exceeded
 ```
 
@@ -48,15 +49,40 @@ each counted flopscope/NumPy call. If it is exceeded, flopscope raises
 
 ## Operation FLOP Costs
 
-| Category | Operations | Cost |
-|----------|-----------|------|
-| **Free** (0 FLOPs) | `fnp.array`, `fnp.zeros`, `fnp.ones`, `fnp.eye`, `fnp.asarray`, `fnp.reshape`, `.T`, indexing, `fnp.stack`, `fnp.concatenate`, `.copy()`, `.astype()`, `fnp.random.default_rng(seed)` (constructing the RNG) | 0 |
-| **Pointwise** (1 FLOP/element) | `+`, `-`, `*`, `/`, `fnp.exp`, `fnp.sqrt`, `fnp.abs`, `fnp.maximum`, `fnp.where`, `fnp.log`, comparisons | N elements |
-| **Reductions** (input size) | `fnp.sum`, `fnp.mean`, `fnp.var`, `fnp.max`, `fnp.min`, `fnp.all`, `fnp.any` | N elements |
-| **Random samplers** | `rng.standard_normal(n)`, `rng.uniform(...)`, `fnp.random.standard_normal(...)` and module-level analogs; same for `RandomState(seed)` | calibrated per method (default ~16 FLOPs/element for `standard_normal`; lower weights for cheap samplers like `uniform`) |
-| **Matmul** | `@`, `fnp.matmul` | M * N * K for (M,N) @ (N,K) |
+As of flopscope 0.9, every operation is billed as
 
-**Key insight:** Matmul dominates. A single `(100, 100) @ (100, 100)` costs 1M FLOPs. A pointwise `exp` on 100 elements costs 100 FLOPs.
+```
+charged = flop_cost × weight × dtype_rate × complex_factor
+```
+
+- `flop_cost` — the op's shape-derived count (e.g. `M·N·(2K−1)` for a `(M,K) @ (K,N)` matmul: K multiplies + K−1 adds per output element).
+- `weight` — the op's tier, one of **{0, 1, 4, 16}**.
+- `dtype_rate` — **1.0 for 32-bit-or-smaller dtypes, 2.0 for float64/int64, up to 4.0 for float128**. The billing dtype follows NumPy promotion over the operands, so one stray float64 vector makes the whole expression bill 2×.
+- `complex_factor` — real-FLOP equivalents for complex dtypes (e.g. complex multiply = 6).
+
+| Tier | Operations | Cost at float32 |
+|------|-----------|------|
+| **Free** (weight 0) | `fnp.zeros`, `fnp.empty`, views (`.T`, basic slicing), `fnp.asarray` on an existing flopscope array (no copy), `fnp.random.default_rng(seed)` construction | 0 |
+| **1× per element** | `+`, `-`, `*`, `/`, comparisons, `fnp.maximum`, `fnp.sqrt`, reductions (`sum`, `mean`, `var`, `max`, …), **and data movement that used to be free**: `fnp.ones`/`full`/`eye` fills, `fnp.array`/`asarray` copies, `.copy()`, `.astype()`, `reshape`/`ravel` (billed even when NumPy would return a view), `stack`, `concatenate`, `tile`, `repeat` | N elements (`eye`: diagonal length written) |
+| **4× per element** | Gathers (`take`, fancy `arr[int_idx]`), 3-arg `fnp.where` | 4·N |
+| **Sorting/search** (weight 4, per comparison) | `sort`, `argsort`, `unique`, `searchsorted` | ≈4·N·⌈log₂N⌉ |
+| **16× per element** | Transcendentals: `fnp.exp`, `fnp.log`, trig, and **`x ** y` power — including `x ** 2`** | 16·N |
+| **Matmul** | `@`, `fnp.matmul`, `fnp.einsum` | `M·N·(2K−1)` for `(M,K) @ (K,N)` |
+| **Random samplers** | `rng.standard_normal(...)` 16/element at float32 (32 at the float64 default), `rng.uniform(...)` 6/element (always float64 — no `dtype=` arg; calibrated float32 base rate 3) | calibrated per method |
+
+**Key insights:**
+- Matmul still dominates: `(100,100) @ (100,100)` in float32 costs ~2M FLOPs (`M·N·(2K−1)` = 1,990,000).
+- **Stay in float32.** The same code on float64 arrays bills exactly 2×. `fnp.zeros(n)` defaults to float64 — pass `dtype=fnp.float32` when you don't need the precision.
+- **Write `x * x`, not `x ** 2`** — power routes through the 16× transcendental tier.
+- Composite helpers bill their internals: `flops.stats.norm.pdf` ≈ 54/element and `flops.stats.norm.cdf` ≈ 96/element.
+
+The weight and rate tables above are a summary. The audited, authoritative
+per-op reference (including complex factors, accumulator-widening rules for
+integer reductions, and per-family formulas) is flopscope's
+[cost model reference](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/)
+— and `ctx.summary()` on your own run is always ground truth.
+`tests/test_flopscope_cost_docs.py` in this kit pins the claims made on this
+page so a future flopscope bump flags them.
 
 ## Array Creation
 
@@ -64,14 +90,17 @@ each counted flopscope/NumPy call. If it is exceeded, flopscope raises
 import flopscope as flops
 import flopscope.numpy as fnp
 
-x = fnp.zeros(100)                          # 1D zeros
-X = fnp.zeros((64, 100), dtype=fnp.float32)  # 2D zeros, explicit dtype
-I = fnp.eye(100, dtype=fnp.float32)          # identity matrix
-a = fnp.array([1.0, 2.0, 3.0])             # from list
-b = fnp.asarray(numpy_array)                # convert from numpy (free)
+x = fnp.zeros(100)                           # 1D zeros — free (defaults to float64)
+X = fnp.zeros((64, 100), dtype=fnp.float32)  # 2D zeros, explicit dtype — free
+I = fnp.eye(100, dtype=fnp.float32)          # identity: 100 FLOPs (diagonal only, billed since 0.9)
+a = fnp.array([1.0, 2.0, 3.0])               # from list: 6 FLOPs (3 elems, float64 default doubles the rate)
+b = fnp.asarray(numpy_array)                 # convert from numpy — free (no copy needed)
 ```
 
-All array creation is **free** (0 FLOPs).
+Since flopscope 0.9, only `fnp.zeros` / `fnp.empty` and no-copy views are free.
+Fills (`ones`, `eye`, `full`) and copies (`fnp.array`, copying `asarray`,
+`.astype()`, `.copy()`) bill 1× per element written — small next to any matmul,
+but no longer zero.
 
 ## Random Number Generation
 
@@ -80,8 +109,8 @@ import flopscope as flops
 import flopscope.numpy as fnp
 
 rng = fnp.random.default_rng(42)            # seeded RNG (free)
-x = rng.standard_normal((1000, 64))         # ~64,000 × 16 FLOPs charged
-x = x.astype(fnp.float32)                   # cast to float32 (free)
+x = rng.standard_normal((1000, 64))         # 64,000 × 32 FLOPs (float64 default)
+x32 = rng.standard_normal((1000, 64), dtype=fnp.float32)  # 64,000 × 16 FLOPs — draw in f32 when you can
 ```
 
 Random samplers **are FLOP-counted** ([flopscope#81](https://github.com/AIcrowd/flopscope/pull/81)):
@@ -93,10 +122,11 @@ only the sampling methods cost FLOPs. Cross-API parity is guaranteed —
 the three idioms above all charge the same FLOPs for the same physical
 sample count.
 
-Per-method weights are calibrated empirically (default ~16 FLOPs per
-element for `standard_normal`; cheaper methods like `uniform` have
-lower weights). See `flopscope.numpy.random._registry` upstream for the
-authoritative table.
+Per-method weights are calibrated empirically (16 FLOPs per element for
+float32 `standard_normal`, 32 at the float64 default; cheaper samplers
+like `uniform` bill 6/element (always float64 — `uniform` has no `dtype=`
+switch; its calibrated float32 base rate is 3)). See
+`flopscope.numpy.random._registry` upstream for the authoritative table.
 
 ## Budget Inspection
 
@@ -117,10 +147,10 @@ that the harness passed in.
 | `residual_wall_time_s` | `float` | Wall time inside the context that is neither flopscope backend execution nor flopscope's own dispatch — i.e. participant Python (loops, control flow) and GC. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) are counted as `flopscope_backend_time_s`, not residual; Python-callback ops bill their callback time here. |
 | `elapsed_s` | `float` | Alias of `wall_time_s` for symmetry with the report. |
 | `namespace` | `str \| None` | Namespace this context attributes ops to (set via `with flops.namespace("name")`). |
-| `op_log` | `list[OpRecord]` | Per-op record (only populated under `--profile`). |
+| `op_log` | `list[OpRecord]` | Per-op record (only populated under `--profile`). Each `OpRecord` carries `resolved_dtype` — which dtype priced the op. |
 | `summary()` | method | Pretty-printed summary for the current context. |
 | `summary_dict(...)` | method | Same data as a `dict` (machine-readable). |
-| `deduct(n)` | method | Manually attribute `n` FLOPs to this context (use sparingly — flopscope's instrumentation handles the common cases). |
+| `deduct(op_name, *, flop_cost, shapes, dtypes, …)` | method | Manually attribute FLOPs. The signature changed in flopscope 0.9: name the op and pass `flop_cost` plus the operand `dtypes` — the dtype rate is applied on top (e.g. `ctx.deduct("my_op", flop_cost=10, subscripts=None, shapes=(), dtypes=(fnp.float64,))` charges 20). Pass `dtypes=()` for a dtype-neutral charge; `dtypes=None` raises. |
 
 ```python
 with flops.BudgetContext(flop_budget=10_000_000) as ctx:
@@ -175,7 +205,16 @@ logic comparing Flopscope's measured `residual_wall_time_s` with the configured
 
 **Pythonic operators are tracked.** `x @ w` counts the same FLOPs as `fnp.matmul(x, w)`. Use whichever reads better.
 
-**dtype matters for precision, not FLOPs.** `float32` and `float64` operations cost the same FLOPs. Use `float32` for memory efficiency and `float64` for numerical stability where needed.
+**dtype now matters for FLOPs too.** Since flopscope 0.9, float64 operations
+bill 2× float32 (`dtype_rate`). NumPy promotion decides the billing dtype, so
+one float64 operand upgrades the whole expression. Keep estimator state in
+float32 unless you need the precision — and note `fnp.zeros(...)` defaults to
+float64. Exotic dtypes without a billing rate raise `UnsupportedDtypeError`
+(a `TypeError`) before any FLOPs are charged.
+
+**Shape-only cost estimators assume float32.** The `flops.accounting.*`
+helpers (`einsum_cost`, `svd_cost`, …) price at the float32 anchor; the same
+op on float64 arrays bills 2× the estimate at runtime.
 
 ## Testing
 

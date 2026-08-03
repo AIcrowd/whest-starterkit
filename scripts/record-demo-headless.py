@@ -37,7 +37,7 @@ CSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # (displayed command, shell command to run | None, output filename | None, tail_lines | None)
 # `None` run command = display-only step (e.g. `cd`). Mirrors scripts/record-demo.sh.
 STEPS = [
-    (f"git clone {CLONE_URL}", f"git clone --quiet {CLONE_URL} .", None, None),
+    (f"git clone {CLONE_URL}", f"git clone --quiet {CLONE_URL} whest-starterkit", None, None),
     ("cd whest-starterkit", None, None, None),
     ("uv sync", "uv sync", "02_sync.out", 6),
     ("uv run python estimator.py", "uv run python estimator.py", "03_python.out", None),
@@ -63,6 +63,15 @@ AGG_ARGS = ["--theme", "monokai", "--font-size", "14", "--last-frame-duration", 
 
 def _env() -> dict:
     e = dict(os.environ)
+    # Drop the recorder's own virtualenv from the child environment. If VIRTUAL_ENV
+    # points somewhere other than the clone's `.venv` (it always does — we record
+    # from a checkout, the demo runs in a tempdir clone), every `uv` invocation
+    # prefixes its output with a `warning: \`VIRTUAL_ENV=<abs path>\` does not match
+    # the project environment path` line. That bakes the maintainer's local
+    # filesystem path into a public asset. Same motivation as the tempdir-name
+    # handling in capture() below.
+    for var in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT"):
+        e.pop(var, None)
     e.update(TERM="xterm-256color", FORCE_COLOR="1", CLICOLOR_FORCE="1", COLUMNS="90")
     return e
 
@@ -71,19 +80,31 @@ def capture(capture_dir: Path) -> None:
     """Run the sequence in a fresh clone, writing each step's output to capture_dir."""
     capture_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp())
-    # Step 1 clones into `work`; subsequent steps run there.
-    rundir = work
-    for _disp, cmd, outfile, tail in STEPS:
+    # Step 1 clones into `work/whest-starterkit` (mirroring what a bare
+    # `git clone <url>`, with no destination arg, produces) rather than directly
+    # into the raw mkdtemp — this keeps the scratch tempdir's opaque OS-assigned
+    # name out of tool output that echoes the cwd (e.g. uv's `file://...`
+    # self-reference for the local package). Subsequent steps run there.
+    clone_dir = work / "whest-starterkit"
+    for i, (_disp, cmd, outfile, tail) in enumerate(STEPS):
         if cmd is None:
             continue
+        rundir = work if i == 0 else clone_dir
         res = subprocess.run(cmd, shell=True, cwd=rundir, env=_env(),
                              capture_output=True, text=True)
-        out = res.stdout + res.stderr
+        # stderr before stdout: progress/log lines stream to stderr while a command
+        # runs, the payoff (report, table, "Next:" hint) prints to stdout last. Verified
+        # empirically per step: `uv sync` is stderr-only, `estimator.py`/`whest validate`
+        # are stdout-only (so this ordering is a no-op for them) — only `whest run
+        # --dataset` splits across both (whestbench routes `[run] ...` progress and
+        # warnings to stderr), where naive stdout-then-stderr concatenation buried the
+        # Final Score panel under 100+ lines of `[run] scoring: N/100` spam.
+        out = res.stderr + res.stdout
         if tail:
             out = "\n".join(out.splitlines()[-tail:]) + "\n"
         if outfile:
             (capture_dir / outfile).write_text(out, encoding="utf-8")
-    # nothing else needed; clone left in `work` (a tempdir)
+    # nothing else needed; clone left in `clone_dir` (under a tempdir)
 
 
 def clean(s: str) -> str:
@@ -94,6 +115,10 @@ def clean(s: str) -> str:
     for line in s.split("\n"):
         plain = CSI.sub("", line)
         if "Importing estimator.py and running setup/predict checks" in plain:
+            continue
+        # Safety net for the leak _env() prevents at the source: never let an
+        # absolute path from the recording machine reach a committed asset.
+        if "VIRTUAL_ENV=" in plain:
             continue
         if any("⠀" <= ch <= "⣿" for ch in plain):  # braille spinner glyphs
             continue

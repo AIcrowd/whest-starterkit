@@ -66,7 +66,7 @@ w.save("weights.npz")                 # plain .npz, no pickle
 `.save()` writes a plain `.npz`; nested `Module`s and lists/tuples/dicts of arrays
 are flattened automatically. (For a single bare array you can also `np.savez` /
 `fnp.load` directly, but `Module` keeps multi-array weights structured and reloads
-them into a typed object.)
+them into a typed object.) For the save call itself, do it offline with plain `numpy` (`np.savez`): inside `predict()`, `fnp.save`/`fnp.savez` bill an egress cost since flopscope 0.9 (≈4 FLOPs per element × dtype rate, plus small headers), while `fnp.load` stays free.
 
 **Designing the weights themselves** — which operations are free vs FLOP-counted,
 and the full `fnp` module surface (array creation, RNG, reductions, matmul,

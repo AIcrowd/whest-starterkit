@@ -48,10 +48,25 @@ The canonical example is the covariance update inside a linear layer:
 # downstream multiplies emit SymmetryLossWarning:
 cov_pre = w.T @ cov @ w
 
-# Use einsum so flopscope sees both `w` operands are the same tensor
-# and tags cov_pre as symmetric. Symmetry then flows downstream:
-cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)
+# Use einsum (not the chained `w.T @ cov @ w`) so the whole sandwich is one
+# contraction over a symmetric-tagged `cov`. Since flopscope 0.10.0 you must
+# also re-tag after any write into cov — a write voids the tag rather than
+# letting a stale claim keep its discount.
+cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))
+for w in mlp.weights:
+    cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)   # symmetric rate
+    ...
+    cov = fnp.multiply(fnp.outer(gain, gain), cov_pre)  # <- voids the tag
+    fnp.fill_diagonal(cov, var_post)                    # <- and so does this
+    cov = flops.as_symmetric(cov, symmetry=(0, 1))      # re-validate, ~7n FLOPs
 ```
+
+The one-time `SymmetryLossWarning` you see on the first write is **expected** —
+it is the signal that the tag is gone and that you need the re-validation. At
+width 256 the re-tag costs 917,502 FLOPs and saves 33,358,080 on the next
+layer's einsum, so it repays itself ≈36×. (Both figures are at the float64
+default; `as_symmetric` bills `7n-1` per element-pass with `n = width²`, and
+float64 bills 2×.)
 
 See `examples/03_covariance_propagation.py` for the full pattern in
 context, and [whestbench#27](https://github.com/AIcrowd/whestbench/issues/27)
@@ -59,30 +74,38 @@ for the rationale.
 
 ## Operation costs
 
+> **flopscope 0.9 billing model.** Costs are `flop_cost × weight × dtype_rate`
+> (× a complex factor for complex dtypes). Practical rules: stay in float32
+> (float64 bills 2×); write `x * x` not `x ** 2` (power is 16-tier); `zeros`
+> and views are free but `ones`/`eye`/`stack`/`concatenate`/copies now bill
+> 1×/element; gathers and 3-arg `where` bill 4×/element; sorts bill
+> ≈4·N·⌈log₂N⌉ (per comparison). Full audited tables:
+> [flopscope cost model](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/).
+
 | What you want | Code | FLOP cost | Notes |
 |---|---|---|---|
 | Create zeros | `fnp.zeros((n, n))` | 0 | Free |
-| Create ones | `fnp.ones(n)` | 0 | Free |
-| Identity matrix | `fnp.eye(n)` | 0 | Free |
-| Wrap existing data | `fnp.array(data)` | 0 | Free |
+| Create ones | `fnp.ones(n)` | 1 per element | Billed since 0.9 |
+| Identity matrix | `fnp.eye(n)` | n (diagonal only) | Billed since 0.9 |
+| Wrap existing data | `fnp.asarray(data)` | 0 | Free if no copy needed; `fnp.array()` always copies |
 | Matrix multiply | `fnp.matmul(A, B)` | O(m x n x k) | Dominates budgets |
 | Element-wise add | `fnp.add(a, b)` | 1 per element | |
 | Element-wise multiply | `fnp.multiply(a, b)` | 1 per element | |
 | Element-wise divide | `fnp.divide(a, b)` | 1 per element | |
 | ReLU | `fnp.maximum(x, 0.0)` | 1 per element | |
 | Square root | `fnp.sqrt(x)` | 1 per element | |
-| Exponential | `fnp.exp(x)` | 1 per element | |
-| Logarithm | `fnp.log(x)` | 1 per element | |
+| Exponential | `fnp.exp(x)` | 16 per element | Transcendental — 16x tier |
+| Logarithm | `fnp.log(x)` | 16 per element | Transcendental — 16x tier |
 | Transpose | `fnp.transpose(W)` | 0 | Free |
-| Reshape | `fnp.reshape(x, shape)` | 0 | Free |
+| Reshape | `fnp.reshape(x, shape)` | 1 per element | Billed since 0.9 (materializes) |
 | Extract diagonal | `fnp.diag(M)` | 0 | Free |
-| Set diagonal | `fnp.fill_diagonal(M, v)` | 0 | Free, in-place |
+| Set diagonal | `fnp.fill_diagonal(M, v)` | n (diagonal only) | Billed since 0.9, in-place |
 | Outer product | `fnp.outer(a, b)` | n x m | |
 | Sum | `fnp.sum(x, axis=0)` | input size | |
 | Mean | `fnp.mean(x, axis=0)` | input size | |
 | Max | `fnp.max(x)` | input size | |
-| Stack arrays | `fnp.stack(rows, axis=0)` | 0 | Free |
-| Concatenate | `fnp.concatenate([a, b])` | 0 | Free |
+| Stack arrays | `fnp.stack(rows, axis=0)` | 1 per element | Billed since 0.9 |
+| Concatenate | `fnp.concatenate([a, b])` | 1 per element | Billed since 0.9 |
 | Index/slice | `x[0]`, `x[:, 3]` | 0 | Free |
 
 ## Common patterns
@@ -127,7 +150,7 @@ class Estimator(BaseEstimator):
 
 Do **not** call `fnp.random.seed(ctx.seed)` — that mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
 
-Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract: Reproducibility](./estimator-contract.md#reproducibility-under-the-grader-seed).
+Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract](./estimator-contract.md).
 
 ### Standard normal PDF and CDF (built-in)
 

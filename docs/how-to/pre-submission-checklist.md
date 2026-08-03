@@ -29,6 +29,21 @@ checks; each one maps to a single command or a one-line confirmation.
 - [ ] **`flops_used`** is comfortably under
       `flop_budget` — leaves headroom for the harder MLPs in the grader
       suite.
+- [ ] **`residual_wall_time_s` is a small share of `effective_compute`.**
+      You are ranked on `C_m = F_m + λ·R_m` (λ = 1e11 FLOPs/s), so 0.1 s of
+      unmetered work costs ~3.7% of the budget. Re-run with
+      `--max-threads 1` as the conservative case: the rules guarantee no
+      particular evaluation hardware, so work that is fast locally only
+      because it is multi-threaded is a bet, not a plan. See
+      [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
+- [ ] **No internal deadline calibrated to your own machine's clock.** If
+      your estimator bails out on `time.time()` and returns a fallback, a
+      slower grading machine can trigger that path silently — you get a
+      valid-looking score computed from the degraded answer, with no error
+      to tell you. Prefer a budget-based cutoff.
+- [ ] **The grader's per-MLP wall-clock cap** is reported as
+      `admin_config.wall_time_limit_s` in your own run report. Read it
+      there rather than assuming a value.
 
 ## Reproducibility
 

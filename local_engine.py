@@ -54,7 +54,7 @@ def build_mlp(width: int, depth: int, seed: int = 0) -> MLP:
         fnp.array((rng.standard_normal((width, width)) * scale).astype(fnp.float32))
         for _ in range(depth)
     ]
-    return MLP(width=width, depth=depth, weights=weights)
+    return MLP(width=width, depth=depth, weights=weights, seed=seed)
 
 
 def monte_carlo_layer_means(
@@ -62,19 +62,23 @@ def monte_carlo_layer_means(
     n_samples: int,
     seed: int = 0,
 ) -> fnp.ndarray:
-    """Forward `n_samples` N(0,1) inputs through `mlp.weights` and average per layer.
+    """Forward `n_samples` N(0,1) float32 inputs through `mlp.weights` and average per layer.
+
+    Draws in float32 and accumulates the mean in float64, mirroring
+    whestbench's own ground-truth sampler (and flopscope 0.9.x bills
+    float64 ops at 2x, so the f32 draw is also the cheap idiom).
 
     Returns shape `(depth, width)` — same shape as `Estimator.predict` so the two
     can be subtracted directly.
     """
     rng = fnp.random.default_rng(seed)
     width = mlp.width
-    x = fnp.array(rng.standard_normal((n_samples, width)).astype(fnp.float32))
+    x = fnp.array(rng.standard_normal((n_samples, width), dtype=fnp.float32))
     rows = []
     for w in mlp.weights:
         x = fnp.maximum(fnp.matmul(x, w), 0.0)
-        rows.append(fnp.mean(x, axis=0))
-    return fnp.stack(rows, axis=0)
+        rows.append(fnp.mean(fnp.asarray(x, dtype=fnp.float64), axis=0))
+    return fnp.asarray(fnp.stack(rows, axis=0), dtype=fnp.float32)
 
 
 def compare_against_monte_carlo(
@@ -140,5 +144,6 @@ def compare_against_monte_carlo(
     for n in sample_counts:
         with flops.BudgetContext(flop_budget=sampling_budget, quiet=True) as mc_ctx:
             sampled = monte_carlo_layer_means(mlp, n, seed=seed)
-        mse = float(fnp.mean((est_pred - sampled) ** 2))
+        diff = est_pred - sampled
+        mse = float(fnp.mean(diff * diff))
         print(row(f"{n:,}", f"{mc_ctx.flops_used:,}", f"{estimator_flops:,}", f"{mse:.6f}"))

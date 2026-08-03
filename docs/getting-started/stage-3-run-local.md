@@ -17,7 +17,7 @@ uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-
 You'll see a Rich-rendered report with five panels:
 
 1. **Run Context** — estimator class, path, timestamps, `n_mlps`, `width`, `depth`, `flop_budget`.
-2. **Hardware & Runtime** — host, OS, CPU, RAM, Python and NumPy versions (so a leaderboard score is reproducible across machines).
+2. **Hardware & Runtime** — host, OS, CPU, RAM, Python and NumPy versions. This makes the *analytical* part of a score reproducible across machines; the residual wall-time term `λ·R_m` still depends on the machine, which is why the panel records what that machine was (see [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent)).
 3. **Sampling Budget Breakdown (Ground Truth)** — provenance/FLOPs for the reference ground truth (loaded from the baked dataset with `--dataset`; sampled locally otherwise).
 4. **Estimator Budget Breakdown** — same fields for your `predict()` call(s).
 5. **Final Score** — the headline metrics:
@@ -71,7 +71,7 @@ def predict(self, mlp: MLP, budget: int) -> fnp.ndarray:
 | `02_mean_propagation` | ~9.5e-04 |
 | `03_covariance_propagation` | ~8.4e-05 |
 
-These are the **raw** final-layer MSEs (the accuracy signal). Your leaderboard `adjusted_final_layer_score` scales each by the compute multiplier `max(0.1, C_m / flop_budget)` — and since these all use <1% of the budget, the ranked number is exactly one-tenth of the value shown (the 0.1 floor).
+These are the **raw** final-layer MSEs (the accuracy signal). Your leaderboard `adjusted_final_layer_score` scales each by the compute multiplier `max(0.1, C_m / flop_budget)` — and since these all use at most ~1.2% of the budget (far below the 10% floor threshold), the ranked number is exactly one-tenth of the value shown (the 0.1 floor).
 
 (Same ballpark as the Stage 1 table because the math and shape are the same
 (width=256, depth=32); they differ because Stage 3 scores the 100 fixed Mini MLPs

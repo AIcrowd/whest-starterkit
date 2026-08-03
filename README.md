@@ -208,7 +208,7 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 <details>
 <summary>🔬 <b><a href="docs/advanced/">Advanced</a></b> — Deeper tooling</summary>
 
-- [Profile Simulation](docs/advanced/profile-simulation.md) — FLOP and time breakdown of your `predict()` call.
+- [Profile Simulation](docs/advanced/profile-simulation.md) — Benchmark the flopscope backend's correctness and wall-clock scaling across network sizes.
 - [WhestBench Explorer](docs/advanced/use-whestbench-explorer.md) — Hosted interactive visualizer at [aicrowd.github.io/whestbench-explorer](https://aicrowd.github.io/whestbench-explorer/) for inspecting MLPs and ground truth.
 
 </details>

@@ -97,7 +97,41 @@ If you want namespace attribution, pass `by_namespace=True`.
 
 ## Is scoring hardware-dependent?
 
-No. flopscope counts FLOPs analytically based on tensor shapes — not wall-clock time. The same estimator produces the same FLOP count on any hardware. You can develop on a laptop and submit for evaluation on a cluster with identical results.
+Partly — and the part that is matters.
+
+**`F_m`, the analytical FLOP count, is not.** flopscope derives it from tensor
+shapes and dtypes, so it is identical on your laptop and on the grader.
+
+**`R_m`, the residual wall time, is.** You are ranked on effective compute
+`C_m = F_m + λ·R_m` with λ = 1e11 FLOPs/second, so every second of work that
+flopscope does *not* meter — pure-Python loops, raw `numpy`, compiled
+extensions you ship yourself, subprocesses, I/O — is billed at the speed of
+whatever machine runs it. Against the 2.72e11 budget that rate is steep:
+**0.1 s of residual ≈ 3.7% of your budget, and 2.72 s of residual consumes all
+of it on its own.**
+
+The rules do not guarantee any particular evaluation hardware. Do not assume
+the grader matches your development machine in core count, clock speed, or
+BLAS backend — a submission whose cost or behaviour depends on a fixed amount
+of wall clock is carrying a risk it does not need to carry.
+
+The way to stay hardware-independent is to keep the work inside
+`flopscope.numpy`, where it is metered analytically and your local number is
+the grader's number. Whatever you push outside it, you are being timed on.
+
+**If your estimator has an internal deadline** — `time.time()` checks, a
+`PREDICT_TIMEOUT` constant, an anytime algorithm that stops refining when the
+clock runs out — do not calibrate it against your own machine's speed. On
+slower hardware a locally-tuned deadline trips early and your estimator
+silently returns its fallback answer: no exception, no failed MLP, just a
+valid-looking score computed from the degraded path. Prefer a **budget-based**
+cutoff — `predict()` is handed `budget`, and `flops.budget_summary()` tells you
+what you have spent — over a clock-based one. If you must use a clock, make the
+fallback something you would be content to be scored on.
+
+To see where you stand, run with `--profile` and read `residual_wall_time_s`
+against `flops_used`. A conservative local check is `--max-threads 1`, which
+takes away the BLAS parallelism you cannot count on having.
 
 ## How many MLP networks are in a full evaluation?
 
@@ -109,7 +143,7 @@ You are ranked by the **budget-adjusted** `adjusted_final_layer_score = final_la
 
 ## My local score is great but my submission scores 10x worse — why?
 
-Almost always one of three things:
+Almost always one of four things:
 
 1. **Module-level state survives between predict() calls in-process.** Your Stage 3 (`--runner local`) iteration accidentally caches results between MLPs (lookup tables, RNG state, memoized partials). Stage 4 (`--runner subprocess`) and the grader run each MLP in a fresh process — that state is gone, and your score collapses. **Fix:** move state to instance attributes (`self._...`) populated in `setup()`, or use the `SetupContext.scratch_dir` for cross-call caching that's recomputed deterministically.
 
@@ -117,7 +151,24 @@ Almost always one of three things:
 
 3. **Numerical non-determinism without a seed.** Random MLP generation, Monte-Carlo ground truth, or your estimator's own RNG. **Fix:** add `--seed N` to your local runs to compare apples-to-apples, and avoid time-based seeds in your estimator.
 
+4. **Unmetered work that was fast locally.** Raw `numpy`, a bundled BLAS, threads, or `multiprocessing` use whatever your development machine happens to give them; the grader's machine is not guaranteed to match it. The FLOP count is identical either way, but `residual_wall_time_s` — and therefore `C_m = F_m + λ·R_m` — can be several times larger. Symptom: `flops_used` matches your local run exactly, while `effective_compute` and `mean_compute_utilization` are much higher, or `combined_budget_exhausted` fires. A clock-based internal deadline can also trip early and silently substitute a fallback answer. **Fix:** move the math into `flopscope.numpy` so it is metered analytically, and re-measure locally with `--max-threads 1`. See [Is scoring hardware-dependent?](#is-scoring-hardware-dependent).
+
 If your Stage 3 and Stage 4 scores agree but the grader still disagrees, suspect Python-version or BLAS-version drift — `uv run whest doctor` will surface the relevant runtime info.
+
+## Did the scoring formula change in whestbench 0.14.0?
+
+No. `adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)`,
+λ = 1e11, the 2.72e11 budget, and the 256×32 shape are all unchanged. What
+changed is the *meter*, twice in recent releases: whestbench 0.13.0 adopted
+flopscope 0.9 (float64 2×, transcendentals 16×, formerly-free data movement
+now billed), and whestbench 0.14.0 adopts flopscope 0.10 — `out=`
+destinations are now priced, symmetry-tag discounts are voided when the
+tagged buffer is written (re-validate with `as_symmetric()` to keep them, as
+`examples/03_covariance_propagation.py` shows), and `einsum(..., out=)` now
+follows NumPy's casting rules, so calls that used to silently truncate raise
+`TypeError`. `F_m` — and therefore `C_m` and the multiplier — can move for
+the same code. Leaderboard scores are re-evaluated under the new meter;
+local scores from 0.13.x kits are not comparable.
 
 ## ➡️ Next step
 
