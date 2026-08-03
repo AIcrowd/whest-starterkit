@@ -10,7 +10,7 @@ Use this page to understand how FLOP budgets work and how to optimize your estim
 
 This challenge scores estimators by **analytical FLOP count**, not execution time. Every mathematical operation your estimator performs is tracked by [flopscope](https://github.com/AIcrowd/flopscope) — a NumPy-compatible library that counts floating-point operations deterministically from tensor shapes and dtypes.
 
-This means your score is **hardware-independent**: the same estimator produces the same FLOP count on a laptop and a GPU cluster. You can focus on algorithmic efficiency rather than hardware tuning.
+This means your **FLOP count** is hardware-independent: the same estimator produces the same `F_m` on a laptop and on the grader. Your *score* is not purely `F_m`, though — you are ranked on effective compute `C_m = F_m + λ·R_m`, and `R_m` (residual wall time) is measured on the grader's hardware, which the rules do not guarantee will match yours. Keep the math inside `flopscope.numpy` and `R_m` stays negligible; push work outside it and you are being timed. See [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
 
 For the full flopscope API and cost model, see the [flopscope documentation](https://github.com/AIcrowd/flopscope).
 

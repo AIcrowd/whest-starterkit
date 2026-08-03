@@ -17,7 +17,7 @@ uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-
 You'll see a Rich-rendered report with five panels:
 
 1. **Run Context** — estimator class, path, timestamps, `n_mlps`, `width`, `depth`, `flop_budget`.
-2. **Hardware & Runtime** — host, OS, CPU, RAM, Python and NumPy versions (so a leaderboard score is reproducible across machines).
+2. **Hardware & Runtime** — host, OS, CPU, RAM, Python and NumPy versions. This makes the *analytical* part of a score reproducible across machines; the residual wall-time term `λ·R_m` still depends on the machine, which is why the panel records what that machine was (see [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent)).
 3. **Sampling Budget Breakdown (Ground Truth)** — provenance/FLOPs for the reference ground truth (loaded from the baked dataset with `--dataset`; sampled locally otherwise).
 4. **Estimator Budget Breakdown** — same fields for your `predict()` call(s).
 5. **Final Score** — the headline metrics:

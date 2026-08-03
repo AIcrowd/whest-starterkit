@@ -78,9 +78,9 @@ These all show up in `whest run --help` but get lost there. Reach for them when:
 | `--flop-budget N` | Default `2.72e11` (the phase-1 grader effective-compute budget — caps `C_m = F_m + λ·R_m`, not just analytical FLOPs; the `v1-warmup` round used `6.8e10`). Bump to `1e12` to confirm an algorithm idea isn't budget-starved before optimizing for budget. |
 | `--profile` | Emits a per-namespace FLOP/time breakdown so you can see where your estimator burns the budget. |
 | `--show-diagnostic-plots` | Renders convergence and per-layer error plots inline (terminal-friendly). Pairs well with `--profile`. |
-| `--max-threads N` | Pin the BLAS thread pool size so `wall_time_s` is comparable across machines. Useful when triaging a "fast on my laptop, slow in CI" report. |
+| `--max-threads N` | Pin the BLAS thread pool size so `wall_time_s` is comparable across machines. Useful when triaging a "fast on my laptop, slow in CI" report. **Reach for `--max-threads 1` as your conservative check:** the rules guarantee no particular evaluation hardware, so anything that is fast locally only because it is multi-threaded may not be fast on the grader — and residual wall time is priced into your score at λ = 1e11 FLOPs/s. See [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent). |
 | `--detail {raw,full}` | `raw` strips Rich formatting (handy for `tee`-ing logs); `full` adds the per-MLP raw arrays. |
-| `--wall-time-limit S` | Cap each `predict()` call's wall time. Useful when local debugging hangs on a numerical edge case. |
+| `--wall-time-limit S` | Cap each `predict()` call's wall time. Useful when local debugging hangs on a numerical edge case. The grader enforces its own per-MLP cap; rather than copying a number out of the docs, read `admin_config.wall_time_limit_s` in your own run report — that is the authoritative value for the round you were scored in. |
 | `--residual-wall-time-limit S` | Cap time spent outside flopscope ops (Python plumbing, loops, control flow). Surfaces "looks fast in FLOPs but Python is the bottleneck" issues. |
 | `--debug` + `--fail-fast` | First exception → halt + raw traceback. Combine for the fastest "what broke?" loop. |
 
