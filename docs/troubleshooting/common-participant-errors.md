@@ -240,11 +240,17 @@ whest run --estimator estimator.py --runner local --debug
 
 ## Predict timeout
 
-Symptom: `PREDICT_TIMEOUT` error.
+Symptom: `PREDICT_TIMEOUT` or `TIME_EXHAUSTED` error.
 
-Why it happens: `predict()` exceeded the wall-clock safety limit.
+Why it happens: a single `predict()` call exceeded its wall-clock limit. **On the grader each MLP gets 60 seconds.** Overrunning it fails that MLP: its predictions are zeroed and its multiplier is forced to 1.0, exactly like exceeding the FLOP budget.
 
-Fix now: check for infinite loops or extremely expensive operations. This is a safety guardrail, not the FLOP budget.
+This is a per-call safety guardrail measured in wall-clock seconds, not the FLOP budget — the two are independent, and you can fail either one on its own.
+
+The local runners enforce the same 60-second limit, so a local `PREDICT_TIMEOUT` means the same thing a graded one does.
+
+One exception worth knowing if you are on **whestbench 0.14.0**: on that version `--runner subprocess` gives up after 30 seconds, half the real limit, so a `predict()` taking 30-60 seconds fails locally that would pass on the grader. This is fixed in the next release — upgrade if you hit it, and until then treat a local subprocess `PREDICT_TIMEOUT` near 30 seconds as inconclusive rather than a real failure.
+
+Fix now: check for infinite loops or extremely expensive operations. If you are close to the limit, treat that as a warning — the cap is per MLP, and a call that fits on one run can overrun on the next.
 
 Verify:
 

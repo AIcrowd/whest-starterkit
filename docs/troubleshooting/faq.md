@@ -89,7 +89,7 @@ Yes — the grading sandbox caps any single array at **4 GiB**, on both the arra
 
 Yes — two, and they apply to the submission as a whole rather than to any one MLP. The grader finalizes your evaluation when **no MLP has finished for 8 minutes**, or when the evaluation has been running for **45 minutes in total**, whichever comes first. Any MLP not finished by then is recorded as `WATCHDOG_TIMEOUT` and counts as a failed MLP (predictions zeroed, multiplier forced to 1.0); MLPs already scored keep their scores.
 
-These are the only aggregate limits. There is **no per-worker time budget** — the 45 minutes is a single wall-clock ceiling on the whole submission, not a per-machine allowance that gets divided up. A working estimator should not come close: the per-MLP wall-time cap already bounds how much work a submission can do, so even a slow legal estimator finishes well inside 45 minutes. The limits are there to terminate a stuck evaluation, not to constrain a slow one. See [Whole-submission timeout](common-participant-errors.md#whole-submission-timeout-watchdog_timeout). (Local `whest run` has no equivalent timer, so this only appears on the server.)
+These are the only aggregate limits. There is **no per-worker time budget** — the 45 minutes is a single wall-clock ceiling on the whole submission, not a per-machine allowance that gets divided up. A working estimator should not come close: the 60-second per-MLP cap already bounds how much predict time a submission can spend, and MLPs are scored in parallel, so even a slow legal estimator finishes well inside 45 minutes. The limits are there to terminate a stuck evaluation, not to constrain a slow one. See [Whole-submission timeout](common-participant-errors.md#whole-submission-timeout-watchdog_timeout). (Local `whest run` has no equivalent timer, so this only appears on the server.)
 
 ## How do I inspect budget summaries while debugging?
 
@@ -141,7 +141,14 @@ takes away the BLAS parallelism you cannot count on having.
 
 ## How many MLP networks are in a full evaluation?
 
-The default evaluation scores your estimator on 10 MLPs (configured by `n_mlps` in `ContestSpec`). Each MLP has the same width and depth but different random weights and a distinct grader-supplied `mlp.seed` for any estimator-side randomness. Your aggregate score is the mean of the per-MLP `adjusted_final_layer_score` values.
+Two different numbers, so be careful which one you are sizing against:
+
+- **Locally**, `whest run` defaults to **10** MLPs (configured by `n_mlps` in `ContestSpec`). Raise it with `--n-mlps` if you want a closer rehearsal.
+- **On the grader**, a full evaluation scores **100** MLPs, split into a public half that drives the visible leaderboard and a held-out half.
+
+Each MLP has the same width and depth but different random weights and a distinct grader-supplied `mlp.seed` for any estimator-side randomness. Your aggregate score is the mean of the per-MLP `adjusted_final_layer_score` values.
+
+The FLOP budget is **per MLP**, not shared across the run, so scoring 100 instead of 10 does not shrink the budget available to any one of them. What it does change is total time: see [Is there a limit on total evaluation time?](#is-there-a-limit-on-total-evaluation-time).
 
 ## What if my estimator is fast but inaccurate?
 
