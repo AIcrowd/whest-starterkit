@@ -85,6 +85,12 @@ flopscope raises `BudgetExhaustedError` before the over-budget operation execute
 
 Yes — the grading sandbox caps any single array at **4 GiB**, on both the arrays you build via `flopscope.numpy` and the array you return from `predict()` (at smoke and grading). It's a memory-safety guard, not a scoring rule, and it's set far above what an efficient estimator needs. If you hit `result array too large`, chunk into row/column blocks — reshapes and allocations cost 0 FLOP, so it's free against your budget. (Local `whest run` has no such cap, so this only appears on the server.)
 
+## Is there a limit on total evaluation time?
+
+Yes — two, and they apply to the submission as a whole rather than to any one MLP. The grader finalizes your evaluation when **no MLP has finished for 8 minutes**, or when the evaluation has been running for **45 minutes in total**, whichever comes first. Any MLP not finished by then is recorded as `WATCHDOG_TIMEOUT` and counts as a failed MLP (predictions zeroed, multiplier forced to 1.0); MLPs already scored keep their scores.
+
+These are the only aggregate limits. There is **no per-worker time budget** — the 45 minutes is a single wall-clock ceiling on the whole submission, not a per-machine allowance that gets divided up. A working estimator should not come close: the per-MLP wall-time cap already bounds how much work a submission can do, so even a slow legal estimator finishes well inside 45 minutes. The limits are there to terminate a stuck evaluation, not to constrain a slow one. See [Whole-submission timeout](common-participant-errors.md#whole-submission-timeout-watchdog_timeout). (Local `whest run` has no equivalent timer, so this only appears on the server.)
+
 ## How do I inspect budget summaries while debugging?
 
 Use:
