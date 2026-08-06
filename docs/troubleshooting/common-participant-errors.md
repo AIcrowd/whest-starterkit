@@ -240,17 +240,44 @@ whest run --estimator estimator.py --runner local --debug
 
 ## Predict timeout
 
-Symptom: `PREDICT_TIMEOUT` error.
+Symptom: `PREDICT_TIMEOUT` or `TIME_EXHAUSTED` error.
 
-Why it happens: `predict()` exceeded the wall-clock safety limit.
+Why it happens: a single `predict()` call exceeded its wall-clock limit. **On the grader each MLP gets 60 seconds.** Overrunning it fails that MLP: its predictions are zeroed and its multiplier is forced to 1.0, exactly like exceeding the FLOP budget.
 
-Fix now: check for infinite loops or extremely expensive operations. This is a safety guardrail, not the FLOP budget.
+This is a per-call safety guardrail measured in wall-clock seconds, not the FLOP budget — the two are independent, and you can fail either one on its own.
+
+The local runners enforce the same 60-second limit, so a local `PREDICT_TIMEOUT` means the same thing a graded one does.
+
+One exception worth knowing if you are on **whestbench 0.14.0**: on that version `--runner subprocess` gives up after 30 seconds, half the real limit, so a `predict()` taking 30-60 seconds fails locally that would pass on the grader. This is fixed in the next release — upgrade if you hit it, and until then treat a local subprocess `PREDICT_TIMEOUT` near 30 seconds as inconclusive rather than a real failure.
+
+Fix now: check for infinite loops or extremely expensive operations. If you are close to the limit, treat that as a warning — the cap is per MLP, and a call that fits on one run can overrun on the next.
 
 Verify:
 
 ```bash
 whest run --estimator estimator.py --runner local --debug
 ```
+
+## Whole-submission timeout (`WATCHDOG_TIMEOUT`)
+
+Symptom: `WATCHDOG_TIMEOUT` on some or all of your per-MLP entries, on a submission that was still making progress.
+
+Why it happens: separately from the per-MLP limits above, the grader bounds the evaluation as a whole. It finalizes your submission when **either**:
+
+- **no MLP has finished for 8 minutes** (a no-progress timer, reset every time an MLP completes), or
+- **the evaluation has been running for 45 minutes in total** (a hard cap, regardless of progress).
+
+Whichever fires first, every MLP not yet finished is recorded as `WATCHDOG_TIMEOUT`. Those count as failed MLPs, so their predictions are zeroed and their multiplier is forced to **1.0** — the same outcome as any other per-MLP failure. MLPs already scored keep their scores.
+
+These are the **only** aggregate limits. In particular there is no per-worker time budget: the 45 minutes is one wall-clock ceiling on the whole submission, measured from when your evaluation starts, and it is not divided among the machines that run it.
+
+You are unlikely to reach either limit with a working estimator. The per-MLP wall-time cap already bounds total work, so a legal submission finishes well inside 45 minutes even at its slowest — these limits exist to terminate a genuinely stuck evaluation rather than to constrain a slow one. If you do see `WATCHDOG_TIMEOUT`, the usual causes are an estimator that hangs (see **Predict timeout** above) or a transient infrastructure fault on our side.
+
+Fix now: if only some MLPs carry the code and the rest scored normally, re-submit — a partial `WATCHDOG_TIMEOUT` is more often infrastructure than your code. If every MLP carries it, look for a hang in `predict()` or `setup()`.
+
+Verify: check `n_failed_mlps` and the per-MLP `error_code` values in the score report.
+
+(Local `whest run` has no equivalent timer, so this only appears on the server.)
 
 ## Budget exhausted mid-operation
 
