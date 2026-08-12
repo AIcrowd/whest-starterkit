@@ -21,11 +21,12 @@ Optional lifecycle hooks:
   Estimator()           ──▶  __init__         (cheap; no I/O, no compute)
        │
        ▼
-  setup(context)        ──▶  one call before any predict()
+  setup(context)        ──▶  one call per worker process, before its predicts
        │                     • runs OUTSIDE any BudgetContext (off-budget)
-       │                     • bounded by setup_timeout_s (default ~5s)
-       │                     • good for: lookup tables, config loads,
-       │                                  shape-independent precompute
+       │                     • grader: hard 30s per run, ~5-15 runs per
+       │                       submission (local CLI default is 5s)
+       │                     • good for: loading shipped weights, lookup
+       │                                  tables, config loads
        ▼
   predict(mlp_1, b)     ──▶  one call per MLP
   predict(mlp_2, b)            • runs INSIDE a BudgetContext
@@ -38,10 +39,25 @@ Optional lifecycle hooks:
 ```
 
 `setup()` and `teardown()` are entirely optional — `examples/02_*` and
-`examples/03_*` skip both. Define them when you have shape-agnostic
-precompute that's expensive enough to be worth doing once. See
+`examples/03_*` skip both. Define them when you have shape-agnostic work to
+load once per worker.
+
+Two things about `setup()` on the grader are easy to get wrong:
+
+- **It is off the FLOP budget, and off the residual too.** Nothing `setup()`
+  does is billed to any MLP — not its FLOPs, not its wall time. This is real
+  and you can rely on it.
+- **It does not run once per submission.** It runs once per worker process,
+  and a submission is served by several workers (a worker also restarts its
+  participant process after certain failures), so expect roughly 5-15 runs.
+  Each one has a hard 30 s ceiling, and exceeding it fails the whole
+  submission with `SETUP_TIMEOUT`. `predict()` gets its own separate 60 s per
+  MLP; setup cannot borrow from it.
+
+The practical upshot: `setup()` is for *loading* precomputed work, not for
+doing it. Compute offline, ship the artifact, read it here — see
+[Ship Weights](../how-to/ship-weights.md). See also
 [FAQ: Can I precompute things in setup()?](../troubleshooting/faq.md#can-i-precompute-things-in-setup)
-for budget rules.
 
 ### `SetupContext` fields
 

@@ -76,10 +76,13 @@ crossover point. Layer-adaptive switching is one possible per-layer optimization
 on top of a full-covariance implementation.
 
 **Spectral / weight-statistics methods.** Compute singular values of
-each `W` once in `setup()` (off-budget); use them to predict per-layer
-gain and variance growth analytically without propagating any
-distribution through the layers. Cost `O(depth · width³)` in setup,
-near-zero per `predict()` call. Mostly an academic angle today —
+each `W` once per MLP, then use them to predict per-layer gain and
+variance growth analytically without propagating any distribution
+through the layers. This has to happen inside `predict()` and is billed
+there — the weights are per-MLP, so they don't exist yet in `setup()`,
+and `setup()`'s off-budget status can't be used to dodge the
+`O(depth · width³)` factorisation. What you get instead is a near-zero
+marginal cost once the spectra are in hand. Mostly an academic angle today —
 sensitive to depth and to the He-init scaling, but a candidate for
 extreme-budget regimes. References: Pennington & Worah (2017), Saxe et
 al. (2014).

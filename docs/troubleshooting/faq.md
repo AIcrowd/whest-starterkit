@@ -36,7 +36,11 @@ flopscope enforces the budget regardless — if your operations exceed it, `Budg
 
 ## Can I precompute things in `setup()`?
 
-Yes. `setup()` runs before any `predict()` calls and is not under a FLOP budget. Use it for one-time preparation that does not depend on the specific MLP (e.g., lookup tables, configuration).
+Yes, and the FLOPs really are free — `setup()` runs outside the per-MLP FLOP budget, and its wall time is not charged to `residual_wall_time_s` either.
+
+The catch is how often it runs. `setup()` is called once per worker process, not once per submission, and a submission is served by several workers (a worker also restarts its participant process after certain failures) — so in practice it runs about 5-15 times. Each run has a hard 30 s ceiling, and blowing it fails the whole submission with `SETUP_TIMEOUT`.
+
+That makes `setup()` the right place to load MLP-independent work (weights, lookup tables, configuration) and the wrong place to generate it. If the precompute is expensive, do it offline and ship the result — see [Ship Weights](../how-to/ship-weights.md).
 
 ## I added a helper module or weights file, but it didn't end up in my submission.
 
@@ -47,8 +51,6 @@ uv run whest package --estimator . --output submission.tar.gz
 ```
 
 You'll see the full list of files before anything is sent, and credential files like `.env` are never included. See [Ship Weights and Multi-File Submissions](../how-to/ship-weights.md).
-
-However, `setup()` does have a time limit (`setup_timeout_s`, typically 5 seconds).
 
 ## How do I set a time limit on my estimator code?
 

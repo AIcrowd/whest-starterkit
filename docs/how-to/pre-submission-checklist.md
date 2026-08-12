@@ -77,10 +77,13 @@ checks; each one maps to a single command or a one-line confirmation.
 - [ ] `predict()` returns the **post-ReLU** mean for **every** layer,
       shape `(mlp.depth, mlp.width)`. Off-by-one (returning depth+1 or
       depth-1 layers) is the most common silent bug.
-- [ ] If you ship a `setup()`: it's idempotent and stays under the ~5s
-      `setup_timeout_s`. Heavy precompute belongs in
-      `SetupContext.scratch_dir` — or precompute offline and ship the artifact
-      next to your estimator (see [how-to/ship-weights.md](./ship-weights.md)).
+- [ ] If you ship a `setup()`: it's idempotent and stays well under the
+      grader's hard **30s** setup budget. Remember `setup()` runs once per
+      worker process (~5-15 times per submission), not once overall, so you
+      pay it repeatedly — and overrunning fails the whole submission with
+      `SETUP_TIMEOUT`. Heavy precompute belongs offline: ship the artifact
+      next to your estimator and load it (see
+      [how-to/ship-weights.md](./ship-weights.md)).
 - [ ] No `print()` left in `predict()`. The grader runs many MLPs;
       stdout flooding is a reliable way to lose `residual_wall_time_s`.
 
