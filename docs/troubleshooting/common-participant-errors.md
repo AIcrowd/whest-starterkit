@@ -218,7 +218,7 @@ Symptom: locally, `whest run` prints `Error [setup:SETUP_ERROR]: Estimator setup
 
 Why it happens: your estimator's `setup()` raised. Unlike a `predict()` failure (which is isolated to a single MLP and zero-scored), an exception in `setup()` rejects the **whole** submission — there is nothing to grade if setup never completes. Common causes: a weights/`.npz` file that didn't ship or loads with the wrong path, an assertion or config read that's brittle on the grader, or work that's fine locally but trips on a sandbox difference.
 
-Fix now: make `setup()` exception-proof. Load files via the path the framework gives you, guard fallible work defensively (try/except with a sane fallback), and keep it lightweight — heavy work belongs in `predict()` (it also avoids the [setup timeout](#setup-timeout)). Reproduce locally with the isolated runner before submitting:
+Fix now: make `setup()` exception-proof. Load files via the path the framework gives you, guard fallible work defensively (try/except with a sane fallback), and keep it to loading rather than computing — heavy precompute belongs **offline**, shipped as an artifact you read here (it also avoids the [setup timeout](#setup-timeout)). Don't move it into `predict()` instead: `predict()` is the billed side. Reproduce locally with the isolated runner before submitting:
 
 ```bash
 whest run --estimator estimator.py --runner subprocess --debug
@@ -228,9 +228,11 @@ whest run --estimator estimator.py --runner subprocess --debug
 
 Symptom: `SETUP_TIMEOUT` error.
 
-Why it happens: `setup()` exceeded the time limit (typically 5 seconds).
+Why it happens: on the grader, `setup()` (plus your module import) has a hard **30 second** budget, and one run of it overran. This is session-level: it fails the whole submission, not one MLP. Note that `setup()` runs once per worker process — roughly 5-15 times per submission — so the 30 s applies to each of those runs, and a setup that is marginally over will not be reliably over on every worker.
 
-Fix now: move expensive computation from `setup()` to `predict()`, or reduce setup work.
+Locally, `whest run` and `whest validate` use a tighter 5 s default, so a local `SETUP_TIMEOUT` does not necessarily mean the grader would have failed you. Check the actual duration before rewriting anything.
+
+Fix now: precompute offline and ship the result as an artifact your `setup()` loads (see [Ship Weights](../how-to/ship-weights.md)). Do **not** move the work into `predict()` — `setup()` is off the FLOP budget and off the residual, `predict()` is billed for both, so that trade makes your score worse.
 
 Verify:
 
@@ -424,11 +426,13 @@ whest run --estimator estimator.py --debug --fail-fast
 
 ## Setup runs expensive operations
 
-Symptom: unexpected FLOP usage or budget consumption before `predict()`.
+Symptom: a slow `setup()`, or a `SETUP_TIMEOUT` you didn't expect.
 
-Why it happens: `setup()` runs outside any `BudgetContext`, so flopscope operations there use the default (very large) budget. This is fine — but if you accidentally do heavy computation in setup that should be in predict, you lose budget awareness.
+Why it happens: on the grader, `setup()` runs in its own flopscope session, which is opened and closed around it before any per-MLP budget exists. Its FLOPs are measured but billed to no MLP, and its wall time is not charged to `residual_wall_time_s`. So expensive work in `setup()` will **not** show up as budget consumption — that is not the failure mode to look for.
 
-Fix now: keep `setup()` lightweight. Move estimation logic to `predict()`.
+What it does cost is time and repetition: a hard 30 s per run, and one run per worker process (roughly 5-15 per submission).
+
+Fix now: keep `setup()` to loading rather than computing. Precompute offline and ship the artifact (see [Ship Weights](../how-to/ship-weights.md)). Moving the work into `predict()` is the wrong direction — that side is billed for both FLOPs and residual.
 
 ## ➡️ Next step
 

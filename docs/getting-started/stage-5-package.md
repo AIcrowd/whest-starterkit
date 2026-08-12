@@ -113,8 +113,11 @@ What happens once `whest submit` (or a portal upload) accepts your
    defaults; same `n_mlps` order of magnitude), in an isolated
    subprocess inside a sandboxed container. No network, no GPU,
    no access to the local filesystem outside `SetupContext.submission_dir` (your shipped files) and `SetupContext.scratch_dir`.
-3. **Your `setup()` runs once.** If it raises, the run is recorded as a
-   failed submission with the traceback surfaced in the AIcrowd UI.
+3. **Your `setup()` runs once per worker process** — several workers serve a
+   submission, so expect roughly 5-15 runs, not one. It stays off the FLOP
+   budget and off the residual, but each run has a hard 30 s ceiling. If it
+   raises, or overruns that ceiling, the run is recorded as a failed
+   submission with the traceback surfaced in the AIcrowd UI.
 4. **`predict()` is called per MLP.** Errors per call are captured but
    don't kill the run — predictions for that MLP are scored against
    zeros. Repeated failures will tank `adjusted_final_layer_score`.

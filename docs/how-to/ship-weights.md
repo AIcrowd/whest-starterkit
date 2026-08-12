@@ -172,10 +172,18 @@ This shows the full file list, sizes, and versions, then stops.
 
 ## (f) Grader timing note
 
-The grader measures **wall time over your entire submission process** — imports,
-`setup()`, and every `predict()` call. Keep `setup()` to cheap operations:
-load files, unpack arrays, set up data structures. Do not train a model in
-`setup()`.
+The grader runs two clocks, and they are separate. Your module import plus
+`setup()` share a hard **30 s** budget; each `predict()` call then gets its own
+hard **60 s**. Setup doesn't eat into predict's window and can't borrow from it.
+
+Setup's cost is not billed — not to the FLOP budget, not to
+`residual_wall_time_s`. What it does cost is repetition: `setup()` runs once
+per worker process, roughly 5-15 times per submission, so anything slow in
+there you pay for again on every worker. And overrunning the 30 s fails the
+whole submission with `SETUP_TIMEOUT`, not just one MLP.
+
+So keep `setup()` to cheap operations: load files, unpack arrays, set up data
+structures. Do not train a model in `setup()`.
 
 The right pattern is to do all heavy computation **offline** (before you
 package), save the result to a file, and load it in `setup()`. That load is
