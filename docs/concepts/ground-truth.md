@@ -15,18 +15,22 @@ For each MLP in the evaluation:
 
 The evaluator uses flopscope for this computation, but under a very large FLOP budget (effectively unlimited). Ground truth computation is not constrained by the participant's FLOP budget.
 
+The gap between what the evaluator spends and what you are allowed to spend is deliberate, and it is enormous. At the evaluation shape (width 1024, depth 16) one Monte-Carlo forward pass costs ~33.6M FLOPs, so the entire per-MLP budget of `2**41 = 2,199,023,255,552` FLOPs buys roughly **65,000** forward passes. Ground truth is baked from **1,000,000,000** of them — about 15,000x more sampling compute than any estimator is allowed to spend. Out-sampling the reference is not on the table; beating it structurally is the whole point.
+
 ## Ground truth has its own error
 
 Because ground truth is estimated by sampling, it has finite precision. With k samples, the standard error of the mean is approximately:
 
     standard_error ≈ sigma / sqrt(k)
 
-The official leaderboard datasets bake their ground truth with **N = 1,000,000,000 samples per MLP** — the same process as the public release, [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The floor this puts on your score (what a *perfect* estimator would still incur) is `avg_variance / N`, where `avg_variance` is the dataset's measured per-neuron final-layer activation variance (≈ 0.18). That works out to a ground-truth MSE floor of **≈ 2e-10** — orders of magnitude below any meaningful estimator gap (covariance propagation is ~`8.4e-5`, roughly 10^5× higher). (Running `whest run` *without* `--dataset` instead generates ground truth on the fly at the lower-precision local default of 2,560,000 samples, where the floor rises to ~`7e-8` — fine for quick iteration, but noisier.) Your MSE never reaches exactly zero, but against the official datasets the target is effectively exact.
+The official leaderboard datasets bake their ground truth with **N = 1,000,000,000 samples per MLP** — the same process as the public release, [`arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The floor this puts on your score (what a *perfect* estimator would still incur) is `avg_variance / N`, where `avg_variance` is the dataset's measured per-neuron final-layer activation variance.
+
+On the Phase 2 release (`@v2-phase2`) that variance measures **0.0748** across the Mini split, putting the ground-truth MSE floor at **7.5e-11** — orders of magnitude below any meaningful estimator gap. Covariance propagation, the most accurate bundled example, measures `4.05e-06` on the same split: about 54,000x above the floor. (Running `whest run` *without* `--dataset` instead generates ground truth on the fly at the lower-precision local default of 2,560,000 samples, ~390x fewer, so the floor rises by that same factor — `2.9e-08` at this variance. Fine for quick iteration, but noisier.) Your MSE never reaches exactly zero, but against the official datasets the target is effectively exact.
 
 ## What this means for your estimator
 
 - A "perfect" estimator that exactly matches the theoretical means would still show nonzero MSE due to ground truth sampling noise.
-- Against the official datasets (N = 1e9 samples) the ground-truth noise floor is ~`2e-10` (= `avg_variance / N`), so in practice you hit your estimator's *own* approximation error long before ground-truth noise matters — a strong estimator like covariance propagation lands around `1e-5`–`1e-4`, still far above that floor.
+- Against the official datasets (N = 1e9 samples) the ground-truth noise floor is `avg_variance / N` — `7.5e-11` on the Phase 2 release. In practice you hit your estimator's *own* approximation error long before ground-truth noise matters: covariance propagation lands at `4.05e-06`, still ~54,000x above the floor.
 - Local on-the-fly runs (`whest run` without `--dataset`) re-sample ground truth, so different `--seed` values give slightly different MLPs and scores; the official baked datasets are fixed, so the leaderboard's ground truth never changes.
 
 ## Configuration

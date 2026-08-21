@@ -47,8 +47,8 @@ if __name__ == "__main__":
         help="Compare your estimator against an example: 'random', 'mean_propagation', "
         "or 'covariance_propagation'.",
     )
-    parser.add_argument("--width", type=int, default=256)
-    parser.add_argument("--depth", type=int, default=32)  # phase-1 competition shape (warmup was 8)
+    parser.add_argument("--width", type=int, default=1024)
+    parser.add_argument("--depth", type=int, default=16)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 

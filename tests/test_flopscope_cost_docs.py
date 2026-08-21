@@ -2,7 +2,13 @@
 and docs/reference/code-patterns.md state in prose.
 
 If a flopscope upgrade breaks one of these, the corresponding doc sentence is
-stale — fix both together. Numbers verified against flopscope 0.10.0.
+stale — fix both together.
+
+Numbers verified under flopscope 0.11.0 — the version this kit pins, and the one
+the grader charges (the evaluator pins `flopscope[server]==0.11.0`). Re-checked
+against 0.12.0: every figure here is identical under both, which is deliberate
+rather than lucky. See the pin note in pyproject.toml for why the kit does not
+simply take the newest release.
 """
 
 from __future__ import annotations
@@ -66,8 +72,9 @@ def test_zeros_and_views_free_fills_and_movement_billed():
 def test_deduct_requires_dtypes_and_applies_rate():
     """Primer: deduct() requires dtypes= (pass () for dtype-neutral); dtype rate applies.
 
-    Real 0.10.0 signature: deduct(op_name, *, flop_cost, subscripts, shapes,
-    dtypes, complex_factor_override=None) — verified 2026-07-31.
+    Real signature: deduct(op_name, *, flop_cost, subscripts, shapes,
+    dtypes, complex_factor_override=None) — unchanged from 0.10.0 through
+    0.12.0.
     """
     with flops.BudgetContext(flop_budget=10**9, quiet=True) as ctx:
         with pytest.raises(TypeError):
@@ -94,17 +101,22 @@ def test_matmul_bills_mults_and_adds():
 
 
 def test_example_predict_totals_pinned():
-    """manage-flop-budget/algorithm-ideas/scoring-model/problem-setup cite these exact totals."""
+    """manage-flop-budget/algorithm-ideas/scoring-model/problem-setup cite these exact totals.
+
+    Pinned at the Phase 2 competition shape (width=1024, depth=16), which is what
+    every doc page quotes. This gates BOTH the flopscope meter and the docs: if a
+    meter change or an example edit moves either total, the cited figures are stale.
+    """
     import importlib.util
     from pathlib import Path
 
     from local_engine import build_mlp
 
-    mlp = build_mlp(width=256, depth=32, seed=0)
+    mlp = build_mlp(width=1024, depth=16, seed=0)
     totals = {}
     for name, expected in [
-        ("02_mean_propagation", 20_333_056),
-        ("03_covariance_propagation", 3_262_575_998),
+        ("02_mean_propagation", 86_639_616),
+        ("03_covariance_propagation", 51_709_240_799),
     ]:
         path = Path(__file__).resolve().parent.parent / "examples" / f"{name}.py"
         spec = importlib.util.spec_from_file_location(name, path)

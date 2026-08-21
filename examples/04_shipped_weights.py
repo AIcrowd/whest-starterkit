@@ -77,14 +77,14 @@ if __name__ == "__main__":
     submission_dir = tempfile.mkdtemp()
     build_weights().save(str(Path(submission_dir) / WEIGHTS_FILE))
 
-    mlp = build_mlp(width=256, depth=32, seed=0)  # phase-1 shape (warmup used depth=8)
+    mlp = build_mlp(width=1024, depth=16, seed=0)  # competition shape
     estimator = Estimator()
     # The framework always calls setup() before predict(); do the same here.
     estimator.setup(
         SetupContext(
-            width=256,
-            depth=32,
-            flop_budget=272_000_000_000,
+            width=1024,
+            depth=16,
+            flop_budget=2**41,
             api_version="1.0",
             submission_dir=submission_dir,
         )

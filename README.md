@@ -11,7 +11,7 @@
 <a href="https://github.com/AIcrowd/whest-starterkit"><img alt="Starter Kit" src="https://img.shields.io/badge/Starter_Kit-whest--starterkit-f57c00?style=for-the-badge&logo=github&logoColor=white"></a>
 <a href="https://aicrowd.github.io/whestbench-explorer/"><img alt="MLP Explorer" src="https://img.shields.io/badge/MLP_Explorer-Interactive-7e57c2?style=for-the-badge"></a>
 <a href="https://github.com/AIcrowd/flopscope"><img alt="flopscope" src="https://img.shields.io/badge/FLOP_Tracking-flopscope-009688?style=for-the-badge&logo=github&logoColor=white"></a>
-<a href="https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026/tree/v1-phase1"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97-View_on_HF_Hub-ffd54f?style=for-the-badge"></a>
+<a href="https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026/tree/v2-phase2"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97-View_on_HF_Hub-ffd54f?style=for-the-badge"></a>
 <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge"></a>
 <br>
 <a href="https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AIcrowd/whest-starterkit/actions/workflows/ci.yml/badge.svg"></a>
@@ -25,6 +25,8 @@
 ## 🎬 60-Second Overview
 
 You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input — without running anywhere near the budget's worth of forward passes. Your score is that error (MSE against the ground-truth Monte-Carlo means) scaled by the share of the FLOP budget you actually spend — so both accuracy and low compute count. Lower is better.
+
+Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(16, 1024)` array, and each MLP carries its own budget of `2**41` FLOPs — worth roughly 6.5e4 forward passes.
 
 <div align="center">
   <img src="assets/whestbench-explorer-visualization.svg" alt="A small ReLU MLP (width 4, depth 5) shown as a layer-by-layer heatmap of per-neuron mean activations after Monte-Carlo ground-truth estimation; rows are layers, columns are neurons, color intensity is mean activation" width="720">
@@ -65,6 +67,7 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 
 ## 🪜 Climb the Ladder (Stages 2-5)
 
+
 Each rung adds one more layer of harness rigor — climb when you're ready. Per-stage walkthroughs live in the [Tutorial](docs/getting-started/).
 
 **Stage 1 — [Iterate locally](docs/getting-started/stage-1-standalone.md)** · the math: estimator vs Monte Carlo.
@@ -83,7 +86,7 @@ uv run whest validate --estimator estimator.py
 
 ```bash
 uv run whest run --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 \
     --split mini \
     --runner local
 ```
@@ -92,7 +95,7 @@ uv run whest run --estimator estimator.py \
 
 ```bash
 uv run whest run --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 \
     --split mini \
     --runner subprocess
 ```
@@ -122,7 +125,7 @@ uv run whest submit --estimator estimator.py
 ```
 
 Your score and per-MLP detail land on the
-[challenge leaderboard](https://www.aicrowd.com/). Full walkthrough:
+[challenge leaderboard](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/leaderboards). Full walkthrough:
 [Stage 5 → Submit to AIcrowd](docs/getting-started/stage-5-package.md#-submit-to-aicrowd).
 
 ## 🚑 When Something Breaks
@@ -134,6 +137,9 @@ uv run whest doctor
 Reads as a 6-row health check; see [docs/reference/whest-doctor.md](docs/reference/whest-doctor.md) for what each row means and how to fix warnings.
 
 Or check [docs/troubleshooting/](docs/troubleshooting/).
+
+Rules questions, a FLOP price that looks wrong, or a residual-cap exception go to
+[arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com).
 
 ## 📚 Documentation
 
@@ -218,9 +224,10 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 ```
 ├── estimator.py     ← The participant's entry point; every stage operates on this file.
 ├── local_engine.py  ← Single-file re-implementation of the harness; safe to read end-to-end.
-├── examples/        ← Numbered reference estimators (01–03) with a curriculum table.
+├── examples/        ← Numbered reference estimators (01–04) with a curriculum table.
 ├── docs/            ← Full documentation; start at docs/README.md.
-└── tests/           ← Drift gates: README commands + local_engine parity.
+├── tests/           ← Drift gates: README commands + local_engine parity.
+└── CHANGELOG.md     ← Rule, parameter and FLOP-figure changes are announced here.
 ```
 
 ## ⚖️ License & Contributing

@@ -2,12 +2,15 @@
 
 Read in order. Each file is a complete, runnable Stage 1 estimator.
 
-| File | Difficulty | Expected MSE (default MLP, n=100k) | What it teaches |
-|---|---|---|---|
-| [01_random.py](01_random.py) | introductory | ~0.90 (random baseline) | The `BaseEstimator` interface and the contract: `predict(mlp, budget) -> fnp.ndarray of shape (depth, width)` |
-| [02_mean_propagation.py](02_mean_propagation.py) | easy | ~0.002 | First-order analytical: propagate per-neuron mean and diagonal variance through ReLU layers |
-| [03_covariance_propagation.py](03_covariance_propagation.py) | medium | ~0.00007 | Track full covariance, not just diagonal variance — costlier but more accurate |
-| [04_shipped_weights.py](04_shipped_weights.py) | easy | n/a (zeros baseline) | Ship a precomputed `weights.npz` next to your estimator and load it via `submission_dir` in `setup()` |
+| File | Difficulty | Expected MSE (default MLP, n=100k) | `predict()` FLOPs (share of budget) | What it teaches |
+|---|---|---|---|---|
+| [01_random.py](01_random.py) | introductory | ~0.52 (random baseline) | 131,072 (0.000%) | The `BaseEstimator` interface and the contract: `predict(mlp, budget) -> fnp.ndarray of shape (depth, width)` |
+| [02_mean_propagation.py](02_mean_propagation.py) | easy | ~0.00017 | 86,639,616 (0.004%) | First-order analytical: propagate per-neuron mean and diagonal variance through ReLU layers |
+| [03_covariance_propagation.py](03_covariance_propagation.py) | medium | ~0.000004 | 51,709,240,799 (2.351%) | Track full covariance, not just diagonal variance — costlier but more accurate |
+| [04_shipped_weights.py](04_shipped_weights.py) | easy | n/a (zeros baseline) | 32,768 (0.000%) | Ship a precomputed `weights.npz` next to your estimator and load it via `submission_dir` in `setup()` |
+
+The default MLP is the competition shape — width 1024, depth 16, seed 0 — and the
+budget share is against the per-MLP budget of `2**41` FLOPs.
 
 ## Run any example
 

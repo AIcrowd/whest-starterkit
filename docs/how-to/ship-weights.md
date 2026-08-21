@@ -8,6 +8,23 @@ Use this page when you want to pre-compute something offline (e.g. a calibration
 scalar, a learned projection matrix, a lookup table) and load it inside
 `setup()` — or when your estimator spans more than one Python module.
 
+> **Where the Phase 2 rules put this.** Shipping **data** — weights, lookup
+> tables, precomputed artifacts — is explicitly permitted, and it is a better
+> deal than it was in Phase 1: with `C_m = F_m`, everything you compute before
+> you package costs you exactly nothing. Shipping **code** is where the line
+> sits. Vendored numpy/scipy/BLAS, compiled kernels of any kind, and anything
+> reached through `ctypes`/`cffi` are prohibited outright, and a submission
+> carrying them is disqualifiable rather than merely broken — see
+> [Allowed Code](../concepts/allowed-code.md) for the full rule.
+>
+> The Sponsor also reserves the discretion to decline to treat a bundled file
+> as data. A file that is really a program — bytecode, a serialized kernel, an
+> instruction table your estimator dispatches through — can be ruled out on
+> those grounds whatever extension it arrives with. Arrays of numbers your
+> estimator does arithmetic on are what this page is about; if your artifact
+> is something else, ask [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) before you build a
+> submission around it.
+
 ---
 
 ## (a) Splitting code across modules
@@ -57,7 +74,8 @@ class Weights(flopscope.Module):
     def __init__(self) -> None:
         self.scale = fnp.ones(())     # public array attribute → saved & restored
 
-# Offline compute is free — only predict()-time FLOPs count toward your score.
+# Offline compute is free — only predict()-time FLOPs count toward your score,
+# and in Phase 2 those FLOPs are the whole of it: C_m = F_m.
 w = Weights()
 w.scale = fnp.asarray(2.0)            # replace with your real precomputation
 w.save("weights.npz")                 # plain .npz, no pickle
@@ -120,6 +138,11 @@ See the full worked example at [`examples/04_shipped_weights.py`](../../examples
 | Total submission size | 50 MiB (the CLI error reports this as ~52 MB) |
 | Total file count | 50 files |
 
+Width 1024 makes that first cap tighter than it looks: one `(1024, 1024)`
+float32 matrix is 4 MiB, so a dozen of them is the whole allowance. Ship the
+smallest sufficient artifact — a projection basis, a rank-*k* factor, a
+calibration table — rather than a full-rank matrix per layer.
+
 If your folder contains large scratch files, cached datasets, or other
 artefacts you don't want to ship, list them in `.whestignore` next to
 `estimator.py` (same glob syntax as `.gitignore`):
@@ -173,14 +196,16 @@ This shows the full file list, sizes, and versions, then stops.
 ## (f) Grader timing note
 
 The grader runs two clocks, and they are separate. Your module import plus
-`setup()` share a hard **30 s** budget; each `predict()` call then gets its own
-hard **60 s**. Setup doesn't eat into predict's window and can't borrow from it.
+`setup()` share a hard **5 s** budget, spent once; each `predict()` call then
+gets its own hard **120 s**. Setup doesn't eat into predict's window and can't
+borrow from it.
 
 Setup's cost is not billed — not to the FLOP budget, not to
-`residual_wall_time_s`. What it does cost is repetition: `setup()` runs once
-per worker process, roughly 5-15 times per submission, so anything slow in
-there you pay for again on every worker. And overrunning the 30 s fails the
-whole submission with `SETUP_TIMEOUT`, not just one MLP.
+`residual_wall_time_s`. It is simply short, and unforgiving. Five seconds
+covers a file read and an unpack, and nothing more; overrunning them fails the
+**whole submission** with `SETUP_TIMEOUT`, not one MLP, and takes one of that
+day's ten submission slots with it. It is the most expensive mistake on this
+page, so time your `setup()` on a cold cache before you ship, not after.
 
 So keep `setup()` to cheap operations: load files, unpack arrays, set up data
 structures. Do not train a model in `setup()`.

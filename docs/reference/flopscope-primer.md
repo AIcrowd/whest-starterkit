@@ -25,15 +25,22 @@ You don't need to create `BudgetContext` yourself — something else opens it fo
 
 | Stage | Who opens the `BudgetContext` | Where to look |
 |---|---|---|
-| 1 — `python estimator.py` | `local_engine.compare_against_monte_carlo` (default `estimator_budget=4e9`) | [local_engine.py](../../local_engine.py) |
+| 1 — `python estimator.py` | `local_engine.compare_against_monte_carlo` (default `estimator_budget=2**41`) | [local_engine.py](../../local_engine.py) |
 | 2 — `whest validate` | the validator (small probe budget on a width=4, depth=2 MLP) | the `whestbench` CLI |
-| 3 — `whest run --runner local` | the in-process harness (default `--flop-budget 2.72e11`) | the `whestbench` CLI |
-| 4 — `whest run --runner subprocess` | the subprocess worker (same default) | the `whestbench` CLI |
+| 3 — `whest run --runner local` | the in-process harness (`--flop-budget`) | the `whestbench` CLI |
+| 4 — `whest run --runner subprocess` | the subprocess worker (same flag) | the `whestbench` CLI |
 | Grader (after you submit) | the harness inside the grader's sandboxed container | (runs server-side on AIcrowd) |
+
+> **Set `--flop-budget` yourself in stages 3 and 4.** The Phase 2 per-MLP
+> budget is `2**41` = `2,199,023,255,552` FLOPs; the `whest` CLI shipped with
+> whestbench 0.15.0 still defaults to the Phase 1 value, so pass the Phase 2
+> number explicitly until the default catches up:
+> `--flop-budget 2199023255552`. Stage 1 already uses it by default.
 
 The `budget` integer your `predict(mlp, budget)` receives matches the
 `flop_budget` of the surrounding context and is the hard cap for that call.
-or ignore it if you always run the same strategy.
+Branch on it if you have both a cheap and an expensive strategy, or ignore it
+if you always run the same one.
 
 `BudgetContext` also supports `wall_time_limit_s` when you want a cooperative
 wall-clock limit in addition to the FLOP cap:
@@ -187,17 +194,25 @@ Flopscope's `BudgetContext` measures `wall_time_s`, `flopscope_backend_time_s`,
 
 WhestBench exposes some of those concepts as run-level CLI knobs:
 
-- `--wall-time-limit`: passed through to the estimator's `BudgetContext`
+- `--wall-time-limit`: passed through to the estimator's `BudgetContext`.
+  The grader sets it to **120 s per MLP**.
 - `--residual-wall-time-limit`: enforced by WhestBench after `predict()` returns,
   using the reported `residual_wall_time_s`. Because `residual_wall_time_s`
   excludes flopscope backend and dispatch time, this gate measures only your
   Python and uninstrumented work — not numpy backend execution or the
-  framework's bookkeeping tax.
+  framework's bookkeeping tax. The grader sets it to **400 ms per MLP**.
 
 So if you see `time_exhausted`, that came from Flopscope's `wall_time_limit_s`.
 If you see `residual_wall_time_exhausted`, that came from WhestBench scoring
 logic comparing Flopscope's measured `residual_wall_time_s` with the configured
 `--residual-wall-time-limit`.
+
+Both are hard caps: crossing either one zeroes that MLP's predictions. Neither
+is priced — there is no rate at which you can buy extra residual time by
+accepting a worse multiplier. The 400 ms allowance exists so your Python can
+move results between flopscope calls; performing meaningful computation in it
+is a rules violation and grounds for disqualification. See
+[Estimator Contract: Phase 2 limits](estimator-contract.md#phase-2-limits).
 
 ## Common Gotchas
 

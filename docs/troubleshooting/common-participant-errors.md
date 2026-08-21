@@ -67,15 +67,17 @@ whest validate --estimator estimator.py
 
 Symptom: unexpectedly poor `adjusted_final_layer_score` despite reasonable prediction logic, with one or more MLPs showing `budget_exhausted: true` or `combined_budget_exhausted: true`.
 
-Why it happens: your estimator's effective compute `C_m = F_m + λ·R_m` exceeded `flop_budget`. The affected MLP's predictions are replaced with zeros and the per-MLP multiplier is forced to **1.0** (no compute discount), so `adjusted_final_layer_score_m = MSE(0, Y_m) × 1.0` — strictly worse than a trivial-zero submission that succeeds (which gets the 0.1 multiplier floor).
+Why it happens: your estimator's effective compute exceeded `flop_budget` — in Phase 2 that is simply your analytical FLOP count, `C_m = F_m`, against a per-MLP budget of `2**41` (2,199,023,255,552 FLOPs). The affected MLP's predictions are replaced with zeros and the per-MLP multiplier is forced to **1.0** (no compute discount), so `adjusted_final_layer_score_m = MSE(0, Y_m) × 1.0` — strictly worse than a trivial-zero submission that succeeds (which gets the 0.1 multiplier floor).
 
-`budget_exhausted` fires when flopscope itself trips (your analytical FLOPs exceed the cap). `combined_budget_exhausted` fires on the post-hoc check `C_m > B` — flopscope didn't trip, but the residual-wall-time penalty (`λ · residual_wall_time_s`, λ default `1e11` FLOPs/sec) pushed effective compute past the cap.
+`budget_exhausted` fires when flopscope itself trips (the operation about to run would exceed the cap). `combined_budget_exhausted` fires on the post-hoc check `C_m > B` after `predict()` returns; because Phase 2 scores `C_m = F_m`, that is a backstop on the same FLOP count rather than a second way to fail. Residual wall time is no longer priced into `C_m` — it has its own 400 ms cap, reported as `residual_wall_time_exhausted` (next section).
+
+> **Locally, `effective_compute` is still inflated.** The pinned whestbench (0.15.0) has not yet dropped the Phase-1 λ term, so a local run reports `C_m = F_m + 1e11·R_m` — easily 40× `flops_used` on a cheap estimator — and `combined_budget_exhausted` can fire locally when nothing is actually wrong. Read `flops_used`; see [Local reports still apply λ](../reference/score-report-fields.md#local-reports-still-apply-λ).
 
 Fix now:
 
 - check `flops_used`, `effective_compute`, `residual_wall_time_s`, `budget_exhausted`, and `combined_budget_exhausted` in the per-MLP report,
 - reduce expensive operations (matmul dominates FLOP cost),
-- reduce Python-side overhead — tight loops over neurons add to `residual_wall_time_s` and thus to `effective_compute`,
+- reduce Python-side overhead — tight loops over neurons add to `residual_wall_time_s`, which has its own hard cap,
 - consider diagonal approximations instead of full covariance,
 - see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md) for optimization guidance.
 
@@ -83,6 +85,29 @@ Verify:
 
 ```bash
 whest run --estimator estimator.py --json
+```
+
+If you have profiled an operation and believe flopscope is billing it wrongly, send a minimal repro (op, shapes, dtypes, the `ctx.summary()` rows) to [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) rather than budgeting around it.
+
+## Residual wall-time cap exceeded
+
+Symptom: a per-MLP entry with `residual_wall_time_exhausted: true` — locally, a `ResidualWallTimeExhaustionWarning` naming the MLP and the measured time. Predictions for that MLP are zeroed and the multiplier is forced to **1.0**.
+
+Why it happens: everything that is not a metered flopscope call — your Python control flow, per-neuron loops, GC, I/O — accumulates in `residual_wall_time_s`, and it is capped at **400 ms per MLP**. The cap is not priced: unused FLOPs do not buy more of it, and going over is a failure rather than a surcharge.
+
+That 400 ms is sized for **plumbing** — control flow, slicing inputs into blocks, bookkeeping between flopscope calls. It is not an allowance for computation. Doing meaningful compute outside flopscope — raw Python arithmetic over neurons, a vendored array library, a compiled kernel, threads or a subprocess — is prohibited and disqualifiable, whether or not it fits inside the cap. See [Allowed Code](../concepts/allowed-code.md) for the full boundary.
+
+Fix now:
+
+- move array work into `flopscope.numpy`, where it is metered analytically instead of timed,
+- replace per-neuron / per-layer Python loops with whole-array ops (one `(depth, width)` array, not `depth × width` scalar steps),
+- move MLP-independent work into `setup()`, whose wall time is not charged to the residual at all,
+- if you have a legitimate structural need for more than 400 ms, write to [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) before submitting instead of engineering around the cap.
+
+Verify:
+
+```bash
+whest run --estimator estimator.py --residual-wall-time-limit 0.4 --profile
 ```
 
 ## My FLOP counts jumped after updating the kit (flopscope 0.9 / whestbench 0.13)
@@ -120,7 +145,7 @@ Symptom: on the **grading server** (not local runs), a per-MLP failure whose mes
 
 Why it happens: the flopscope runtime on the grading sandbox caps any single array at **4 GiB** (a memory-safety guard). It applies to both arrays you build via `flopscope.numpy` and the array you return from `predict()`. A single array that large almost always means an over-vectorized "all layers × all samples at once" buffer, or `float64` where the MLP weights are `float32`.
 
-Note: local `whest run` uses an in-process backend **without** this cap, so you won't reproduce it locally — keep your peak single-array size under 4 GiB as a rule.
+Note: local `whest run` uses an in-process backend **without** this cap, so you won't reproduce it locally — keep your peak single-array size under 4 GiB as a rule. The solution process also gets **8 GB of RAM** in total on the grader, so your peak *combined* footprint matters too, not just the largest single array.
 
 Fix now:
 
@@ -228,9 +253,9 @@ whest run --estimator estimator.py --runner subprocess --debug
 
 Symptom: `SETUP_TIMEOUT` error.
 
-Why it happens: on the grader, `setup()` (plus your module import) has a hard **30 second** budget, and one run of it overran. This is session-level: it fails the whole submission, not one MLP. Note that `setup()` runs once per worker process — roughly 5-15 times per submission — so the 30 s applies to each of those runs, and a setup that is marginally over will not be reliably over on every worker.
+Why it happens: on the grader, `setup()` (plus your module import) has a hard **5 second** budget, and it overran. This is session-level: it fails the **whole** submission, not one MLP — your submission gets one `setup()` run and no second chance at it.
 
-Locally, `whest run` and `whest validate` use a tighter 5 s default, so a local `SETUP_TIMEOUT` does not necessarily mean the grader would have failed you. Check the actual duration before rewriting anything.
+Locally, `whest run` and `whest validate` use the same 5 s default, so a local `SETUP_TIMEOUT` means what a graded one does. A setup that lands close to the ceiling is already a problem: the grader's machine is not guaranteed to be as fast as yours.
 
 Fix now: precompute offline and ship the result as an artifact your `setup()` loads (see [Ship Weights](../how-to/ship-weights.md)). Do **not** move the work into `predict()` — `setup()` is off the FLOP budget and off the residual, `predict()` is billed for both, so that trade makes your score worse.
 
@@ -244,13 +269,13 @@ whest run --estimator estimator.py --runner local --debug
 
 Symptom: `PREDICT_TIMEOUT` or `TIME_EXHAUSTED` error.
 
-Why it happens: a single `predict()` call exceeded its wall-clock limit. **On the grader each MLP gets 60 seconds.** Overrunning it fails that MLP: its predictions are zeroed and its multiplier is forced to 1.0, exactly like exceeding the FLOP budget.
+Why it happens: a single `predict()` call exceeded its wall-clock limit. **On the grader each MLP gets 120 seconds.** Overrunning it fails that MLP: its predictions are zeroed and its multiplier is forced to 1.0, exactly like exceeding the FLOP budget.
 
 This is a per-call safety guardrail measured in wall-clock seconds, not the FLOP budget — the two are independent, and you can fail either one on its own.
 
-The local runners enforce the same 60-second limit, so a local `PREDICT_TIMEOUT` means the same thing a graded one does.
+The local runners enforce whatever `--wall-time-limit` you give them, so pass `--wall-time-limit 120` to hold a local run to the grader's cap before reading a local `PREDICT_TIMEOUT` as a graded one.
 
-One exception worth knowing if you are on **whestbench 0.14.0**: on that version `--runner subprocess` gives up after 30 seconds, half the real limit, so a `predict()` taking 30-60 seconds fails locally that would pass on the grader. This is fixed in the next release — upgrade if you hit it, and until then treat a local subprocess `PREDICT_TIMEOUT` near 30 seconds as inconclusive rather than a real failure.
+One exception worth knowing if you are on **whestbench 0.14.0 or older**: on those versions `--runner subprocess` gives up after 30 seconds, well short of the real limit, so a `predict()` taking longer than 30 seconds fails locally that would pass on the grader. This kit now pins whestbench 0.15.0, where the subprocess runner waits for the full wall limit plus a grace margin, so a local subprocess `PREDICT_TIMEOUT` again means what a graded one does. If you are on an older kit, run `uv sync` before trusting a timeout near 30 seconds.
 
 Fix now: check for infinite loops or extremely expensive operations. If you are close to the limit, treat that as a warning — the cap is per MLP, and a call that fits on one run can overrun on the next.
 
@@ -337,7 +362,7 @@ whest validate --estimator estimator.py
 
 Symptom: operations work but FLOP budget is not consumed (shows 0 flops_used).
 
-Why it happens: you are using `import numpy as np` instead of `import flopscope.numpy as fnp`. Numpy operations are not FLOP-tracked. (This is the *local* symptom — your venv has numpy, so it runs silently untracked. On the grader `import numpy` fails outright, since the sandbox has no numpy — see [Import error in estimator](#import-error-in-estimator). Either way, `np.*` is wrong; use `fnp.*`.)
+Why it happens: you are using `import numpy as np` instead of `import flopscope.numpy as fnp`. Numpy operations are not FLOP-tracked. (This is the *local* symptom — your venv has numpy, so it runs silently untracked. On the grader `import numpy` fails outright, since the sandbox has no numpy — see [Import error in estimator](#import-error-in-estimator). Either way, `np.*` is wrong; use `fnp.*`.) Shipping numpy — or any other array library or compiled kernel — alongside your estimator to make `np.*` work is **prohibited** and disqualifiable: the requirement is that your math is metered, not merely that it runs.
 
 Fix now: replace all `np.*` calls with `fnp.*` equivalents. See [Code Patterns](../reference/code-patterns.md).
 
@@ -414,7 +439,8 @@ Tell them apart from `failure_breakdown` and the exit code:
 
 - **Exit `1` + non-zero `failure_breakdown.error` + "Estimator Errors" panel** — `predict()` raised exceptions on at least one MLP. See [Predict raised an unexpected exception](#predict-raised-an-unexpected-exception).
 - **Exit `0` + every `per_mlp[i].budget_exhausted: true`** — you ran out of analytical FLOPs.
-- **Exit `0` + every `per_mlp[i].combined_budget_exhausted: true`** — your `effective_compute = F_m + λ·R_m` exceeded the cap (residual wall time pushed you over, even though flopscope didn't trip).
+- **Exit `0` + every `per_mlp[i].combined_budget_exhausted: true`** — the post-hoc check on effective compute (`C_m = F_m` in Phase 2) exceeded the cap even though flopscope itself didn't trip.
+- **Exit `0` + every `per_mlp[i].residual_wall_time_exhausted: true`** — you exceeded the 400 ms residual wall-time cap.
 - **Exit `0` + every `per_mlp[i].time_exhausted: true`** — you ran out of wall-clock time.
 
 Fix now: run with `--debug` to see tracebacks in the "Estimator Errors" panel (works with any runner), or `--fail-fast` to halt at the first failing MLP with the raw Python stack:
@@ -430,7 +456,7 @@ Symptom: a slow `setup()`, or a `SETUP_TIMEOUT` you didn't expect.
 
 Why it happens: on the grader, `setup()` runs in its own flopscope session, which is opened and closed around it before any per-MLP budget exists. Its FLOPs are measured but billed to no MLP, and its wall time is not charged to `residual_wall_time_s`. So expensive work in `setup()` will **not** show up as budget consumption — that is not the failure mode to look for.
 
-What it does cost is time and repetition: a hard 30 s per run, and one run per worker process (roughly 5-15 per submission).
+What it does cost is time: a hard 5 s ceiling on the single `setup()` run your submission gets, and overrunning it fails the whole submission.
 
 Fix now: keep `setup()` to loading rather than computing. Precompute offline and ship the artifact (see [Ship Weights](../how-to/ship-weights.md)). Moving the work into `predict()` is the wrong direction — that side is billed for both FLOPs and residual.
 

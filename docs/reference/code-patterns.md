@@ -52,7 +52,7 @@ cov_pre = w.T @ cov @ w
 # contraction over a symmetric-tagged `cov`. Since flopscope 0.10.0 you must
 # also re-tag after any write into cov — a write voids the tag rather than
 # letting a stale claim keep its discount.
-cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))
+cov = flops.as_symmetric(fnp.eye(width, dtype=fnp.float32), symmetry=(0, 1))
 for w in mlp.weights:
     cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)   # symmetric rate
     ...
@@ -62,11 +62,14 @@ for w in mlp.weights:
 ```
 
 The one-time `SymmetryLossWarning` you see on the first write is **expected** —
-it is the signal that the tag is gone and that you need the re-validation. At
-width 256 the re-tag costs 917,502 FLOPs and saves 33,358,080 on the next
-layer's einsum, so it repays itself ≈36×. (Both figures are at the float64
-default; `as_symmetric` bills `7n-1` per element-pass with `n = width²`, and
-float64 bills 2×.)
+it is the signal that the tag is gone and that you need the re-validation. The
+re-tag is cheap next to the contraction it keeps on the symmetric rate: at the
+Phase 2 shape (`width=1024, depth=16`), the 17 `as_symmetric` calls in
+`examples/03_covariance_propagation.py` cost 124,780,527 FLOPs between them —
+0.24% of that estimator's bill — against 51,531,210,752 spent on the einsums
+themselves. (`as_symmetric` bills `7n-1` per element-pass with `n = width²` —
+7,340,031 FLOPs a call at the float32 rate the example seeds its covariance in;
+float64 would bill 2×.)
 
 See `examples/03_covariance_propagation.py` for the full pattern in
 context, and [whestbench#27](https://github.com/AIcrowd/whestbench/issues/27)
@@ -148,9 +151,13 @@ class Estimator(BaseEstimator):
         self.projection = self.setup_rng.standard_normal((ctx.width, 64))
 ```
 
+`setup()` runs once per submission under a hard 5 s ceiling, so keep it to
+work of that size — a projection basis fits comfortably; anything heavier
+belongs in a shipped data file ([Ship Weights](../how-to/ship-weights.md)).
+
 Do **not** call `fnp.random.seed(ctx.seed)` — that mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
 
-Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract](./estimator-contract.md).
+Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract: Reproducibility under the grader seed](./estimator-contract.md#reproducibility-under-the-grader-seed).
 
 ### Standard normal PDF and CDF (built-in)
 
@@ -197,10 +204,16 @@ def norm_cdf(x):
     return fnp.where(x >= 0, cdf, 1.0 - cdf)
 ```
 
-> Use the pure-flopscope version above. The grader sandbox does **not** provide
-> `scipy` (or any third-party PyPI package) — only `flopscope`, the `whestbench`
-> API, and the Python standard library are importable — and only flopscope
-> operations are FLOP-counted.
+> Use the pure-flopscope version above. The grader sandbox provides only
+> `flopscope`, the `whestbench` API, and the Python standard library — `scipy`
+> and every other third-party PyPI package are absent, and only flopscope
+> operations are FLOP-counted. Do not route around that by vendoring
+> `numpy`/`scipy`/a BLAS into your submission, or by reaching for compiled
+> kernels or `ctypes`/`cffi`: those are prohibited and are grounds for
+> disqualification, not a matter of paying a higher bill. Shipping *data*
+> files — weights, lookup tables, precomputed artifacts — remains permitted;
+> see [Ship Weights](../how-to/ship-weights.md) and
+> [Allowed Code](../concepts/allowed-code.md).
 
 ### ReLU expectation (E[max(0, z)] where z ~ N(mu, sigma^2))
 
@@ -242,6 +255,10 @@ fit for moderate widths). The approximation degrades when:
   ~32 you may want higher moments (skewness) or per-layer recalibration.
 - **Activations cluster near zero.** When `α ≈ 0`, the rectified-Gaussian
   approximation is accurate, but `µ` is small and relative errors spike.
+
+The Phase 2 shape (`width=1024, depth=16`) sits on the friendly side of the
+first two: wide layers make the CLT argument bite, and there are only sixteen
+of them for error to compound through.
 
 If your `final_layer_mse` is fine but `all_layers_mse` blows up, this assumption
 is usually the culprit. See [algorithm-ideas.md](../how-to/algorithm-ideas.md)

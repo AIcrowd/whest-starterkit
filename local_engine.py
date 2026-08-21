@@ -65,7 +65,7 @@ def monte_carlo_layer_means(
     """Forward `n_samples` N(0,1) float32 inputs through `mlp.weights` and average per layer.
 
     Draws in float32 and accumulates the mean in float64, mirroring
-    whestbench's own ground-truth sampler (and flopscope 0.9.x bills
+    whestbench's own ground-truth sampler (and flopscope bills
     float64 ops at 2x, so the f32 draw is also the cheap idiom).
 
     Returns shape `(depth, width)` — same shape as `Estimator.predict` so the two
@@ -85,11 +85,20 @@ def compare_against_monte_carlo(
     estimator: BaseEstimator,
     mlp: MLP,
     sample_counts: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000),
-    estimator_budget: int = int(4e9),
-    sampling_budget: int = int(1e12),
+    estimator_budget: int = 2**41,
+    sampling_budget: int = int(5e12),
     seed: int = 0,
 ) -> None:
     """Run estimator once, then sweep MC at each sample count and print a table.
+
+    `estimator_budget` defaults to the competition per-MLP budget, 2**41 FLOPs,
+    so your `predict()` is metered here exactly as the grader meters it.
+
+    `sampling_budget` caps one Monte-Carlo row, not the whole sweep: each sample
+    count runs in its own `BudgetContext`, so the ceiling only has to clear the
+    largest single row (n=100,000 bills 3,363,737,665,536 FLOPs at width 1024,
+    depth 16). The 5e12 default leaves headroom above it. Ground-truth sampling
+    is a local convenience — it is not charged against your submission.
 
     Friendly preflight: before the MC sweep, validate the estimator returns the
     right shape/dtype on the actual MLP. On failure, print a one-line diagnostic

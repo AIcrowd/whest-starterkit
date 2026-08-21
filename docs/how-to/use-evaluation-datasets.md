@@ -16,16 +16,30 @@ For day-to-day estimator work, you almost never need to bake your own. The AIcro
 
 ## 🚀 Do this now (HF Hub, no bake required)
 
-The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The Phase 1 MLPs are **256×32** (width 256, depth 32); the earlier `v1-warmup` round used 256×8. The dataset contains two splits:
+The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026). The Phase 2 MLPs are **1024×16** (width 1024, depth 16); Phase 1 used 256×32, and the earlier `v1-warmup` round 256×8. The dataset contains two splits:
 
-| Split | Size | Use for |
+| Split | Contents | Use for |
 |---|---:|---|
-| `mini` | 100 MLPs (~850 MB) | Day-to-day iteration. Downloaded once, then served from cache. |
-| `full` | 1,000 MLPs (~8.5 GB) | Final lock-in check before you submit. |
+| `mini` | 100 MLPs | Day-to-day iteration. Downloaded once, then served from cache. |
+| `full` | 1,000 MLPs | Final lock-in check before you submit. |
 
 `mini` is the **default split** — `whest run --dataset hf://...` without `--split` picks it automatically.
 
-> **Pin the `v1-phase1` revision.** Every command below pins `@v1-phase1`. Don't
+> **Budget the download — Phase 2 is 8× Phase 1.** One MLP's weights are
+> 16 × 1024 × 1024 float32 (64 MiB) against Phase 1's 32 × 256 × 256 (8 MiB), so
+> every split grew with it:
+>
+> | Split | MLPs | Phase 1 (`@v1-phase1`) | Phase 2 (`@v2-phase2`) |
+> |---|---:|---:|---:|
+> | `mini` | 100 | 0.86 GB | **7.03 GB** |
+> | `full` | 1000 | 8.59 GB | **69.96 GB** |
+>
+> Downloads are cached after the first call, so the cost is one-time per revision
+> — but `full` is a 70 GB commitment. Start with `mini`, which is the default
+> split and is what the Stage 3 walkthrough uses. `whest run` without `--dataset`
+> needs no download at all and generates MLPs locally.
+
+> **Pin the `v2-phase2` revision.** Every command below pins `@v2-phase2`. Don't
 > drop the tag and rely on bare `main`: `main` advances each contest phase, so an
 > unpinned load can silently change the dataset underneath you — and an offline
 > cache can just as silently keep serving an older phase. The tag is immutable
@@ -36,17 +50,17 @@ The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`
 ```bash
 whest run \
     --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2
 ```
 
-The CLI prints something like `Using default split 'mini' (from metadata.default_split)`, downloads ~850 MB on the first run (cached for every subsequent run), and runs your estimator against 100 MLPs. Subsequent runs reuse the cache, so there is no re-download.
+The CLI prints something like `Using default split 'mini' (from metadata.default_split)`, downloads the split on the first run (cached for every subsequent run), and runs your estimator against 100 MLPs. Subsequent runs reuse the cache, so there is no re-download.
 
 ### 2. Lock in your numbers against full
 
 ```bash
 whest run \
     --estimator estimator.py \
-    --dataset hf://aicrowd/arc-whestbench-public-2026@v1-phase1 \
+    --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 \
     --split full
 ```
 
@@ -61,13 +75,13 @@ from datasets import load_dataset
 
 # mini is the default config of this repo
 mini = load_dataset("aicrowd/arc-whestbench-public-2026",
-                    revision="v1-phase1", split="mini")
+                    revision="v2-phase2", split="mini")
 print(mini[0]["mlp_name"])     # e.g. "krista-wright"
-print(mini[0]["weights"])      # (depth=32, width=256, width=256) float64  — warmup round was depth=8
+print(mini[0]["weights"])      # (depth=16, width=1024, width=1024) float64  — phase 1 was (32, 256, 256)
 
 # full is a separate config; pass the config name explicitly
 full = load_dataset("aicrowd/arc-whestbench-public-2026",
-                    "full", revision="v1-phase1", split="full")
+                    "full", revision="v2-phase2", split="full")
 ```
 
 The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), so re-downloads dedupe at the chunk level and parallel multi-shard fetches are fast. For maximum download throughput on a fast connection, set `HF_XET_HIGH_PERFORMANCE=1` in your environment before the load.
@@ -75,7 +89,7 @@ The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), 
 > **Tip — prepared-Arrow fast path.** When you load via `whestbench.load_dataset(...)` (or via `whest run --dataset hf://...`), WhestBench prefers a pre-built `prepared/<split>/` Arrow artifact published alongside the parquet. It downloads only that subtree and memory-maps it via `datasets.Dataset.load_from_disk()`, skipping the parquet→arrow conversion that the bare `datasets.load_dataset(...)` path runs on first use. End-to-end this is ~18% faster on `mini` and ~60% faster on `full`, with a ~33% smaller cache footprint. You'll see a one-line stderr notice (`whestbench: using prepared Arrow split 'mini' from ...`) when the fast path fires. Falls back silently to the parquet path if anything goes wrong.
 
 > **Prefetch without a local copy (whestbench ≥ 0.13).** `whest dataset download
-> aicrowd/arc-whestbench-public-2026 --revision v1-phase1` with no `--output`
+> aicrowd/arc-whestbench-public-2026 --revision v2-phase2` with no `--output`
 > fetches into the Hugging Face hub cache only — a later
 > `whest run --dataset hf://…` is then a pure cache hit. Pass `--output DIR`
 > when you additionally want the files materialised into a directory.
@@ -94,8 +108,8 @@ whest dataset bake \
     --output ./my-eval \
     --n-mlps 10 \
     --n-samples 1_000_000 \
-    --width 256 \
-    --depth 32
+    --width 1024 \
+    --depth 16
 # Produces:
 #   ./my-eval/
 #   ├── data/public-00000-of-00001.parquet
@@ -140,8 +154,8 @@ whest dataset bake \
     --output ./my-big-eval \
     --n-mlps 1000 \
     --n-samples 1_000_000_000 \
-    --width 256 \
-    --depth 32
+    --width 1024 \
+    --depth 16
 ```
 
 > ⚠️ **`--device` does nothing without `--torch`.** Running `whest dataset bake --device cuda` *without* `--torch` silently falls back to the slow CPU path and ignores your GPU. Always pass `--torch` for a GPU bake.
@@ -167,7 +181,7 @@ python -c "import json, secrets; json.dump([secrets.randbits(63) for _ in range(
 
 # Each GPU/host bakes one slice (0-indexed). Run these concurrently.
 whest dataset bake --torch --device cuda --mlp-seeds seeds.json \
-    --n-mlps 1000 --n-samples 1_000_000_000 --width 256 --depth 32 \
+    --n-mlps 1000 --n-samples 1_000_000_000 --width 1024 --depth 16 \
     --slice 0/4 --output ./shard-0
 # ...repeat with --slice 1/4, 2/4, 3/4 on the other devices...
 
@@ -179,8 +193,8 @@ Each shard writes a *partial* dataset (its `metadata.json` carries `is_partial: 
 
 ## ✅ Expected outcome
 
-- `whest run --dataset hf://...@v1-phase1` (no `--split`) auto-resolves to `mini`, downloads ~850 MB on first call, then runs from cache on subsequent calls.
-- `whest run --dataset hf://...@v1-phase1 --split full` deliberately switches to the 1,000-MLP split.
+- `whest run --dataset hf://...@v2-phase2` (no `--split`) auto-resolves to `mini`, downloads it on first call, then runs from cache on subsequent calls.
+- `whest run --dataset hf://...@v2-phase2 --split full` deliberately switches to the 1,000-MLP split.
 - Re-running with the same dataset + estimator gives identical scores (the bake is deterministic).
 
 ## 📚 Dataset traceability
@@ -191,7 +205,7 @@ When you use `--dataset`, the results JSON records exactly which dataset produce
 {
   "run_config": {
     "dataset": {
-      "path": "hf://aicrowd/arc-whestbench-public-2026@v1-phase1",
+      "path": "hf://aicrowd/arc-whestbench-public-2026@v2-phase2",
       "split": "mini",
       "n_mlps": 100
     }

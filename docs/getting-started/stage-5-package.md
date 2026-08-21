@@ -77,6 +77,10 @@ Add `--watch` to follow the submission until it's graded:
 uv run whest submit --estimator estimator.py --watch
 ```
 
+> **Ten submissions per team per UTC day.** The counter resets at 00:00 UTC,
+> and a submission that fails on the grader still spends one — so rehearse at
+> [Stage 4](stage-4-run-subprocess.md) before you spend a slot.
+
 Prefer the browser? The packaged `submission.tar.gz` still uploads fine on
 the AIcrowd challenge submission page.
 
@@ -113,11 +117,10 @@ What happens once `whest submit` (or a portal upload) accepts your
    defaults; same `n_mlps` order of magnitude), in an isolated
    subprocess inside a sandboxed container. No network, no GPU,
    no access to the local filesystem outside `SetupContext.submission_dir` (your shipped files) and `SetupContext.scratch_dir`.
-3. **Your `setup()` runs once per worker process** — several workers serve a
-   submission, so expect roughly 5-15 runs, not one. It stays off the FLOP
-   budget and off the residual, but each run has a hard 30 s ceiling. If it
-   raises, or overruns that ceiling, the run is recorded as a failed
-   submission with the traceback surfaced in the AIcrowd UI.
+3. **Your `setup()` runs once** per submission. It stays off the FLOP
+   budget and off the residual, but it has a hard **5 s** ceiling. If it
+   raises, or overruns that ceiling, the **whole** submission is recorded as
+   failed, with the traceback surfaced in the AIcrowd UI.
 4. **`predict()` is called per MLP.** Errors per call are captured but
    don't kill the run — predictions for that MLP are scored against
    zeros. Repeated failures will tank `adjusted_final_layer_score`.
@@ -130,8 +133,13 @@ a percent or two, the suspects are listed in the
 
 If you suspect a grader-side issue (your submission errors out without
 your local Stage 4 doing so), open a thread on the
-[challenge discussion forum](https://www.aicrowd.com/) with the
-submission ID — that's the quickest path to a human.
+[challenge discussion forum](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026)
+with the submission ID — that's the quickest path to a human.
+
+For anything that doesn't belong in a public thread — a rules question, an
+operation you believe flopscope is mispricing, or a legitimate need for more
+residual wall time than the 400 ms cap allows — email
+[arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) with your submission ID and a minimal repro.
 
 ## ✅ Expected outcome
 

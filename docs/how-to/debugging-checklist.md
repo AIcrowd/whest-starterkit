@@ -31,7 +31,7 @@ whest validate --estimator estimator.py
 
 If it fails, check:
 
-- [ ] **Output shape:** does `predict()` return shape `(mlp.depth, mlp.width)`?
+- [ ] **Output shape:** does `predict()` return shape `(mlp.depth, mlp.width)` — read off `mlp`, not a constant? The graded shape is `(16, 1024)`; a `(32, 256)` left over from Phase 1 fails every MLP.
 - [ ] **Finite values:** are all values finite? Check for `nan` or `inf` in your math.
 - [ ] **Class name:** is your class named `Estimator`? The loader looks for this by default.
 
@@ -48,6 +48,7 @@ Check:
 - [ ] **Did `predict()` raise?** If `whest run` exits with status `1` and prints an "Estimator Errors" panel, your estimator raised an exception. Use `--debug` to include tracebacks inline in the panel, or add `--fail-fast` to halt at the first failure and let the raw Python traceback propagate.
 - [ ] **Does zeros beat you?** If returning `fnp.zeros((mlp.depth, mlp.width))` scores better than your estimator, your predictions are wrong in a way that's worse than guessing zero.
 - [ ] **Is `budget_exhausted` true?** If so, your estimator exceeded the FLOP budget and all predictions were zeroed. See [Manage Your FLOP Budget](./manage-flop-budget.md).
+- [ ] **Is `residual_wall_time_exhausted` true?** Re-run with `--residual-wall-time-limit 0.4` to reproduce the grader's hard 400 ms residual cap. Any MLP over it is scored against zeros, which reads as "my algorithm got worse" when it is really Python plumbing getting slower.
 - [ ] **Are errors concentrated at deep layers?** Run with `--debug` and compare `all_layers_mse` — if early layers are good but later layers are bad, your propagation may accumulate errors.
 
 ## Tier 3: Optimization checks (10+ minutes)
@@ -57,16 +58,18 @@ Profile your FLOP usage:
 ```python
 import flopscope as flops
 
-with flops.BudgetContext(flop_budget=272_000_000_000) as budget:
-    result = estimator.predict(mlp, budget=272_000_000_000)
+B_M = 2_199_023_255_552  # 2**41 — the Phase 2 per-MLP budget
+
+with flops.BudgetContext(flop_budget=B_M) as budget:
+    result = estimator.predict(mlp, budget=B_M)
     flops.budget_summary()
 ```
 
 Check:
 
-- [ ] **Is matmul dominant?** If >90% of FLOPs are in matmul, consider diagonal variance instead of full covariance.
+- [ ] **Is one matrix op dominant?** If `matmul` or `einsum` is >90% of your FLOPs, consider diagonal variance instead of full covariance — at width 1024 the `einsum` in full covariance propagation is 99.67% of that estimator's bill.
 - [ ] **Redundant computation?** Are you computing something in a loop that could be precomputed once?
-- [ ] **Free operations wasted?** Remember: `fnp.zeros`, `fnp.transpose`, `fnp.reshape`, indexing cost 0 FLOPs.
+- [ ] **Free operations wasted?** Since flopscope 0.9 the free list is short: `fnp.zeros`, `fnp.empty`, no-copy views (`.T` / `fnp.transpose`, basic slicing, `fnp.asarray` on an existing flopscope array), and constructing an RNG. `reshape`, `ravel`, `stack`, `concatenate`, `ones`, `astype` and copies are all billed per element — see the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs).
 
 ## Using `pdb` / `breakpoint()` inside your estimator
 

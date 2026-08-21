@@ -8,11 +8,11 @@ Use this page when you want a better understanding of the technical framing of t
 
 ## 📌 TL;DR
 
-- Input: one random layered `MLP` and one `flop_budget`.
-- Output: one `(n,)` prediction row per depth, for exactly `d` depths.
-- Goal: estimate expected neuron values under uniformly random inputs.
+- Input: one random layered `MLP` and one `flop_budget`. This round: width `n = 1024`, depth `d = 16`, `flop_budget = 2**41 = 2,199,023,255,552`.
+- Output: one `(n,)` prediction row per depth, for exactly `d` depths — a `(16, 1024)` array this round.
+- Goal: estimate expected neuron values under standard normal `N(0, 1)` inputs.
 - Predictions are real-valued expected neuron states, not probabilities.
-- Scoring is **budget-adjusted** final-layer MSE: `adjusted_final_layer_score = final_layer_mse × max(0.1, effective_compute / flop_budget)`. If the budget is exceeded (analytical FLOPs or `effective_compute = F_m + λ·R_m`), predictions are zeroed and the multiplier is forced to 1.0 (no compute discount).
+- Scoring is **budget-adjusted** final-layer MSE: `adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / flop_budget)`, where `C_m = F_m` is the analytical FLOP count and nothing else. If the FLOP budget is exceeded — or the 400 ms residual wall-time cap or the 120 s wall-clock cap trips — predictions are zeroed and the multiplier is forced to 1.0 (no compute discount).
 
 ## The research question
 
@@ -69,26 +69,28 @@ The simplest approach is **Monte Carlo sampling**:
 
 This is unbiased and converges as `k → ∞`, but the error decreases slowly (`≈ 1/√k`). The challenge asks: can you reach the same accuracy more efficiently by exploiting the network's structure?
 
-To estimate a width-256, depth-32 MLP to 1% accuracy, sampling needs roughly 10,000 forward passes at ~4M FLOPs each — about 40 billion FLOPs total. Mean propagation reaches similar accuracy for ~20M FLOPs (one O(depth × width²) propagation, no sampling at all). That is a ~2,000x improvement.
+To estimate a width-1024, depth-16 MLP to 1% accuracy, sampling needs roughly 10,000 forward passes — a measured 336,373,825,536 FLOPs for that sweep, about 15% of the per-MLP budget. Mean propagation reaches similar accuracy for 86,639,616 FLOPs (one O(depth × width²) propagation, no sampling at all). That is a ~3,900x improvement.
 
 ## What the estimator receives
 
 Each evaluation call provides:
 
-- one `MLP` with `n` neurons and `d` layers,
-- one integer `flop_budget` — the maximum number of floating-point operations your estimator may use, tracked analytically by flopscope.
+- one `MLP` with `n` neurons and `d` layers — `n = 1024`, `d = 16` this round,
+- one integer `flop_budget` — the maximum number of floating-point operations your estimator may use, tracked analytically by flopscope. This round it is `2**41 = 2,199,023,255,552` per MLP.
 
-Your estimator must emit exactly `d` vectors, each with shape `(n,)`.
+Your estimator must emit exactly `d` vectors, each with shape `(n,)` — a `(16, 1024)` array this round.
 
 Row `i` is your estimate of expected neuron values after layer `i`.
 
 ## Computational model
 
-FLOP usage is tracked analytically by flopscope. Your estimator imports flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`) and uses its primitives, which report exact FLOP counts. The leaderboard ranks on **effective compute** `C_m = F_m + λ·R_m`, where `F_m` is analytical FLOPs and `R_m` is the residual wall-time bucket (Python-side work not inside a flopscope kernel) at λ (the configured residual-penalty rate, default `1e11` FLOPs/sec). If `C_m > flop_budget` (or wall-time / residual-wall-time caps trip), the affected MLP's predictions are zeroed and the budget multiplier is forced to 1.0. See [Scoring Model](./scoring-model.md) for the full formula.
+FLOP usage is tracked analytically by flopscope. Your estimator imports flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`) and uses its primitives, which report exact FLOP counts. The leaderboard ranks on the FLOPs flopscope counted and nothing else: `C_m = F_m`. Wall-clock time is not converted into compute; instead the residual wall-time bucket `R_m` (Python-side work not inside a flopscope kernel) has a hard **400 ms** cap per MLP, alongside a 120 s wall-clock cap. If `C_m > flop_budget`, or either time cap trips, the affected MLP's predictions are zeroed and the budget multiplier is forced to 1.0. See [Scoring Model](./scoring-model.md) for the full formula.
+
+That residual bucket is for plumbing — array marshalling, control flow, bookkeeping — not for computation. The only code you may run is the flopscope client API and the pure-Python standard library; vendored numerical libraries, compiled kernels, FFI, and threads or subprocesses are prohibited, and doing real numerical work outside flopscope's accounting is grounds for disqualification rather than a cost you can choose to pay. Shipping *data* alongside your estimator — weights, lookup tables, precomputed artifacts — remains permitted. The [Estimator Contract](../reference/estimator-contract.md) lists the rules in full.
 
 ## Ground truth
 
-Ground truth is approximated by Monte Carlo simulation over random inputs.
+Ground truth is approximated by Monte Carlo simulation over standard normal `N(0, 1)` inputs.
 The evaluator computes empirical means by depth and neuron, stored as `ground_truth_samples`.
 
 ## Further reading

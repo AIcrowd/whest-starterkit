@@ -18,15 +18,15 @@ You should see a table like:
 
 ```
 --- Your estimator ---
-MLP: width=256 depth=32 seed=0
+MLP: width=1024 depth=16 seed=0
 
  n_samples | sampling_flops | estimator_flops |        MSE
 ----------------------------------------------------------
-        10 |     42,071,040 |               0 |   1.217108
-       100 |    420,710,400 |               0 |   1.192599
-     1,000 |  4,207,104,000 |               0 |   1.214506
-    10,000 | 42,071,040,000 |               0 |   1.201126
-   100,000 | 420,710,400,000 |               0 |   1.206404
+        10 |    336,439,296 |               0 |   0.744041
+       100 |  3,363,803,136 |               0 |   0.744617
+     1,000 | 33,637,441,536 |               0 |   0.745814
+    10,000 | 336,373,825,536 |               0 |   0.746173
+   100,000 | 3,363,737,665,536 |               0 |   0.745660
 ```
 
 The stub `predict()` returns all zeros, so `estimator_flops` is `0` and the MSE
@@ -48,15 +48,16 @@ This loads `examples/02_mean_propagation.py` and runs both estimators on the sam
 
 ## ✅ Expected outcome
 
-| Estimator | MSE on the default MLP | Status |
+| Estimator | MSE on the default MLP (`n_samples=100,000` row) | Status |
 |---|---|---|
-| Zeros template (default) | ~1.2 | floor — natural variance of the activations |
-| `--baseline mean_propagation` | ~0.0017 | ~700x better; first-order analytical |
-| `--baseline covariance_propagation` | ~0.0001 | ~20x better than mean; tracks neuron correlations |
+| Zeros template (default) | ~0.75 | floor — natural variance of the activations |
+| `--baseline mean_propagation` | ~0.00017 | ~4,400x better; first-order analytical |
+| `--baseline covariance_propagation` | ~0.000004 | ~43x better than mean; tracks neuron correlations |
 
 You're ready for Stage 2 once your estimator's MSE is comfortably below
-the zeros floor and `estimator_flops` stays under whatever budget you'd
-target downstream (Stage 3's phase-1 grader default is `2.72e11`; the `v1-warmup` round used `6.8e10`).
+the zeros floor and `estimator_flops` stays under the per-MLP budget —
+`local_engine` applies the grader's own `2**41` (2,199,023,255,552 FLOPs), so
+Stage 1 and Stage 3 hold you to exactly the same cap.
 
 ## ✅ When you're ready
 

@@ -3,7 +3,7 @@
 The starter kit teaches you to write a Python estimator that predicts
 per-neuron mean activations of a randomly-initialized ReLU MLP under a
 FLOP budget. **Lower MSE per FLOP wins.** New here? See the [60-second
-overview](../README.md#60-second-overview) in the root README, then
+overview](../README.md#-60-second-overview) in the root README, then
 jump in below.
 
 ## 🗺️ Map
@@ -54,7 +54,9 @@ Pick the line that sounds like you.
 | Improve my score (0.5 → 0.005) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
 | Push from 0.005 → 0.0005 | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
 | Debug a broken estimator | [troubleshooting/common-participant-errors.md](troubleshooting/common-participant-errors.md), [troubleshooting/faq.md](troubleshooting/faq.md), [how-to/debugging-checklist.md](how-to/debugging-checklist.md) |
+| Know what code I'm allowed to ship | [concepts/allowed-code.md](concepts/allowed-code.md) |
 | Sanity-check before submitting | [how-to/pre-submission-checklist.md](how-to/pre-submission-checklist.md) |
 | Look up the precise contract | [reference/estimator-contract.md](reference/estimator-contract.md), [reference/score-report-fields.md](reference/score-report-fields.md), [reference/local-engine-api.md](reference/local-engine-api.md), [reference/cli-reference.md](reference/cli-reference.md) |
 | Diagnose my install / environment | [reference/whest-doctor.md](reference/whest-doctor.md) |
+| Ask a rules question, report a suspected FLOP mispricing, or ask about the 400 ms residual cap | email <arc-whestbench@aicrowd.com> — see [FAQ](troubleshooting/faq.md#who-do-i-contact-about-a-rules-question-or-a-flop-that-looks-mispriced) |
 | Profile or visualize | [advanced/use-whestbench-explorer.md](advanced/use-whestbench-explorer.md), [advanced/profile-simulation.md](advanced/profile-simulation.md) |
