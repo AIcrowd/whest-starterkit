@@ -43,5 +43,15 @@ jobs:
       - name: Stage 3 smoke — whest run (small)
         run: uv run whest run --estimator estimator.py --n-mlps 2
 
+      - name: Stage 4 smoke — subprocess runner
+        run: uv run whest run --estimator estimator.py --n-mlps 2 --n-samples 20000 --runner subprocess
+
+      - name: Stage 5 smoke — package (single file and folder)
+        run: |
+          uv run whest package --estimator estimator.py --yes --output /tmp/single.tar.gz
+          uv run whest validate-package /tmp/single.tar.gz
+          uv run whest package --estimator . --yes --output /tmp/folder.tar.gz
+          uv run whest validate-package /tmp/folder.tar.gz
+
       - name: Run pytest (unit + parity + README snapshot)
         run: uv run pytest tests/ -v
