@@ -24,7 +24,7 @@ ground-truth samples N       1e9 per MLP, baked into the dataset
 ```
 
 Since whestbench 0.16.0 every one of those is the `whest run` **default**, so a plain
-local run with no flags at all already meters you exactly as the grader does.
+local run with no flags applies the Phase 2 parameters.
 
 ## Every round, side by side
 
@@ -123,7 +123,7 @@ residual time is plumbing, which a cap bounds directly.
 under λ > 0 an identical submission produced different values of `C_m` on different
 hardware and under different load. `F_m` is derived analytically from tensor shapes
 and dtypes and does not vary by machine. With λ = 0 the ranked quantity is `F_m`
-alone, so a local run and a graded run report the same compute. See
+alone, which does not depend on where the run happened. See
 [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
 
 **A combined budget did not state a FLOP limit.** Under λ, `B` bounded a sum of

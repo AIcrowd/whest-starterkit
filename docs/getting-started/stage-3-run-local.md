@@ -15,8 +15,8 @@ uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-
 `--split mini` selects the 100-MLP Mini split (it's the default split, so you can omit `--split`); `local` is the default runner, so you can omit `--runner local` too. Ground truth is precomputed at N=1e9, so there's no sampling step. The `mini` split is a **7.03 GB** download, cached after the first call, so later runs reuse it with no re-download (8x Phase 1's 0.86 GB: one MLP's weights are now 16 x 1024 x 1024 float32; see [Use Evaluation Datasets](../how-to/use-evaluation-datasets.md)). The FLOP budget is `2**41` (2,199,023,255,552 FLOPs per MLP) and the MLP shape is the competition size (width=1024, depth=16). Phase 1 used 256×32 at a `2.72e11` budget; [Competition Rounds](../reference/rounds.md) compares every round.
 
 > **No dataset to hand? You still get the Phase 2 shape.** Since whestbench 0.16.0 the
-> graded round *is* the `whest run` default, so omitting `--dataset` still meters you
-> exactly as the grader does: a generated 10-MLP suite at 1024x16 with
+> Phase 2 round *is* the `whest run` default, so omitting `--dataset` still applies the
+> round's parameters: a generated 10-MLP suite at 1024x16 with
 > `flop_budget=2**41`. Only the ground truth differs: 200,000 local Monte-Carlo draws
 > per MLP (`--n-samples`) instead of the dataset's baked N=1e9. Both the MLPs and their
 > sampled ground truth are redrawn on every run, so the score moves unless you pass
