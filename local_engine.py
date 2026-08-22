@@ -3,16 +3,17 @@
 Pedagogical re-implementation of whestbench primitives using flopscope's
 NumPy-shaped API (``flopscope.numpy``).
 
-This module deliberately stays single-file and uses just the canonical
-flopscope idiom — ``import flopscope as flops; import flopscope.numpy as
-fnp`` — see ``docs/reference/code-patterns.md``. Most operations are
-``fnp.*`` calls; ``flops`` is only reached for ``BudgetContext``. We keep
-the surface intentionally narrow here for clarity, mirroring how
-participants will mostly write their code.
+This module deliberately stays single-file and uses the canonical flopscope
+idiom, ``import flopscope as flops; import flopscope.numpy as fnp`` (see
+``docs/reference/code-patterns.md``). Most operations are ``fnp.*`` calls;
+``flops`` is only reached for ``BudgetContext``. The narrow surface mirrors
+how participants will mostly write their code.
 
 Drift from whestbench is detected by ``tests/test_local_engine_parity.py``.
-Do NOT refactor this file to ``from whestbench import ...`` — see Issue #1
-in the design spec for rationale.
+The ``MLP`` / ``BaseEstimator`` imports below are deliberate; they are the
+participant-facing types. What must NOT be imported is whestbench's own
+engine (``sample_mlp``, ``sample_layer_statistics``): re-implementing those
+in ``fnp`` is the whole point of this file.
 """
 
 from __future__ import annotations
@@ -68,8 +69,8 @@ def monte_carlo_layer_means(
     whestbench's own ground-truth sampler (and flopscope bills
     float64 ops at 2x, so the f32 draw is also the cheap idiom).
 
-    Returns shape `(depth, width)` — same shape as `Estimator.predict` so the two
-    can be subtracted directly.
+    Returns shape `(depth, width)`, the same shape as `Estimator.predict`, so the
+    two can be subtracted directly.
     """
     rng = fnp.random.default_rng(seed)
     width = mlp.width
@@ -88,36 +89,82 @@ def compare_against_monte_carlo(
     estimator_budget: int = 2**41,
     sampling_budget: int = int(5e12),
     seed: int = 0,
+    submission_dir: str | None = None,
 ) -> None:
     """Run estimator once, then sweep MC at each sample count and print a table.
 
-    `estimator_budget` defaults to the competition per-MLP budget, 2**41 FLOPs,
-    so your `predict()` is metered here exactly as the grader meters it.
+    `estimator_budget` defaults to the competition per-MLP budget, 2**41 FLOPs.
+    Your `predict()` is metered against the same 2**41 FLOP budget and the same
+    120 s per-predict wall cap the grader uses, and the 0.4 s residual-time gate
+    is checked after the run. Not modelled here: the 5 s `setup()` timeout, the
+    8 GB memory limit, and the grader's zero-and-continue behaviour on failure
+    (this helper exits instead). Use `whest run` for those.
 
     `sampling_budget` caps one Monte-Carlo row, not the whole sweep: each sample
     count runs in its own `BudgetContext`, so the ceiling only has to clear the
     largest single row (n=100,000 bills 3,363,737,665,536 FLOPs at width 1024,
     depth 16). The 5e12 default leaves headroom above it. Ground-truth sampling
-    is a local convenience — it is not charged against your submission.
+    is a local convenience. It is not charged against your submission, so its
+    context deliberately carries no wall cap.
 
-    Friendly preflight: before the MC sweep, validate the estimator returns the
-    right shape/dtype on the actual MLP. On failure, print a one-line diagnostic
-    pointing at the contract doc and exit cleanly (SystemExit) — no numpy traceback.
+    `final_layer_mse` is the ranked metric. The grader scores
+    `adjusted_final_layer_score = final_layer_mse * max(0.1, C_m / B_m)`.
+    `all_layers_mse` is whestbench's secondary metric; it is the more forgiving
+    of the two, so do not tune against it alone.
 
-    Returns None — this is a print helper for stage-1 dev loops.
+    Friendly preflight: before the MC sweep, validate the estimator returns an
+    `fnp.ndarray` of the right shape on the actual MLP (dtype is not checked
+    here; the grader casts with `fnp.asarray(..., dtype=fnp.float32)`). On
+    failure, print a one-line diagnostic pointing at the contract doc, then exit
+    cleanly with SystemExit instead of a numpy traceback.
+
+    Returns None; this is a print helper for stage-1 dev loops.
     """
     expected_shape = (mlp.depth, mlp.width)
 
+    import inspect
+
+    from whestbench import SetupContext
+
+    # `submission_dir` is where the grader puts your packaged folder, and it is how
+    # the shipped-weights pattern (examples/04) finds its `.npz`. Default it to the
+    # directory the estimator class was defined in, which is what the grader does
+    # for a folder submission, so estimator.py + weights.npz side by side just
+    # works. Pass `submission_dir=` explicitly when the weights live elsewhere
+    # (examples/04 saves into a tempdir rather than committing an .npz to the repo).
     try:
-        with flops.BudgetContext(flop_budget=estimator_budget, quiet=True) as est_ctx:
+        _src = inspect.getsourcefile(type(estimator))
+    except TypeError:  # C/builtin type — no source file to locate
+        _src = None
+    _submission_dir = submission_dir or (
+        str(Path(_src).resolve().parent) if _src else str(_REPO_ROOT)
+    )
+
+    # setup() runs OUTSIDE the BudgetContext, matching the grader: it calls
+    # setup in `runner.start` (runner.py:175), not inside the per-predict budget.
+    # Any FLOPs you spend here are free, but the grader does hold it to a 5 s
+    # timeout that this helper does not model.
+    estimator.setup(
+        SetupContext(
+            width=mlp.width,
+            depth=mlp.depth,
+            flop_budget=estimator_budget,
+            api_version="1.0",
+            submission_dir=_submission_dir,
+            seed=seed,
+        )
+    )
+
+    # `wall_time_limit_s` mirrors the grader's per-predict cap (whestbench 0.16.0
+    # scoring.py:709-712 passes spec.wall_time_limit_s = 120.0). Without it a slow
+    # estimator prints a clean table locally and still fails on the grader.
+    try:
+        with flops.BudgetContext(
+            flop_budget=estimator_budget, wall_time_limit_s=120.0, quiet=True
+        ) as est_ctx:
             est_pred = estimator.predict(mlp, estimator_budget)
     except Exception as exc:
-        import inspect
-
-        try:
-            src_file = inspect.getsourcefile(type(estimator))
-        except TypeError:
-            src_file = "<unknown>"
+        src_file = _src or "<unknown>"
         print(
             f"\n[whest-starterkit] Your estimator raised at {src_file} "
             f"during predict():\n  {type(exc).__name__}: {exc}\n"
@@ -145,14 +192,45 @@ def compare_against_monte_carlo(
 
     estimator_flops = est_ctx.flops_used
 
-    row = "{:>10} | {:>14} | {:>15} | {:>10}".format
-    header = row("n_samples", "sampling_flops", "estimator_flops", "MSE")
-    print(f"MLP: width={mlp.width} depth={mlp.depth} seed={seed}\n")
+    # The residual-time gate: wall time inside the context that flopscope could
+    # not attribute to a metered op. The grader fails the MLP outright when this
+    # exceeds 0.4 s (multiplier forced to 1.0), so surface it before the table.
+    if est_ctx.residual_wall_time_s > 0.4:
+        print(
+            f"[whest-starterkit] RESIDUAL GATE: {est_ctx.residual_wall_time_s:.3f}s > 0.400s "
+            f"— the grader would FAIL this MLP (multiplier forced to 1.0).\n"
+        )
+
+    # `final_layer_mse` goes LAST on purpose: it is the ranked metric, so it is
+    # the number the eye lands on. tests/test_local_engine.py pins both MSE columns
+    # by position, so reordering this row will fail CI rather than silently move
+    # what is tested. sampling_flops is 17 chars wide at n=100,000
+    # (3,363,737,665,536).
+    row = "{:>10} | {:>17} | {:>15} | {:>14} | {:>15}".format
+    header = row(
+        "n_samples", "sampling_flops", "estimator_flops", "all_layers_mse", "final_layer_mse"
+    )
+    print(
+        f"MLP: width={mlp.width} depth={mlp.depth} seed={mlp.seed}  "
+        f"(MC sampling seed={seed})\n"
+    )
     print(header)
     print("-" * len(header))
     for n in sample_counts:
         with flops.BudgetContext(flop_budget=sampling_budget, quiet=True) as mc_ctx:
             sampled = monte_carlo_layer_means(mlp, n, seed=seed)
         diff = est_pred - sampled
-        mse = float(fnp.mean(diff * diff))
-        print(row(f"{n:,}", f"{mc_ctx.flops_used:,}", f"{estimator_flops:,}", f"{mse:.6f}"))
+        all_layers_mse = float(fnp.mean(diff * diff))
+        final_layer_mse = float(fnp.mean((est_pred[-1] - sampled[-1]) ** 2))
+        print(
+            row(
+                f"{n:,}",
+                f"{mc_ctx.flops_used:,}",
+                f"{estimator_flops:,}",
+                f"{all_layers_mse:.6f}",
+                f"{final_layer_mse:.6f}",
+            )
+        )
+
+    # Mirror the grader's lifecycle end-to-end: setup() above, teardown() here.
+    estimator.teardown()

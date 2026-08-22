@@ -1,4 +1,4 @@
-"""Mean propagation estimator for ReLU MLPs — self-contained educational implementation.
+"""Mean propagation estimator for ReLU MLPs, a self-contained educational implementation.
 
 For a ReLU unit  z = max(0, w^T x),  if the pre-activation is Gaussian:
 
@@ -34,8 +34,8 @@ class Estimator(BaseEstimator):
 
     Seeding (whestbench contract -- see
     ``docs/reference/estimator-contract.md``): this estimator is deterministic,
-    but it carries the canonical seeding scaffold so every bundled example
-    shows the pattern. ``self._setup_rng`` is the submission-level RNG seeded
+    but it carries the canonical seeding scaffold so examples 01-03
+    all show the pattern. ``self._setup_rng`` is the submission-level RNG seeded
     from ``ctx.seed`` inside ``setup``; the ``_rng`` line at the top of
     ``predict`` is the per-MLP RNG seeded from ``mlp.seed``. Both are unused
     here because the algorithm is purely analytical -- a randomized estimator
@@ -66,14 +66,14 @@ class Estimator(BaseEstimator):
         # --- Step 1: initialise the input distribution ---
         # Treat the network input as standard normal: mu=0, var=1 per dimension.
         #
-        # dtype matters more than it looks. flopscope bills float64 at TWICE the
-        # float32 rate, and `fnp.zeros(width)` defaults to float64. NumPy promotion
-        # then spreads that float64 through every expression it touches — including
-        # `w.T @ mu`, whatever dtype the weights arrive as. Seeding these two
-        # arrays at float32 keeps the whole loop at the 1x rate. Measured on the
-        # competition shape (width=1024, depth=16): 153,913,344 -> 86,639,616 FLOPs,
-        # 43.7% cheaper, with the final-layer MSE unchanged to five significant
-        # figures. ReLU-moment propagation does not need float64 precision here.
+        # flopscope bills float64 at TWICE the float32 rate, and `fnp.zeros(width)`
+        # defaults to float64. NumPy promotion then spreads that float64 through
+        # every expression it touches, including `w.T @ mu`, whatever dtype the
+        # weights arrive as. Seeding these two arrays at float32 keeps the whole
+        # loop at the 1x rate. Measured on the competition shape
+        # (width=1024, depth=16): 153,913,344 -> 86,639,616 FLOPs, 43.7% cheaper,
+        # with the final-layer MSE unchanged to five significant figures.
+        # ReLU-moment propagation does not need float64 precision here.
         mu = fnp.zeros(width, dtype=fnp.float32)  # shape (width,)
         var = fnp.ones(width, dtype=fnp.float32)  # shape (width,) — diagonal of the covariance
 
@@ -99,7 +99,7 @@ class Estimator(BaseEstimator):
             # `flops.stats.norm.*` promotes float32 input to float64 to match
             # scipy.stats, and flopscope warns about exactly this. Left alone, the
             # promoted result would re-infect the rest of the loop at the 2x rate and
-            # undo the float32 seeding above — so cast straight back.
+            # undo the float32 seeding above, so cast straight back.
             phi_alpha = flops.stats.norm.pdf(alpha).astype(fnp.float32)  # phi(alpha)
             Phi_alpha = flops.stats.norm.cdf(alpha).astype(fnp.float32)  # Phi(alpha)
 

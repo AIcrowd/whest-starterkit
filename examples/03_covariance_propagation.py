@@ -1,4 +1,4 @@
-"""Covariance propagation estimator for ReLU MLPs — self-contained educational implementation.
+"""Covariance propagation estimator for ReLU MLPs, a self-contained educational implementation.
 
 Unlike the diagonal (mean-propagation) approach, this estimator tracks the
 *full* covariance matrix between neurons as the signal passes through each
@@ -29,6 +29,12 @@ Numerical stability:
     linear layer we check the maximum diagonal entry and rescale (mu, cov) if
     it exceeds a threshold, keeping a running log-scale to restore the mean in
     the original coordinates before recording it.
+
+    At the graded shape (1024x16, He weights) this guard never fires: the
+    largest diagonal entry stays between 0.26 and 1.37 across all 16 layers.
+    It is carried for the deeper or differently-scaled networks you may try
+    next. Leaving it in costs 1,023 FLOPs per layer, 16,368 across the suite,
+    against a 51.7-billion-FLOP predict().
 """
 
 from __future__ import annotations
@@ -38,9 +44,14 @@ import flopscope.numpy as fnp
 from whestbench import BaseEstimator, SetupContext
 from whestbench.domain import MLP
 
-# If any diagonal entry of the covariance exceeds this value we rescale
-# to keep the arithmetic well-behaved in float32.
-_COV_RESCALE_THRESHOLD = 1e100
+# If any diagonal entry of the covariance exceeds this value we rescale to keep
+# the arithmetic inside the float32 range (max 3.4e38; see the float32 seeding
+# in Step 1).
+# float32 tops out at 3.4028235e38, so the float64-era 1e100 this constant used to
+# hold can never fire: it rounds to inf on the way in, and by the time a diagonal
+# entry compared greater the covariance had already overflowed. 1e30 is
+# representable and still leaves room for one more W^T cov W before the overflow.
+_COV_RESCALE_THRESHOLD = 1e30
 
 
 class Estimator(BaseEstimator):
@@ -52,8 +63,8 @@ class Estimator(BaseEstimator):
 
     Seeding (whestbench contract -- see
     ``docs/reference/estimator-contract.md``): this estimator is deterministic,
-    but it carries the canonical seeding scaffold so the propagation examples
-    (01–03) all show the pattern. ``self._setup_rng`` is the submission-level
+    but it carries the canonical seeding scaffold so examples 01-03 all show
+    the pattern. ``self._setup_rng`` is the submission-level
     RNG seeded from ``ctx.seed`` inside ``setup``; the ``_rng`` line at the top
     of ``predict`` is the per-MLP RNG seeded from ``mlp.seed``. Both are unused
     here because the algorithm is purely analytical.
@@ -88,12 +99,13 @@ class Estimator(BaseEstimator):
         # n = width^2.
         #
         # Both arrays are seeded at float32 on purpose. flopscope bills float64 at
-        # TWICE the float32 rate, and `fnp.zeros`/`fnp.eye` default to float64 —
+        # TWICE the float32 rate, and `fnp.zeros`/`fnp.eye` default to float64.
         # NumPy promotion then carries that through the O(width^3) einsum in Step 3,
         # which is 99.7% of this estimator's cost, whatever dtype the weights arrive
         # as. Measured against float32 weights on the competition shape
         # (width=1024, depth=16): 103,407,495,614 -> 51,709,240,799 FLOPs, a 49.99%
-        # saving, with the final-layer MSE unchanged to five significant figures.
+        # saving, with the final-layer MSE unchanged to three significant figures
+        # (4.1674e-06 vs 4.1676e-06).
         # Not quite an exact halving: the 32 stats.norm.pdf/cdf calls bill float64 in
         # BOTH runs, so they are common to numerator and denominator.
         # Covariance propagation does not need float64 precision at this width.
@@ -123,7 +135,7 @@ class Estimator(BaseEstimator):
             #
             # Use einsum (not the chained matmul `w.T @ cov @ w`) so the whole
             # sandwich is a single contraction over the symmetric-tagged `cov`
-            # (see Steps 1 and 7b) — flopscope bills it at the symmetric rate,
+            # (see Steps 1 and 7b). flopscope bills it at the symmetric rate,
             # the single biggest saving in this estimator after dtype (~24% per
             # layer; the float32 seeding in Step 1 is worth a further 50%).
             # See https://github.com/AIcrowd/whestbench/issues/27 for the
@@ -159,7 +171,7 @@ class Estimator(BaseEstimator):
             #
             # The zero is an explicit float32 array, not a bare `0.0`. A Python
             # float literal is a C double, and under flopscope 0.11.0 it promoted
-            # this whole `where` to float64 — 131,072 FLOPs across the 16 layers
+            # this whole `where` to float64: 131,072 FLOPs across the 16 layers
             # instead of 65,536. flopscope 0.12.0 applies NEP 50 weak promotion and
             # charges the float32 price for the literal too, so the two versions
             # disagreed on this one line. Passing the dtype explicitly costs the
@@ -169,14 +181,19 @@ class Estimator(BaseEstimator):
             gain = fnp.where(sigma_pre > 1e-12, Phi_alpha, _zero32)
 
             # Off-diagonal approximation:  cov_post[i,j] ≈ gain[i]*gain[j]*cov_pre[i,j]
-            # This elementwise update and the diagonal write below discard the
-            # symmetry tag: since flopscope 0.10.0 a write into (or derivation
-            # from) a tagged buffer voids the tag rather than letting a stale
-            # claim keep its discount. The one-time SymmetryLossWarning here is
-            # expected — Step 7b below is the remedy it names.
+            # This multiply KEEPS the symmetry tag: `outer(gain, gain)` is symmetric
+            # by construction and `cov_pre` inherited the tag through the einsum, so
+            # both operands share a symmetry group and the product stays tagged.
             cov = fnp.multiply(fnp.outer(gain, gain), cov_pre)
 
             # Replace the diagonal with the exact marginal variances.
+            # THIS is the line that voids the tag: since flopscope 0.10.0 a write
+            # into a tagged buffer drops the tag rather than letting a stale claim
+            # keep its discount. flopscope will not warn you here; it silently
+            # stops applying the symmetric discount, which is why Step 7b
+            # re-validates rather than waiting for a warning. (A SymmetryLossWarning
+            # does exist, but it fires on an op given mismatched symmetry groups,
+            # not on this write.)
             fnp.fill_diagonal(cov, var_post)
 
             # --- Step 7b: re-validate and re-tag the covariance ---
@@ -186,8 +203,12 @@ class Estimator(BaseEstimator):
             # instead of 4,292,870,144 for the same contraction untagged — a
             # 1,072,169,472 saving per layer, 24.98%, which repays the re-validation
             # about 146x. Measured by running this estimator with and without the
-            # tag on the competition shape. Re-validate-after-write is the supported
-            # symmetry idiom under flopscope >= 0.10.0.
+            # tag on the competition shape: dropping this one line raises einsum
+            # spend from 51,531,210,752 to 67,613,752,832 FLOPs (layers 2-16 fall
+            # back to the untagged 4,292,870,144 rate), against 124,780,527 FLOPs
+            # for the 17 `as_symmetric` calls that keep it.
+            # Re-validate-after-write is the supported symmetry idiom under
+            # flopscope >= 0.10.0.
             cov = flops.as_symmetric(cov, symmetry=(0, 1))
 
             # --- Step 8: record mean in original (unscaled) coordinates ---

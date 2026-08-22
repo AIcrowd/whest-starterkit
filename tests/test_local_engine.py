@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import flopscope.numpy as fnp
 import pytest
 from whestbench import MLP
+
+# Anchor example paths to the repo root so the subprocess tests below do not
+# depend on pytest's cwd (an IDE run-configuration often sets it to tests/).
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_build_mlp_returns_mlp_with_correct_shape():
@@ -31,8 +37,9 @@ def test_build_mlp_is_deterministic_given_seed():
 
 
 def test_build_mlp_he_initialization_scale():
-    """He init: weights ~ N(0, sqrt(2/width)). Variance of a 1024x1024 weight
-    matrix should be close to 2/1024 = ~0.00195."""
+    """He init: weights ~ N(0, 2/width) — that second parameter is the variance,
+    so the std is sqrt(2/width). Variance of a 1024x1024 weight matrix should be
+    close to 2/1024 = ~0.00195."""
     from local_engine import build_mlp
 
     mlp = build_mlp(width=1024, depth=1, seed=0)
@@ -130,34 +137,51 @@ def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
     assert result is None
     out = capsys.readouterr().out
     assert "n_samples" in out
-    assert "MSE" in out
+    # Both metrics are tabulated, named as the grader names them.
+    assert "all_layers_mse" in out
+    assert "final_layer_mse" in out
     assert "10" in out
     assert "100" in out
 
 
 @pytest.mark.parametrize(
-    "name,max_mse",
+    "name,expected_all,expected_final,rel",
     [
-        # Update these tolerances if the curriculum table changes.
-        ("examples/01_random.py", 1.0),
-        ("examples/02_mean_propagation.py", 0.10),
-        ("examples/03_covariance_propagation.py", 0.10),
+        # The advertised n=100k values on the 1024x16 seed-0 MLP. `expected_all` is
+        # the `all_layers_mse` column examples/README.md tabulates; `expected_final`
+        # is the ranked `final_layer_mse` quoted in the note under that table. Bands
+        # are tight on purpose: a loose cap lets an accuracy regression that leaves
+        # the FLOP total untouched sail through CI.
+        ("examples/01_random.py", 0.5246, 0.8432, 0.02),
+        ("examples/02_mean_propagation.py", 0.000171, 0.000300, 0.05),
+        ("examples/03_covariance_propagation.py", 0.0000039, 0.0000042, 0.10),
     ],
 )
-def test_example_mse_within_table_tolerance(name, max_mse):
+def test_example_mse_within_table_tolerance(name, expected_all, expected_final, rel):
     """examples/README.md advertises MSE values; CI keeps them honest."""
-    import re
     import subprocess
     import sys
 
     result = subprocess.run(
-        [sys.executable, name],
+        [sys.executable, str(REPO_ROOT / name)],
+        cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        check=True,
     )
+    assert result.returncode == 0, result.stderr
     last_line = [line for line in result.stdout.splitlines() if line.strip()][-1]
-    mse_match = re.search(r"(\d+\.\d+)\s*$", last_line)
-    assert mse_match, f"Could not parse MSE from: {last_line}"
-    mse = float(mse_match.group(1))
-    assert mse <= max_mse, f"{name} MSE {mse} exceeds curriculum-table cap {max_mse}"
+    # Parse by column rather than by trailing float: the table ends with
+    # final_layer_mse today, and pinning both columns explicitly means a future
+    # column reorder fails loudly instead of silently testing the wrong number.
+    cells = [c.strip() for c in last_line.split("|")]
+    assert len(cells) == 5, f"Unexpected table shape: {last_line}"
+    all_layers_mse, final_layer_mse = float(cells[3]), float(cells[4])
+
+    assert all_layers_mse == pytest.approx(expected_all, rel=rel), (
+        f"{name} all_layers_mse {all_layers_mse} left the examples/README.md "
+        f"band {expected_all}+-{rel:.0%}"
+    )
+    assert final_layer_mse == pytest.approx(expected_final, rel=rel), (
+        f"{name} final_layer_mse {final_layer_mse} left the examples/README.md "
+        f"band {expected_final}+-{rel:.0%}"
+    )
