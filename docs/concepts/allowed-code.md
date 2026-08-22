@@ -11,7 +11,7 @@ Read this page before you reach for anything that is not flopscope or the standa
 - A submission may use exactly three things: **the grader's Python interpreter**, **the flopscope client API**, and **the pure-Python standard library**.
 - Everything on the [prohibition list](#what-is-prohibited) is out: vendored numpy/scipy/BLAS, compiled kernels, FFI, concurrency, compute that overlaps a metered op, and anything that touches the flopscope client, transport, or accounting.
 - **Data files remain permitted.** Shipping weights, lookup tables, and precomputed artifacts is explicitly allowed. See [Ship Weights](../how-to/ship-weights.md).
-- **Residual wall time is for plumbing, not for computation.** It is not priced in Phase 2 (`C_m = F_m`); it is hard-capped at **400 ms per MLP**. Meaningful computation there is a breach of this rule, not a cheap trade.
+- **Residual wall time is for plumbing, not for computation.** It is not priced in Phase 2 (`C_m = F_m`); it is hard-capped at **400 ms per MLP**. Meaningful computation there is a breach of this rule, not a cheap trade. Pricing is exactly what Phase 1 did, and dropping it is a direct consequence of this rule ([why](../reference/rounds.md#why-phase-2-does-not-price-residual-time)).
 - Enforcement may be **retrospective and LLM-assisted**: submitted source is reviewed after the fact, and a submission can be invalidated after it has been scored.
 
 ## Why there is a rule at all

@@ -88,22 +88,48 @@ rulebook otherwise.
 ## Residual wall time: priced, then gated
 
 "Residual" is the part of `predict()` that flopscope does not meter: your Python,
-control flow, GC. Left unpriced *and* uncapped it would be a free lunch, and the
-challenge has closed that hole two different ways.
+control flow, GC. Unconstrained it would allow work the FLOP budget does not see,
+so every round has constrained it. The mechanism changed at Phase 2.
 
 **Priced (`v1-warmup`, `v1-phase1`).** Residual seconds were converted to FLOPs at
 λ = 1e11 and added to the bill, so `C = F + λR`. Wall time was allowed but cost
 budget, and the two resources traded against each other.
 
 **Gated (`v2-phase2`, current).** λ = 0, so residual pricing is **deprecated**.
-Residual time is capped separately at 0.4 s and crossing that cap fails the MLP
-outright. Effective compute is then exactly `C = F`, with no second currency to
-reason about.
+Residual time is capped separately at 0.4 s, and exceeding the cap fails the MLP.
+Effective compute is then `C = F`.
 
-Under Phase 1 a slow estimator was *expensive*; under Phase 2 it is *disqualified
-from that MLP*. Residual time is for plumbing (unpacking `mlp`, control flow,
-assembling the result), not for computation. See
-[Allowed Code](../concepts/allowed-code.md).
+Under Phase 1 a slow estimator cost budget. Under Phase 2 it fails the MLP.
+Residual time covers plumbing: unpacking `mlp`, control flow, and assembling the
+result. See [Allowed Code](../concepts/allowed-code.md).
+
+### Why Phase 2 does not price residual time
+
+Phase 1 charged residual seconds at λ = 1e11 FLOPs per second. Phase 2 sets λ = 0
+and caps residual time instead. Three properties of the priced model motivated the
+change.
+
+**Pricing permits the purchase of unmetered compute.** Under λ, arithmetic performed
+outside flopscope was billable rather than disallowed: it had a defined cost, and a
+submission that paid it stayed within the rules. Phase 2
+[prohibits](../concepts/allowed-code.md#what-is-prohibited) computation outside
+flopscope, so there is no transaction for a rate to price. The remaining use of
+residual time is plumbing, which a cap bounds directly.
+
+**The priced score depended on the grading machine.** `R_m` is wall-clock time, so
+under λ > 0 an identical submission produced different values of `C_m` on different
+hardware and under different load. `F_m` is derived analytically from tensor shapes
+and dtypes and does not vary by machine. With λ = 0 the ranked quantity is `F_m`
+alone, so a local run and a graded run report the same compute. See
+[Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
+
+**A combined budget did not state a FLOP limit.** Under λ, `B` bounded a sum of
+FLOPs and priced seconds, so the FLOPs available to a submission depended on how
+much residual time it spent. With λ = 0, `B` is a FLOP limit.
+
+The 0.4 s cap is a limit, not an allowance. Residual time below it does not affect
+the score: 3 ms and 300 ms both contribute nothing to `C_m`. Exceeding it zeroes
+that MLP's predictions.
 
 > The rate is deprecated, not removed. `PHASE1_LAMBDA_FLOPS_PER_SECOND` is still
 > exported so a `v1-*` round can be re-scored correctly.

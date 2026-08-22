@@ -64,7 +64,7 @@ Use this page to understand how the leaderboard score is computed from your esti
 - Lower score is better.
 - The leaderboard ranks on **`adjusted_final_layer_score`**: the final-layer MSE scaled by a compute multiplier `max(0.1, C_m / flop_budget)`, then averaged across MLPs.
 - **Compute is analytical FLOPs, and nothing else: `C_m = F_m`.** The per-MLP budget is `B = 2**41 = 2,199,023,255,552` FLOPs.
-- Residual wall-time is **not priced** into your score. It is capped instead: **400 ms per MLP**, and blowing the cap zeroes that MLP's predictions.
+- Residual wall-time is **not priced** into your score. It is capped instead: **400 ms per MLP**, and blowing the cap zeroes that MLP's predictions. Phase 1 priced it at λ = 1e11 and Phase 2 does not, because computation outside flopscope is now prohibited rather than purchasable, and because wall clock made the ranked score machine-dependent ([why](../reference/rounds.md#why-phase-2-does-not-price-residual-time)).
 - `final_layer_mse` and `all_layers_mse` are reported too, but as **raw diagnostics**. They are *not* the metric you are ranked on.
 - The multiplier rewards using less compute, down to a 10× discount floor (reached at 10% budget use). Below that floor, only accuracy moves your score.
 - If your estimator blows any per-MLP cap (the FLOP budget, the 400 ms residual cap, or the 120 s wall-clock cap), all predictions for that MLP are zeroed **and** the multiplier is forced to 1.0. A failure is strictly worse than the cheapest valid submission.
@@ -81,7 +81,7 @@ Each estimator call receives a `flop_budget`, a cap on the floating-point operat
 For the per-MLP FLOP budget `B = 2**41 = 2,199,023,255,552`:
 
 1. **Your estimator runs.** Your `predict(mlp, budget)` is called. flopscope counts every floating-point operation analytically (`F_m`); the harness also measures the residual wall-time bucket (`R_m`), the Python-side work that runs outside a flopscope kernel.
-2. **Compute is read off flopscope.** `C_m = F_m`. Only the operations flopscope counted are charged to you; wall-clock time is not converted into FLOPs.
+2. **Compute is read off flopscope.** `C_m = F_m`. Only the operations flopscope counted are charged to you; wall-clock time is not converted into FLOPs, as it was in Phase 1 ([why that changed](../reference/rounds.md#why-phase-2-does-not-price-residual-time)).
 3. **Caps are checked.** If `C_m > B` (or flopscope trips mid-run), if `R_m` exceeds the 400 ms residual cap, or if the 120 s wall-clock cap fires, all predictions for this MLP are replaced with zero vectors and the compute multiplier is forced to `1.0`.
 4. **Raw accuracy is measured.** The final-layer mean squared error (MSE) between your predictions and Monte Carlo ground truth is computed. This is `final_layer_mse`, a diagnostic.
 5. **Score is the budget-adjusted MSE.** The per-MLP score is `final_layer_mse × max(0.1, C_m / B)`: accuracy scaled by the share of budget you used, with the discount capped at 10×.
