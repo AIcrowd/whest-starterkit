@@ -9,31 +9,34 @@ description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "flopscope>=0.11.0,<0.12.0",
-    "whestbench>=0.15.0,<0.16.0",
+    "flopscope>=0.12.0,<0.13.0",
+    "whestbench>=0.16.0,<0.17.0",
 ]
 
-# flopscope is pinned to what the GRADER charges, not to the newest release.
+# These two pins are the Phase 2 pair: whestbench 0.16.0 with flopscope 0.12.0.
 #
-# The evaluator pins `flopscope[server]==0.11.0` and `whestbench@v0.15.0`, so 0.11.0
-# is the accounting a submission is actually scored under today. flopscope 0.12.0 is
-# released, but whestbench 0.15.0 declares `flopscope<0.12.0`, so the kit cannot move
-# to it alone — the resolution is genuinely unsatisfiable, not merely undesirable.
+# 0.16.0 is the first whestbench release whose *defaults* are the graded round —
+# 1024x16, a 2**41 per-MLP budget, a 120 s predict cap, a 5 s setup() cap, and a gated
+# 400 ms residual with lambda = 0. Under 0.15.0 this kit documented those rules while
+# the CLI it installed still enforced Phase 1's, so anyone following the docs was
+# metered against a rulebook the docs did not describe. Closing that gap is why the kit
+# moved.
 #
-# The three move together, in this order:
-#   1. whestbench merges its pending PRs and cuts 0.16.0 (pinning flopscope 0.12.0)
-#   2. the evaluator re-pins to whestbench 0.16.0 + flopscope 0.12.0 (an atomic pair)
-#   3. this kit pins `flopscope>=0.12.0,<0.13.0` and `whestbench>=0.16.0,<0.17.0`
+# The usual order is: whestbench cuts a release naming a flopscope minor, the grader
+# re-pins to that pair, then the kit follows — the kit should never report FLOP counts a
+# submission is not scored on. The grader's move to this pair is in progress at the time
+# of writing, so for a short window the kit leads it. That is safe here only because the
+# meter itself does not move between the two: flopscope 0.12.0 reprices ~40 operations
+# relative to 0.11.0, and none of them are operations these examples use (matmul, tagged
+# einsum, stats.norm, astype, pointwise), so every FLOP figure in docs/ is identical
+# under both. tests/test_flopscope_cost_docs.py is the gate that keeps that true — if it
+# ever fails, this comment is the thing to re-read before changing a number.
 #
-# Pinning the kit ahead of the grader is not the safe direction: it would report FLOP
-# counts a submission is not scored on, which is the same defect as lagging, pointing
-# the other way.
-#
-# Every FLOP figure in docs/ was measured under 0.11.0 and re-checked against both
-# flopscope main @ 0812afe9 and 0.12.0 — all three agree exactly, because the ~41
-# billing fixes in between do not touch the ops these examples use (matmul, tagged
-# einsum, stats.norm, astype, pointwise). So step 3 is a pin bump, not a re-measure —
-# but re-run tests/test_flopscope_cost_docs.py to confirm that still holds.
+# whestbench enforces the relationship from its side:
+# `scripts/bump_starterkit_pin.py --check-deps` fails unless this kit's whestbench floor
+# equals whestbench's own version and the two flopscope specifiers are character-
+# identical. Keep the strings in lockstep with
+# https://github.com/AIcrowd/whestbench/blob/main/pyproject.toml.
 
 [dependency-groups]
 dev = [
