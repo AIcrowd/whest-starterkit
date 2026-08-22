@@ -2,7 +2,13 @@
 
 > [← Documentation](../README.md)
 
-Lookup material. No tutorials here — go to [How-to](../how-to/) for guidance, [Concepts](../concepts/) for the why, [Tutorial](../getting-started/) for the climbing trail.
+Lookup material. No tutorials here. Go to [How-to](../how-to/) for guidance, [Concepts](../concepts/) for the why, [Tutorial](../getting-started/) for the climbing trail.
+
+## The round
+
+| Doc | What it covers |
+|---|---|
+| [rounds.md](rounds.md) | Every round the challenge has run — shape, budget, wall caps, and how residual time was charged — side by side. Start here if a number you read somewhere else does not match what your local run reports, or if you need to reproduce a score from an earlier round. |
 
 ## Estimator API
 
@@ -23,7 +29,7 @@ Lookup material. No tutorials here — go to [How-to](../how-to/) for guidance, 
 
 | Doc | What it covers |
 |---|---|
-| [cli-reference.md](cli-reference.md) | Pointer at the upstream `whest` CLI documentation, plus the flags that make a local run match Phase 2. |
+| [cli-reference.md](cli-reference.md) | Which `whest` subcommand belongs to which stage, the daily submission quota, and the `whest run` limit and dataset flags with their 0.16.0 defaults. Full syntax lives upstream. |
 | [whest-doctor.md](whest-doctor.md) | Each `whest doctor` health check, what it verifies, and how to fix a `WARN` or `FAIL` row. |
 
 ## ➡️ Where to look next

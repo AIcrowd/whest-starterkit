@@ -14,29 +14,33 @@ checks; each one maps to a single command or a one-line confirmation.
 
 ## Correctness
 
-- [ ] **`uv run whest validate --estimator estimator.py`** ends with a
-      green `Status: success` panel. (Catches: wrong shape, non-finite
-      values, broken `setup()`.)
+- [ ] **`uv run whest validate --estimator estimator.py`** — read the
+      **Checks table**, not just the panel header. Every row must say `OK`. A
+      `FAIL` on `setup(context) within the graded cap` still prints
+      `Status: success` and still exits `0`, so a green panel alone is not
+      proof. `--json` is not a substitute: it emits `{"ok": true, …}` with no
+      check rows at all. (Catches: wrong shape, non-finite values, a `setup()`
+      that raises; in the table only, a `setup()` over the 5 s cap.)
 - [ ] **`uv run whest run --estimator estimator.py --runner local --seed 42 --n-mlps 3`**
       produces an `adjusted_final_layer_score` you recognize.
 - [ ] **`uv run whest run --estimator estimator.py --runner subprocess --seed 42 --n-mlps 3`**
       produces a score within ~1% of the local-runner score above.
       (Catches: shared global state, RNG re-seed differences, imports
-      that fail in clean processes — see [FAQ](../troubleshooting/faq.md#my-local-score-is-great-but-my-submission-scores-10x-worse--why).)
+      that fail in clean processes; see [FAQ](../troubleshooting/faq.md#my-local-score-is-great-but-my-submission-scores-10x-worse--why).)
 
 ## Budget hygiene
 
 - [ ] In the run report, **`per_mlp[i].budget_exhausted` is `false`** for
       every MLP. Any `true` means that MLP scored against zeros.
-- [ ] **`flops_used`** is comfortably under `flop_budget` — leaves headroom
+- [ ] **`flops_used`** is comfortably under `flop_budget`. That leaves headroom
       for the harder MLPs in the grader suite. The per-MLP budget is
       `B_m = 2,199,023,255,552` FLOPs (2^41), and what it caps is
       `C_m = F_m`: your analytical FLOP count, nothing else.
 - [ ] **`residual_wall_time_s` stays under 0.4 s on every MLP.** Residual
-      wall time is not priced into your score — it is capped: spend more than
+      wall time is not priced into your score; it is capped. Spend more than
       **400 ms** outside flopscope ops on one MLP and that MLP's prediction
-      is replaced with zeros. The residual exists for plumbing — loops,
-      control flow, bookkeeping — not for computation, and doing meaningful
+      is replaced with zeros. The residual exists for plumbing (loops,
+      control flow, bookkeeping), not for computation, and doing meaningful
       compute there is disqualifiable rather than merely expensive.
       Reproduce the cap locally with `--residual-wall-time-limit 0.4` and
       confirm **`residual_wall_time_exhausted` is `false`**. If you believe
@@ -48,7 +52,7 @@ checks; each one maps to a single command or a one-line confirmation.
       assuming it. Re-run with `--max-threads 1` as a stress test: on the
       grader your solution process gets **2 pinned vCPUs** (the flopscope
       backend has its own 14), and the rules guarantee no particular
-      evaluation hardware — so work that finishes in time locally only
+      evaluation hardware, so work that finishes in time locally only
       because it is spread across your laptop's cores is a bet, not a plan.
       See
       [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
@@ -58,7 +62,7 @@ checks; each one maps to a single command or a one-line confirmation.
       per-layer covariance, count the layers before you ship.
 - [ ] **No internal deadline calibrated to your own machine's clock.** If
       your estimator bails out on `time.time()` and returns a fallback, a
-      slower grading machine can trigger that path silently — you get a
+      slower grading machine can trigger that path silently. You get a
       valid-looking score computed from the degraded answer, with no error
       to tell you. Prefer a budget-based cutoff.
 
@@ -67,19 +71,19 @@ checks; each one maps to a single command or a one-line confirmation.
 Phase 2 states this as a rule, not as a limitation of the sandbox: a
 submission may use the **flopscope client API** and the **pure-Python
 standard library**, and nothing else. Breaching it is disqualifiable, not
-merely broken, and enforcement is retrospective — a submission can be
+merely broken, and enforcement is retrospective: a submission can be
 invalidated after it has been scored. Read the list once even if your
 estimator is fifty lines of `fnp`; the full rule is in
 [Allowed Code](../concepts/allowed-code.md).
 
 - [ ] **No vendored array or math libraries.** Shipping `numpy`, `scipy`, a
       BLAS build, or any part of one inside your submission folder is
-      prohibited, and so is any compiled kernel — `.so`, `.dylib`, `.pyd`, a
+      prohibited, and so is any compiled kernel: `.so`, `.dylib`, `.pyd`, a
       built extension module, generated machine code.
 - [ ] **No FFI.** `ctypes`, `cffi`, and any other route out of the
       interpreter are prohibited.
 - [ ] **No concurrency.** `asyncio`, `threading`, `subprocess`, and
-      `multiprocessing` are prohibited — including the "just to overlap I/O"
+      `multiprocessing` are prohibited, including the "just to overlap I/O"
       uses.
 - [ ] **No compute while a flopscope op is in flight.** Doing your own work
       alongside an in-flight flopscope call is prohibited; it is the same
@@ -89,13 +93,13 @@ estimator is fifty lines of `fnp`; the full rule is in
       accounting.
 - [ ] **Data files are still allowed.** Weights, lookup tables, and
       precomputed artifacts are explicitly permitted, and with `C_m = F_m`
-      they are the cheapest thing you can ship — see
+      they are the cheapest thing you can ship; see
       [ship-weights.md](./ship-weights.md), which also covers where the
       data/code line sits.
 - [ ] **Only sandbox-available imports.** The sandbox enforces the rule from
       the other side: your estimator can import **only** `flopscope` (incl.
       `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`,
-      `MLP`, `SetupContext`), and the standard library — there is no
+      `MLP`, `SetupContext`), and the standard library. There is no
       `requirements.txt` install. Your local venv *has* the rest, so a local
       run won't flag a stray `import`; grep your estimator and route all
       array math through `flopscope.numpy as fnp`. Heavier work (a
@@ -117,24 +121,29 @@ Unsure whether a technique you have in mind is inside the line? Ask
       `fnp.random.default_rng(mlp.seed)`. If your estimator uses randomness
       inside `setup()` (e.g. a fixed random projection basis), seed it from
       `ctx.seed`: `fnp.random.default_rng(ctx.seed)`. Custom seeds at either
-      site may be disqualified for prize eligibility — see
+      site may be disqualified for prize eligibility; see
       [Estimator Contract: Reproducibility](../reference/estimator-contract.md#reproducibility-under-the-grader-seed).
-      Do **not** call `fnp.random.seed(...)` — use `default_rng(...)` for an
+      Do **not** call `fnp.random.seed(...)`; use `default_rng(...)` for an
       isolated `Generator`.
 
 ## Sanity
 
 - [ ] `predict()` returns the **post-ReLU** mean for **every** layer,
-      shape `(mlp.depth, mlp.width)` — `(16, 1024)` at the Phase 2 shape.
+      shape `(mlp.depth, mlp.width)`, `(16, 1024)` at the Phase 2 shape.
       Off-by-one (returning depth+1 or depth-1 layers) is the most common
       silent bug, and a hard-coded `(32, 256)` left over from Phase 1 is the
       second.
 - [ ] If you ship a `setup()`: it's idempotent and stays well under the
-      grader's hard **5 s** setup budget. `setup()` runs **once**, and
-      overrunning those 5 s fails the whole submission with `SETUP_TIMEOUT`
-      — not one MLP, all 100. Heavy precompute belongs offline: ship the
-      artifact next to your estimator and load it (see
-      [how-to/ship-weights.md](./ship-weights.md)).
+      grader's hard **5 s** setup budget. `setup()` runs once per worker
+      process (roughly **5-15 times** per submission, not once), and each run
+      gets its own 5 s, so anything expensive is paid for again on every
+      worker. Overrunning it fails the whole submission with `SETUP_TIMEOUT`:
+      not one MLP, all 100. Confirm the cap you ran under in
+      `run_config.setup_timeout_s` (it reads `5.0`), and rehearse a tighter one
+      with `--setup-timeout 2.5` to see your headroom; over the cap you get
+      `Error [setup:SETUP_TIMEOUT]: setup exceeded timeout (…)`. Heavy
+      precompute belongs offline: ship the artifact next to your estimator and
+      load it (see [how-to/ship-weights.md](./ship-weights.md)).
 - [ ] No `print()` left in `predict()`. The grader runs many MLPs;
       stdout flooding is a reliable way to lose `residual_wall_time_s`.
 
@@ -154,7 +163,7 @@ Prefer to inspect the artifact first? Build it with
 then `uv run whest submit submission.tar.gz`.
 
 Shipping weights or extra modules? Package the **folder** instead
-(`uv run whest package --estimator . --output submission.tar.gz`) — it lists every
+(`uv run whest package --estimator . --output submission.tar.gz`). It lists every
 file and asks you to confirm, and credential files like `.env` are never
 included. See [Ship Weights](./ship-weights.md).
 

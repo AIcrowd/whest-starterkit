@@ -6,7 +6,7 @@ contract is announced here.
 
 The kit is not published to PyPI and has never carried a version tag, so entries are
 dated and grouped by the dependency baseline they shipped against. **Unreleased** is
-what has landed on `main` since the last dated entry — read it before you tune anything.
+what has landed on `main` since the last dated entry. Read it before you tune anything.
 
 ## Unreleased
 
@@ -14,19 +14,19 @@ what has landed on `main` since the last dated entry — read it before you tune
 
 - **Phase 2 is the live round.** The graded shape is now **width 1024 x depth 16**
   (Phase 1 was 256 x 32), so `predict()` returns a `(16, 1024)` array. The per-MLP FLOP
-  budget `B_m` is **`2**41` = 2,199,023,255,552 FLOPs** — 8.085x the Phase 1 budget of
+  budget `B_m` is **`2**41` = 2,199,023,255,552 FLOPs**, 8.085x the Phase 1 budget of
   ~2.72e11. Effective compute is now **`C_m = F_m`**: residual wall time is no longer
   priced and the residual-penalty rate λ does not apply in Phase 2. A Phase 1 estimator
   that reads `mlp.width` / `mlp.depth` still runs, but its cost and its score both move;
   anything that hardcoded the Phase 1 shape or budget now returns the wrong array.
 - **Residual wall time is capped, not billed.** A hard cap of **400 ms per MLP** replaces
   the λ pricing; exceeding it substitutes zero predictions for that MLP. The residual
-  bucket is for plumbing, not for computation — meaningful compute there is
+  bucket is for plumbing, not for computation. Meaningful compute there is
   disqualifiable, not a cheap trade. See
   [docs/concepts/allowed-code.md](docs/concepts/allowed-code.md).
 - **Phase 2 limits.** Wall-clock cap **120 s per MLP** (was 60 s). Solution process memory
-  **8 GB** (the Phase 1 box was 64 GB). `setup()` is capped at **5 s** and runs once —
-  exceeding it fails the **whole submission**, not one MLP. **10 submissions per team per
+  **8 GB** (the Phase 1 box was 64 GB). `setup()` is capped at **5 s** and runs once.
+  Exceeding it fails the **whole submission**, not one MLP. **10 submissions per team per
   UTC day** (was 50). Unchanged from Phase 1: 2 vCPUs pinned to the solution with 14 to
   the flopscope backend, a 100-MLP test suite (50 public + 50 holdout), and the score
   shape `s_m = MSE_final,m * max(0.1, C_m / B_m)`.
@@ -44,27 +44,39 @@ what has landed on `main` since the last dated entry — read it before you tune
 - **docs**: add [Allowed Code](docs/concepts/allowed-code.md) — what a submission may use,
   the prohibition list, the data-file carve-out, what residual time is for, and how the
   rule is enforced.
+- **docs**: add [Competition Rounds](docs/reference/rounds.md) — every round the challenge
+  has run, side by side, with the flags needed to reproduce a score from an earlier one.
 - **docs**: add this changelog, so a parameter change in the kit has somewhere to be
   announced.
-- **deps**: pin `whestbench>=0.15.0,<0.16.0` and `flopscope>=0.11.0,<0.12.0`. The kit pins
-  the meter the grader charges, not the newest release: the evaluator pins
-  `flopscope[server]==0.11.0`, so 0.11.0 is the accounting a submission is actually scored
-  under today. flopscope 0.12.0 is released, but whestbench 0.15.0 declares
-  `flopscope<0.12.0`, so the three move together — whestbench cuts a release pinning
-  0.12.0, the evaluator re-pins to that pair, and the kit follows. Pinning the kit ahead of
-  the grader would report FLOP counts a submission is not scored on, which is the same
-  defect as lagging, pointing the other way. See the note in `pyproject.toml` for the
-  current step.
+- **deps**: pin `whestbench>=0.16.0,<0.17.0` and `flopscope>=0.12.0,<0.13.0`. whestbench 0.16.0
+  is the first release whose *defaults* are the graded Phase 2 round (1024x16, `2**41`, a
+  120 s predict cap, a 5 s `setup()` cap and a gated 400 ms residual), so under 0.15.0 the kit
+  documented rules the local CLI did not enforce. flopscope 0.12.0 reprices ~40 operations
+  relative to 0.11.0, but none that these examples touch: `matmul`, tagged `einsum`,
+  `as_symmetric`/`is_symmetric`, `fill_diagonal`, `stats.norm.*` and `astype` bill identically
+  under both, so every FLOP figure in `docs/` is unchanged (`tests/test_flopscope_cost_docs.py`
+  is the gate). The evaluator is still on `whestbench@v0.15.0` + `flopscope[server]==0.11.0`;
+  its open PR #265 moves it to this pair.
+- **harness (whestbench 0.16.0)**: the local CLI now defaults to the graded round, so local
+  numbers are the grader's numbers. New/changed on `whest run`: `--setup-timeout SECONDS`
+  (new; default 5.0, and breaching it fails the *whole* submission, so rehearse it),
+  `--wall-time-limit` default 60.0 -> 120.0, and `--no-residual-wall-time-limit` (new; needed
+  only to re-score a Phase 1 round). `whestbench.budget.ROUNDS` / `CURRENT_ROUND` expose every
+  round's settings as data.
+- **harness (whestbench 0.16.0), scoring-affecting**: a subprocess worker that dies mid-suite is
+  now replaced and the suite continues; previously one crash failed every remaining MLP, so a
+  crashy submission's suite score improves. MLP weights are float32 on every construction path.
 - **local_engine**: re-default `compare_against_monte_carlo` to the real Phase 2 budget —
   `estimator_budget=2**41`, and a `5e12` sampling budget applied per sample-count row.
 
 ### Docs
 
 - Phase 2 content pass across `docs/` and `examples/`: every cost figure re-measured at
-  1024 x 16 against whestbench 0.15.0 and flopscope 0.11.0. The bundled examples now cost
-  **86,639,616 FLOPs (0.0039% of `B_m`)** for `02_mean_propagation` and
+  1024 x 16 against whestbench 0.16.0 and flopscope 0.12.0 — and identical under flopscope
+  0.11.0, since 0.12.0's repricing misses every operation these examples use. The bundled
+  examples now cost **86,639,616 FLOPs (0.0039% of `B_m`)** for `02_mean_propagation` and
   **51,709,240,799 FLOPs (2.3515% of `B_m`)** for `03_covariance_propagation` — a 597x
-  ratio between them, up from ~160x at the Phase 1 shape, because the covariance step is
+  ratio between them, up from 137.6x at the Phase 1 shape, because the covariance step is
   cubic in width.
 
 ## 2026-08-12
@@ -226,5 +238,5 @@ what has landed on `main` since the last dated entry — read it before you tune
   `estimator.py` template, the five-stage tutorial ladder, the reference / how-to /
   troubleshooting doc tree, and CI that runs every command the README prints.
 
-Earlier history lives in `whestbench-public`, from which the examples and docs were
-imported with their history preserved.
+Earlier history for the examples and docs predates this repository; it was imported
+with history preserved when the kit was split out into its own repo.

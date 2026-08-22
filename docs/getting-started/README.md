@@ -2,17 +2,17 @@
 
 > [← Documentation](../README.md)
 
-The tutorial trail. Each stage is a single command on the same `estimator.py`, with the harness adding one more level of formality at each step. Read top-to-bottom: Stage 4's subprocess isolation catches bugs that Stage 3 hides, so skipping ahead is rarely worth it.
+The tutorial trail. Each stage is a single command on the same `estimator.py`, with the harness adding one more level of formality at each step. Read top-to-bottom. Stage 4 runs your estimator the way the grader does, through a pipe in a separate process, so it surfaces packaging and import bugs Stage 3 cannot.
 
 | Stage | Command | What it adds | Doc |
 |---|---|---|---|
 | 1 | `uv run python estimator.py` | The math. Iterate locally with `flopscope` and `local_engine.py`; no `whest` CLI required. | [stage-1-standalone.md](stage-1-standalone.md) |
-| 2 | `uv run whest validate --estimator estimator.py` | Contract correctness — class resolved, optional `setup()` runs, shape, finite values. | [stage-2-validate.md](stage-2-validate.md) |
+| 2 | `uv run whest validate --estimator estimator.py` | Contract correctness: class resolved, optional `setup()` runs, shape, finite values. | [stage-2-validate.md](stage-2-validate.md) |
 | 3 | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 --split mini --runner local` | Real scoring against the public Mini split (100 MLPs), in-process (so `pdb` works). | [stage-3-run-local.md](stage-3-run-local.md) |
-| 4 | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 --split mini --runner subprocess` | Subprocess isolation — catches state-bleed between MLPs, dirty imports, RNG re-use. | [stage-4-run-subprocess.md](stage-4-run-subprocess.md) |
+| 4 | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 --split mini --runner subprocess` | Process isolation — the grader's transport. Catches dirty imports, stdout writes, and (on Linux) runaway memory. State does **not** reset between MLPs: one worker serves the suite. | [stage-4-run-subprocess.md](stage-4-run-subprocess.md) |
 | 5 | `uv run whest package --estimator estimator.py --output submission.tar.gz` | Package the submission tarball for AIcrowd. | [stage-5-package.md](stage-5-package.md) |
 
-Each stage doc carries an "Expected outcome" callout so you know what success looks like before climbing — and a "Ladder" strip at the top so you always know where you are.
+Each stage doc carries an "Expected outcome" callout so you know what success looks like before climbing, and a "Ladder" strip at the top so you always know where you are.
 
 ## ➡️ Where to look next
 

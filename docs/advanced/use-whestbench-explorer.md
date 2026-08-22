@@ -19,7 +19,7 @@ The Explorer is a separate, hosted React app:
 
 Open the hosted URL, generate an MLP, propagate inputs, and inspect activations layer-by-layer. There's nothing to install.
 
-> The Explorer used to ship inside `whestbench` as a `whest visualizer` subcommand. As of whestbench commit `28c203f` (May 2026), it lives in its own repo with auto-deploy to GitHub Pages — `whest visualizer` no longer exists.
+> The Explorer used to ship inside `whestbench` as a `whest visualizer` subcommand. As of whestbench commit `28c203f` (May 2026), it lives in its own repo with auto-deploy to GitHub Pages; `whest visualizer` no longer exists.
 
 ## ✅ Expected outcome
 
@@ -36,7 +36,7 @@ An interactive view of network structure, layer behavior, and estimator-vs-groun
    uv run whest run --estimator estimator.py --runner local
    ```
 
-The Explorer is for intuition — it is not a scoring oracle. Official scoring still comes from `whest run`.
+The Explorer is for intuition. Official scoring still comes from `whest run`.
 
 ## Interpreting the visualization
 
@@ -49,7 +49,7 @@ The Explorer shows neuron activations across layers:
 Patterns to look for:
 
 - **Error grows at deep layers:** your method loses accuracy as correlations accumulate through layers.
-- **Sudden drops to zero:** ReLU is killing neuron groups — your variance estimates may be too narrow.
+- **Sudden drops to zero:** ReLU is killing neuron groups; your variance estimates may be too narrow.
 - **Uniform predictions:** your estimator may not be exploiting the weight structure.
 
 ## ➡️ Next step

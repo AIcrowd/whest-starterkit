@@ -7,7 +7,7 @@ If your run errored, your score regressed, or your local and remote scores disag
 | Doc | When to read |
 |---|---|
 | [common-participant-errors.md](common-participant-errors.md) | Symptom → cause → fix-now → verify, for the most common failures (wrong shape, NaN/Inf, exceeded budget, the 400 ms residual wall-time cap, signature mismatches, import errors, numeric blow-up in deep networks, whole-submission timeout). |
-| [faq.md](faq.md) | Quick answers — can I use scipy? what is `residual_wall_time_limit`? how many submissions do I get a day? is there a limit on total evaluation time? why does my submission score worse than my local run? |
+| [faq.md](faq.md) | Quick answers: can I use scipy? what is `residual_wall_time_limit`? how many submissions do I get a day? is there a limit on total evaluation time? why does my submission score worse than my local run? |
 
 ## ➡️ Where to look next
 

@@ -2,7 +2,9 @@
 
 The starter kit teaches you to write a Python estimator that predicts
 per-neuron mean activations of a randomly-initialized ReLU MLP under a
-FLOP budget. **Lower MSE per FLOP wins.** New here? See the [60-second
+FLOP budget. **Score = `final_layer_mse × max(0.1, C_m/B_m)`; lower wins**:
+accuracy on the last layer, times the budget fraction you spent, floored at
+10%. New here? See the [60-second
 overview](../README.md#-60-second-overview) in the root README, then
 jump in below.
 
@@ -13,7 +15,7 @@ jump in below.
 | 🪜 | **[Tutorial](getting-started/)** | The 5-stage ladder. Run code, climb step by step. | [Stage 1: Iterate locally](getting-started/stage-1-standalone.md) |
 | 📖 | **[Concepts](concepts/)** | Why the challenge exists, what's being measured, how the math works. | [Problem Setup](concepts/problem-setup.md) |
 | 🔧 | **[How-to](how-to/)** | Recipes for specific tasks: write, debug, optimize, submit. | [Write an Estimator](how-to/write-an-estimator.md) |
-| 📚 | **[Reference](reference/)** | Exact contracts, field schemas, CLI options, attribute lists. | [Estimator Contract](reference/estimator-contract.md) |
+| 📚 | **[Reference](reference/)** | Exact contracts, field schemas, CLI options, attribute lists. | [Competition Rounds](reference/rounds.md), then [Estimator Contract](reference/estimator-contract.md) |
 | 🚑 | **[Troubleshooting](troubleshooting/)** | When something breaks. | [Common Participant Errors](troubleshooting/common-participant-errors.md) |
 | 🔬 | **[Advanced](advanced/)** | Profiler and the hosted Explorer visualizer. | [Profile Simulation](advanced/profile-simulation.md) |
 
@@ -33,6 +35,10 @@ Pick the line that sounds like you.
 
 [debugging-checklist](how-to/debugging-checklist.md) → [common-participant-errors](troubleshooting/common-participant-errors.md) → [FAQ: local vs remote score mismatch](troubleshooting/faq.md#my-local-score-is-great-but-my-submission-scores-10x-worse--why) → [whest-doctor](reference/whest-doctor.md).
 
+### "The numbers I'm reading don't match the numbers I'm getting."
+
+[rounds](reference/rounds.md) (which rulebook you're under, and why a pre-Phase-2 number doesn't compare) → [scoring-model](concepts/scoring-model.md) → [score-report-fields](reference/score-report-fields.md).
+
 ### "I'm about to submit."
 
 [pre-submission-checklist](how-to/pre-submission-checklist.md) → [Stage 5](getting-started/stage-5-package.md) → [score-report-fields](reference/score-report-fields.md) (so you can read the leaderboard report).
@@ -51,12 +57,18 @@ Pick the line that sounds like you.
 |---|---|
 | Understand the math | [concepts/problem-setup.md](concepts/problem-setup.md), [concepts/scoring-model.md](concepts/scoring-model.md), [concepts/ground-truth.md](concepts/ground-truth.md) |
 | Know what success looks like at each stage | the **Expected outcome** callout at the bottom of each [stage doc](getting-started/), and the [example benchmarks](concepts/scoring-model.md#example-estimator-benchmarks) |
-| Improve my score (0.5 → 0.005) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
-| Push from 0.005 → 0.0005 | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
+| Improve my score (0.9 → 2e-4, the mean-propagation rung) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
+| Push from 2e-4 → 4e-6 (the covariance rung) and beyond | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
 | Debug a broken estimator | [troubleshooting/common-participant-errors.md](troubleshooting/common-participant-errors.md), [troubleshooting/faq.md](troubleshooting/faq.md), [how-to/debugging-checklist.md](how-to/debugging-checklist.md) |
 | Know what code I'm allowed to ship | [concepts/allowed-code.md](concepts/allowed-code.md) |
+| Ship precomputed weights or multiple modules | [how-to/ship-weights.md](how-to/ship-weights.md) |
+| Work out which round's rules apply, or reproduce an earlier round's score | [reference/rounds.md](reference/rounds.md) |
 | Sanity-check before submitting | [how-to/pre-submission-checklist.md](how-to/pre-submission-checklist.md) |
 | Look up the precise contract | [reference/estimator-contract.md](reference/estimator-contract.md), [reference/score-report-fields.md](reference/score-report-fields.md), [reference/local-engine-api.md](reference/local-engine-api.md), [reference/cli-reference.md](reference/cli-reference.md) |
 | Diagnose my install / environment | [reference/whest-doctor.md](reference/whest-doctor.md) |
 | Ask a rules question, report a suspected FLOP mispricing, or ask about the 400 ms residual cap | email <arc-whestbench@aicrowd.com> — see [FAQ](troubleshooting/faq.md#who-do-i-contact-about-a-rules-question-or-a-flop-that-looks-mispriced) |
 | Profile or visualize | [advanced/use-whestbench-explorer.md](advanced/use-whestbench-explorer.md), [advanced/profile-simulation.md](advanced/profile-simulation.md) |
+
+Figures are raw `final_layer_mse` on the `mini` split; the ranked score is this ×
+`max(0.1, C/B)`, which for every bundled example is the 0.1 floor. See
+[concepts/scoring-model.md](concepts/scoring-model.md#example-estimator-benchmarks).

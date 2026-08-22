@@ -11,12 +11,13 @@ Use this page to interpret `whest run` output fields.
 Typical report sections include:
 
 - `schema_version`
+- `whestbench_version` — the whestbench that produced this report (e.g. `"0.16.0"`).
 - `mode`
 - `run_meta`
 - `run_config`
 - `run_config.seed` (always present; `null` when `--seed` was omitted; the integer value passed to `--seed` otherwise). When set, this is also the value forwarded to `SetupContext.seed` for the estimator's `setup()` call. See [Estimator Contract: Reproducibility](./estimator-contract.md#reproducibility-under-the-grader-seed).
 - `run_config.dataset` (present when `--dataset` is used)
-- `run_config.{width, depth, n_mlps, flop_budget, wall_time_limit_s, residual_wall_time_limit_s}` — the shape and the limits this run actually applied. Check them first when a local score doesn't line up with the grader: the CLI's own defaults are not the Phase 2 values, so a run you didn't pass flags to was scored under different limits. See [Estimator Contract: Phase 2 limits](./estimator-contract.md#phase-2-limits).
+- `run_config.{n_mlps, width, depth, flop_budget, setup_timeout_s, wall_time_limit_s, residual_wall_time_limit_s, lambda_flops_per_second}` — the shape and the limits this run actually applied. Since whestbench 0.16.0 the CLI defaults *are* the graded values, so an unflagged local run is metered under the same rules as the grader; read these fields to confirm which round's rulebook produced an older report, or to check a run where you did pass flags. The one default that is **not** a graded value is `--n-samples`: dataset-less runs draw 200,000 ground-truth Monte-Carlo samples per MLP, against the 1e9 draws baked into the graded dataset, and `--n-samples` is not recorded in `run_config`. See [Estimator Contract: Phase 2 limits](./estimator-contract.md#phase-2-limits).
 - `results`
 
 ## Host metadata
@@ -32,13 +33,14 @@ Inside `results`:
 | `adjusted_final_layer_score` | **Leaderboard metric.** Suite mean of per-MLP `adjusted_final_layer_score = final_layer_mse × max(0.1, C_m / B)`; failure → × 1.0. Lower is better. |
 | `final_layer_mse` | Raw final-layer MSE averaged across MLPs (no budget multiplier). Diagnostic. |
 | `all_layers_mse` | Raw all-layers MSE averaged across MLPs (no budget multiplier). Diagnostic — reveals where approximation error accumulates. |
+| `per_layer_mse` | Per-layer MSE averaged across MLPs. `list[float]` of length `depth` (16 in Phase 2). `per_layer_mse[-1]` is `final_layer_mse`, and the mean of the list is `all_layers_mse` (to float32 precision). Shows *where* your approximation degrades: a rising tail means error compounds with depth. |
 | `best_mlp_adjusted_final_layer_score` | Minimum per-MLP `adjusted_final_layer_score` across the suite. |
 | `worst_mlp_adjusted_final_layer_score` | Maximum per-MLP `adjusted_final_layer_score` across the suite. |
 | `mean_score_multiplier` | Mean of per-MLP `max(0.1, C_m / B)` (1.0 on failure). Bounded `[0.1, 1.0]`. |
 | `mean_compute_utilization` | Mean of per-MLP `C_m / B`, **unclamped** — can exceed 1.0 when an MLP busted the cap. |
 | `mean_effective_compute` | Mean of per-MLP `effective_compute` (`C_m`). In Phase 2 `C_m = F_m`, so this is the mean of `flops_used`. |
 | `n_failed_mlps` | Count of MLPs with any failure flag or `error_code` set. |
-| `failure_breakdown` | Dict with independent counts per failure flag: `budget_exhausted`, `time_exhausted`, `residual_wall_time_exhausted`, `combined_budget_exhausted`, `error`. Sums can exceed `n_failed_mlps` because one MLP can carry multiple flags. `combined_budget_exhausted` is `0` on the Phase 2 grader, but can be non-zero locally — see [Local reports still apply λ](#local-reports-still-apply-λ). |
+| `failure_breakdown` | Dict with independent counts per failure flag: `budget_exhausted`, `time_exhausted`, `residual_wall_time_exhausted`, `combined_budget_exhausted`, `error`. Sums can exceed `n_failed_mlps` because one MLP can carry multiple flags. `combined_budget_exhausted` is `0` under the current round's λ = 0, since `C_m = F_m` is already capped by flopscope; it can only fire on a report re-scored with a non-zero `--lambda-flops-per-second`. |
 | `breakdowns` | Aggregate FLOP/time breakdowns keyed by section name. Includes `sampling` and `estimator`. |
 | `per_mlp` | Array of per-MLP detail records (see below) |
 
@@ -49,10 +51,11 @@ Each entry in `per_mlp`:
 | Field | Type | Description |
 |---|---|---|
 | `mlp_index` | `int` | Index of the MLP in the evaluation set |
+| `mlp_name` | `str` | Deterministic human-readable slug for this MLP (e.g. `"megan-chang"`). Use it as a stable label in your own logs. |
 | `flops_used` | `int` | Total FLOPs used by your estimator for this MLP (`F_m`) |
-| `effective_compute` | `float` | `C_m` — the compute your score is scaled by. Phase 2 scores `C_m = F_m`. **Locally this still shows `F_m + λ·R_m`** — see [Local reports still apply λ](#local-reports-still-apply-λ) below. |
+| `effective_compute` | `float` | `C_m = F_m + λ·R_m`. With the round's default λ = 0 this is exactly equal to `flops_used`; check `run_config.lambda_flops_per_second` if it isn't. |
 | `adjusted_final_layer_score` | `float` | `s_m` — the per-MLP budget-adjusted score that flows into the suite mean. |
-| `combined_budget_exhausted` | `bool` | Whether the post-hoc check `C_m > B` fired (predictions zeroed if true). Phase 2 scores `C_m = F_m`, which flopscope already caps at `B`, so on the grader there is nothing left for this to catch. **Locally it can still fire**, because the local harness keeps the Phase-1 λ term — see below. |
+| `combined_budget_exhausted` | `bool` | Whether the post-hoc check `C_m > B` fired (predictions zeroed if true). Phase 2 scores `C_m = F_m`, which flopscope already caps at `B`, so on the grader there is nothing left for this to catch. |
 | `budget_exhausted` | `bool` | Whether the estimator exceeded the FLOP budget (predictions zeroed if true) |
 | `time_exhausted` | `bool` | Whether the estimator exceeded the wall-clock limit for this MLP — 120 s on the grader (predictions zeroed if true) |
 | `residual_wall_time_exhausted` | `bool` | Whether WhestBench judged residual wall time to exceed `residual_wall_time_limit_s` — 400 ms on the grader (predictions zeroed if true) |
@@ -62,15 +65,16 @@ Each entry in `per_mlp`:
 | `residual_wall_time_s` | `float` | Wall time inside the predict context that is neither flopscope backend execution nor flopscope dispatch — i.e. participant Python (loops, control flow), GC, and Python-callback op time. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual. Gated against the 400 ms residual cap; it does not enter the score (Phase 1 charged it as `λ·R_m`). |
 | `final_layer_mse` | `float` | MSE of your final-layer predictions vs ground truth (no multiplier) |
 | `all_layers_mse` | `float` | MSE of your all-layer predictions vs ground truth (no multiplier) |
+| `per_layer_mse` | `list[float]` | Per-layer MSE for this MLP, length `depth`. |
 | `breakdowns` | `dict \| null` | Per-MLP breakdown container. Currently includes estimator-only data under `estimator`. Sampling is aggregate-only. |
+| `traceback` | `str \| null` | **Always present**; `null` on a clean run. Non-null when this MLP produced no real predictions — an estimator exception, or budget/time exhaustion. Forwarded from the worker under `--runner subprocess`/`server`, captured in-process otherwise. Test `traceback is not None`, not key presence. |
 
 If the estimator raised an error, the entry also includes:
 
 | Field | Type | Description |
 |---|---|---|
 | `error` | `str` \| `dict` | Legacy string message, or structured object: `{"message": str, "details": object}` |
-| `error_code` | `str` | Stable identifier: `PREDICT_ERROR` for a `RunnerError`, or the Python exception class name otherwise |
-| `traceback` | `str \| null` | Formatted traceback string for the failure. Forwarded from the subprocess worker when `--runner subprocess`/`server` is used; captured locally otherwise. |
+| `error_code` | `str` | The `RunnerError`'s own code (e.g. `PREDICT_ERROR`) when the failure crossed a runner boundary, or the Python exception class name when it was raised in-process. **Not stable across runners**: the same wrong-shape return reports `"ValueError"` under `--runner local` (the default) and `"PREDICT_ERROR"` under `--runner subprocess`. Branch on `error.details` or on the boolean failure flags, not on this string. |
 
 For structured `error` objects, `error.details` includes:
 
@@ -99,33 +103,18 @@ Where `F_m` is the analytical FLOPs counted by flopscope (`flops_used`) and `B` 
 > residual). Phase 2 drops `λ`: residual wall time is capped at 400 ms per MLP
 > instead of billed, so the scored `C_m` is just `F_m`.
 
-### Local reports still apply λ
+### Which cost model produced this report
 
-`whest run` on the pinned whestbench (0.15.0) has **not** yet had λ removed — it
-still computes `C_m = F_m + λ·R_m` with `λ = 1e11`, and it does not record λ in
-`run_config`, so the report does not tell you which cost model produced it. The
-gap is easy to see and easy to misread:
+Every report records the regime it was scored under.
+`run_config.lambda_flops_per_second` is `0.0` in the current round, so
+`C_m = F_m` and `effective_compute` equals `flops_used` exactly, locally and on
+the grader. A non-zero value means the run re-scored an earlier priced round
+(`--lambda-flops-per-second 1e11 --no-residual-wall-time-limit
+--wall-time-limit 60 --flop-budget 272000000000`), in which case
+`effective_compute = F_m + λ·R_m` and `combined_budget_exhausted` can fire on
+residual time alone.
 
-```text
-flops_used                20,333,056
-effective_compute        825,274,476     <- F_m + 1e11 x 0.0080 s of residual
-residual_wall_time_s           0.0080
-```
-
-That is a **40× gap on an estimator using 0.001% of the budget**, and it is an
-artifact of the local harness, not of your estimator. Until whestbench ships the
-Phase 2 cost model:
-
-- read **`flops_used`**, not `effective_compute`, as the number Phase 2 scores you on;
-- treat a local `combined_budget_exhausted` as a local-only artifact — it is the
-  λ term pushing `C_m` past `B`, which cannot happen when `C_m = F_m`;
-- do not tune against `effective_compute` or `mean_compute_utilization` locally,
-  since both carry the λ term.
-
-Use `--residual-wall-time-limit 0.4` to exercise the cap that *does* apply in
-Phase 2. Both λ-era fields stay in the schema so Phase 1 reports still parse.
-
-> **Why "score" not "MSE"?** Once `final_layer_mse` is multiplied by the budget factor `max(0.1, C_m/B)`, the result is no longer a mean-squared-error — it is a derived ranking score (denoted `s_m`). The `_score` suffix in `adjusted_final_layer_score` reflects this; the raw diagnostics `final_layer_mse` and `all_layers_mse` keep the `_mse` suffix because they remain genuine MSEs.
+> **Why "score" not "MSE"?** Once `final_layer_mse` is multiplied by the budget factor `max(0.1, C_m/B)`, the result is no longer a mean-squared-error; it is a derived ranking score (denoted `s_m`). The `_score` suffix in `adjusted_final_layer_score` reflects this; the raw diagnostics `final_layer_mse` and `all_layers_mse` keep the `_mse` suffix because they remain genuine MSEs.
 
 ## Time decomposition
 
@@ -148,8 +137,33 @@ these places:
 
 - `results.breakdowns.estimator` - aggregated estimator breakdown across all evaluated MLPs
 - `results.breakdowns.sampling` - aggregated sampling breakdown across all evaluated MLPs
-- `results.breakdowns.sampling.time_source` - `"bake"` for `--dataset` runs (whestbench ≥ 0.13): the sampling timings were measured on the dataset bake machine, not in your run. The run-report panel says the same and no longer shows a sampling Residual Wall Time row — the estimator panel's residual row is the only live-measured residual time, and the only one the 400 ms cap is applied to.
+- `results.breakdowns.sampling.time_source` - `"bake"` for `--dataset` runs (whestbench ≥ 0.13): the sampling timings were measured on the dataset bake machine, not in your run. The run-report panel says the same and no longer shows a sampling Residual Wall Time row; the estimator panel's residual row is the only live-measured residual time, and the only one the 400 ms cap is applied to.
 - `results.per_mlp[].breakdowns.estimator` - one normalized estimator breakdown per MLP
+
+Each breakdown object has this shape:
+
+```
+{ flop_budget, flops_used, flops_remaining,
+  wall_time_s, flopscope_backend_time_s, flopscope_overhead_time_s, residual_wall_time_s,
+  by_namespace: {
+    "estimator.estimator-client": {
+      flops_used, calls, flopscope_backend_time_s, flopscope_overhead_time_s,
+      operations: {
+        "matmul": { flop_cost, calls, flopscope_backend_time_s, flopscope_overhead_time_s },
+        ...
+      }
+    }, ...
+  } }
+```
+
+`operations` is where your budget actually went. Rank it with:
+
+```bash
+uv run python -c "import json; ops = json.load(open('report.json'))['results']['breakdowns']['estimator']['by_namespace']['estimator.estimator-client']['operations']; [print(f\"{v['flop_cost']:>15,} {v['calls']:>6}  {k}\") for k, v in sorted(ops.items(), key=lambda kv: -kv[1]['flop_cost'])]"
+```
+
+Per-namespace entries carry only the two flopscope timings; `residual_wall_time_s`
+exists at the breakdown top level only.
 
 Namespace normalization rules:
 
@@ -170,16 +184,16 @@ MLPs.
 ## Interpretation guide
 
 - `final_layer_mse` is your most actionable accuracy diagnostic — it directly drives `adjusted_final_layer_score`.
-- `mean_compute_utilization` and `mean_score_multiplier` together tell you whether you're hitting the **0.1 multiplier floor**. If `mean_compute_utilization` is well below 0.1, you have headroom to spend more compute "for free" (more compute will not hurt your score until utilization rises above 0.1). Both are derived from `effective_compute`, so locally they inherit the λ term — see [Local reports still apply λ](#local-reports-still-apply-λ).
+- `mean_compute_utilization` and `mean_score_multiplier` together tell you whether you're hitting the **0.1 multiplier floor**. If `mean_compute_utilization` is well below 0.1, you have headroom to spend more compute "for free" (more compute will not hurt your score until utilization rises above 0.1).
 - `n_failed_mlps` and `failure_breakdown` should be `0` and all-zeros for a healthy submission. Any failure (budget bust, time bust, exception, wrong shape, non-finite) means the affected MLP scored `final_layer_mse_m × 1.0` (no compute discount).
 - `budget_exhausted` is the first thing to check if your score is unexpectedly high — exceeded budget means your predictions were zeroed.
 - `time_exhausted` means the estimator crossed the wall-clock limit configured through `wall_time_limit_s` / `--wall-time-limit` — 120 s per MLP on the grader.
 - `residual_wall_time_exhausted` means residual wall time crossed WhestBench's `residual_wall_time_limit_s` / `--residual-wall-time-limit` — 400 ms per MLP on the grader.
-- `combined_budget_exhausted` fires when the post-hoc check `C_m > B` trips because residual wall time pushed effective compute past the cap. Phase 2 scores `C_m = F_m`, so on the grader there is nothing left for it to catch — but locally the λ term survives, so a local `true` here is a harness artifact rather than a real bust. See [Local reports still apply λ](#local-reports-still-apply-λ).
-- `flops_used` vs `flop_budget` is the whole budget story in Phase 2: the FLOPs flopscope counted are exactly what sets your multiplier. Read `flops_used`, not `effective_compute` — locally the latter still carries the λ term.
+- `combined_budget_exhausted` fires when the post-hoc check `C_m > B` trips because residual wall time pushed effective compute past the cap. Phase 2 scores `C_m = F_m`, so there is nothing left for it to catch.
+- `flops_used` vs `flop_budget` is the whole budget story in Phase 2: the FLOPs flopscope counted are exactly what sets your multiplier. `effective_compute` is the same number while λ = 0.
 - High `flopscope_backend_time_s` relative to wall: numpy compute is the dominant cost. Healthy for a numpy-heavy estimator.
 - High `flopscope_overhead_time_s` relative to wall: many small ops are paying the per-call dispatch tax. Consider batching with larger numpy primitives.
-- High `residual_wall_time_s` relative to wall: participant Python is the bottleneck (tight loops, per-element attribute access, calls into uninstrumented libraries). This bucket costs you no FLOPs, but it is capped at 400 ms per MLP and crossing the cap zeroes that MLP's predictions. It is there for plumbing — moving results around between flopscope calls — and doing real numerical work in it is a rules violation, not a purchase; see [Estimator Contract](./estimator-contract.md#phase-2-limits).
+- High `residual_wall_time_s` relative to wall: participant Python is the bottleneck (tight loops, per-element attribute access, calls into uninstrumented libraries). This bucket costs you no FLOPs, but it is capped at 400 ms per MLP and crossing the cap zeroes that MLP's predictions. It is there for plumbing (moving results around between flopscope calls), and doing real numerical work in it is a rules violation, not a purchase; see [Estimator Contract](./estimator-contract.md#phase-2-limits).
 - `adjusted_final_layer_score` is the budget-adjusted score (≤ raw `final_layer_mse` mean since the multiplier is ≤ 1.0). A value close to the raw mean means you used near-full budget; a value close to 1/10 of the raw mean means you used ≤10% of budget and got the maximum discount.
 
 ## Dataset traceability fields
@@ -192,7 +206,7 @@ When using `whest run --dataset`, the report includes `run_config.dataset`:
 | `sha256` | SHA-256 hash of the file for integrity |
 | `seed` | RNG seed used to generate the dataset |
 | `n_mlps` | Number of MLPs in the dataset |
-| `seed_protocol` | Object with `name` and `version`. WhestBench currently requires `version = "3.0"`. |
+| `seed_protocol` | Object describing how per-MLP seeds were derived. WhestBench 0.16.0 loads `version` `"3.0"` (`whestbench_explicit_per_mlp_seeds`, seeds stored verbatim in the parquet `mlp_seed` column) and `"4.0"` (`whestbench_kdf_per_mlp_seeds`, keyed BLAKE2b derivation); legacy `"2.0"` (`whestbench_seedsequence_hierarchy`) is still accepted. A 4.0 block additionally carries `kdf`, `salt_source` (`"metadata"` or `"env"`), `salt_digest`, and optionally `salt_id` / `salt`; when `salt_source` is `"env"` the salt arrives through the `WHEST_SEED_SALT` environment variable. |
 
 ### Dataset format compatibility
 

@@ -19,22 +19,22 @@
 </div>
 
 <div align="center">
-  <img src="assets/demo.gif" alt="whest-starterkit first 5 minutes" width="720">
+  <img src="assets/demo.gif" alt="whest-starterkit walkthrough: clone, sync, estimate, validate, score" width="720">
 </div>
 
 ## 🎬 60-Second Overview
 
-You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input — without running anywhere near the budget's worth of forward passes. Your score is that error (MSE against the ground-truth Monte-Carlo means) scaled by the share of the FLOP budget you actually spend — so both accuracy and low compute count. Lower is better.
+You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input, without running anywhere near the budget's worth of forward passes. Your score is the error on the **final layer only** (`final_layer_mse`, against N=1e9 Monte-Carlo ground truth), multiplied by `max(0.1, C_m / B_m)` — the fraction of the FLOP budget you spent, floored at 10%. Once you are under 10% of budget, spending less buys nothing and accuracy is the only lever left; every bundled example is already at that floor. Lower is better.
 
-Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(16, 1024)` array, and each MLP carries its own budget of `2**41` FLOPs — worth roughly 6.5e4 forward passes.
+Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(16, 1024)` array, and each MLP carries its own budget of `2**41` FLOPs (roughly 6.5e4 forward passes).
 
 <div align="center">
   <img src="assets/whestbench-explorer-visualization.svg" alt="A small ReLU MLP (width 4, depth 5) shown as a layer-by-layer heatmap of per-neuron mean activations after Monte-Carlo ground-truth estimation; rows are layers, columns are neurons, color intensity is mean activation" width="720">
   <br>
-  <sub><em>Per-neuron mean activations of a small MLP (width 4, depth 5) after Monte-Carlo ground truth — exactly what your estimator predicts. Generate your own at the <a href="https://aicrowd.github.io/whestbench-explorer/">hosted WhestBench Explorer</a>.</em></sub>
+  <sub><em>Per-neuron mean activations of a small MLP (width 4, depth 5) after Monte-Carlo ground truth, exactly what your estimator predicts. Generate your own at the <a href="https://aicrowd.github.io/whestbench-explorer/">hosted WhestBench Explorer</a>.</em></sub>
 </div>
 
-The kit is structured as a five-stage **ladder of formality**: each stage adds one more layer of harness rigor. Start at Stage 1 (pure local math, zero CLI knowledge); climb to Stage 5 (a packaged submission) when you're ready.
+The kit is a five-stage **ladder of formality**: each stage adds one more layer of harness rigor. Start at Stage 1 (pure local math, zero CLI knowledge); climb to Stage 5 (a packaged submission) when you're ready.
 
 ## 🚀 Your First 5 Minutes (Stage 1: just `python`)
 
@@ -47,7 +47,7 @@ cd whest-starterkit
 uv sync && uv run python estimator.py
 ```
 
-That run printed a Monte-Carlo convergence table — your estimator's predictions, the FLOPs it used, and the MSE against ground truth at increasing sample counts. To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
+That run printed a Monte-Carlo convergence table: `n_samples`, the FLOPs the sampler spent, the FLOPs **your** `predict()` spent, then `all_layers_mse` and `final_layer_mse`. The leaderboard ranks the latter. Both compare your prediction against a fresh Monte-Carlo estimate at that sample count, not against ground truth, so read down the column: `n=10` is mostly sampling noise, and only the bottom row is a fair read on your estimator. (The grader compares against baked N=1e9 ground truth instead.) To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
 
 Compare against a bundled baseline:
 
@@ -67,8 +67,7 @@ See [examples/README.md](examples/README.md) for the curriculum table.
 
 ## 🪜 Climb the Ladder (Stages 2-5)
 
-
-Each rung adds one more layer of harness rigor — climb when you're ready. Per-stage walkthroughs live in the [Tutorial](docs/getting-started/).
+Per-stage walkthroughs live in the [Tutorial](docs/getting-started/).
 
 **Stage 1 — [Iterate locally](docs/getting-started/stage-1-standalone.md)** · the math: estimator vs Monte Carlo.
 
@@ -100,19 +99,20 @@ uv run whest run --estimator estimator.py \
     --runner subprocess
 ```
 
-**Stage 5 — [Package and Submit](docs/getting-started/stage-5-package.md)** · build the submission artifact, then ship it (run `whest login` once first — see [Submit to AIcrowd](#-submit-to-aicrowd) below).
+**Stage 5 — [Package and Submit](docs/getting-started/stage-5-package.md)** · build the submission artifact, then ship it (run `whest login` once first; see [Submit to AIcrowd](#-submit-to-aicrowd) below).
 
 ```bash
 uv run whest package --estimator estimator.py   # build & inspect the tarball
 uv run whest submit  --estimator estimator.py   # ship it (also packages, in one step)
 ```
 
-> These ship **only `estimator.py`** — the common case. Embedding weights or splitting across modules? Point `--estimator` at a folder instead: see [Stage 5 → Embedding weights or multiple modules](docs/getting-started/stage-5-package.md#-embedding-weights-or-multiple-modules-power-users).
+> These ship **only `estimator.py`**, the common case. To embed weights or split across modules, point `--estimator` at a folder instead: see [Stage 5 → Embedding weights or multiple modules](docs/getting-started/stage-5-package.md#-embedding-weights-or-multiple-modules-power-users).
 
 ## 🏁 Submit to AIcrowd
 
 Climbed to Stage 5? Ship it from the CLI. Log in once with your
-[AIcrowd API key](https://www.aicrowd.com/participants/me/customize):
+[AIcrowd API key](https://www.aicrowd.com/participants/me/edit), or set `AICROWD_API_KEY`,
+or pass `whest login --api-key <key>`:
 
 ```bash
 uv run whest login
@@ -143,7 +143,7 @@ Rules questions, a FLOP price that looks wrong, or a residual-cap exception go t
 
 ## 📚 Documentation
 
-Past Stage 1, the documentation is organized into six sections — pick whichever matches your task. Full map and guided reading paths at **[docs/](docs/README.md)**.
+Past Stage 1, the documentation is organized into six sections. Pick whichever matches your task. Full map and guided reading paths at **[docs/](docs/README.md)**.
 
 <details>
 <summary>🪜 <b><a href="docs/getting-started/">Tutorial</a></b> — Climb the 5-stage ladder above</summary>
@@ -151,7 +151,7 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 - [Stage 1: Iterate locally](docs/getting-started/stage-1-standalone.md) — The math; `flopscope` + `local_engine.py`, no `whest` CLI.
 - [Stage 2: Validate the contract](docs/getting-started/stage-2-validate.md) — Class resolves, `setup()` runs, shape, finite values.
 - [Stage 3: Run locally](docs/getting-started/stage-3-run-local.md) — Real scoring against the grader's MLP suite, in-process.
-- [Stage 4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) — Catches state-bleed, RNG re-use, dirty imports.
+- [Stage 4: Subprocess runner](docs/getting-started/stage-4-run-subprocess.md) — Process isolation over the grader's transport. Catches dirty imports, stdout writes, and (on Linux) runaway memory. One worker serves the whole suite, so state does *not* reset between MLPs.
 - [Stage 5: Package and Submit](docs/getting-started/stage-5-package.md) — Build the AIcrowd submission tarball and ship it.
 
 </details>
@@ -162,6 +162,7 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 - [Problem Setup](docs/concepts/problem-setup.md) — MLP architecture, He init, the research question, further reading.
 - [Scoring Model](docs/concepts/scoring-model.md) — Pipeline diagram, `adjusted_final_layer_score` / `all_layers_mse` formulas, calibration table.
 - [Ground Truth](docs/concepts/ground-truth.md) — How the evaluator computes reference values via Monte Carlo.
+- [Allowed Code](docs/concepts/allowed-code.md) — What a submission may use, the prohibition list, the data-file carve-out, and how the rule is enforced (retrospectively, so a graded submission can still be invalidated).
 
 </details>
 
@@ -182,11 +183,15 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 **Debugging and shipping**
 - [Debugging Checklist](docs/how-to/debugging-checklist.md) — Tiered procedure when something feels wrong.
 - [Pre-Submission Checklist](docs/how-to/pre-submission-checklist.md) — One-screen gate before you click submit.
+- [Ship Weights and Multi-File Submissions](docs/how-to/ship-weights.md) — Precompute offline, load in `setup()` via `submission_dir`, folder-mode packaging, the 50 MiB / 50-file caps.
 
 </details>
 
 <details>
 <summary>📚 <b><a href="docs/reference/">Reference</a></b> — Exact contracts, schemas, lookup material</summary>
+
+**The round**
+- [Competition Rounds](docs/reference/rounds.md) — Every round side by side: shape, budget, wall caps, and how residual time was charged. Read this first if a number you saw elsewhere doesn't match your local run, or if you need to reproduce a score from an earlier round.
 
 **Estimator API**
 - [Estimator Contract](docs/reference/estimator-contract.md) — `predict`/`setup`/`teardown` signatures, `SetupContext`, failure-semantics table, lifecycle diagram.
@@ -226,7 +231,8 @@ Past Stage 1, the documentation is organized into six sections — pick whicheve
 ├── local_engine.py  ← Single-file re-implementation of the harness; safe to read end-to-end.
 ├── examples/        ← Numbered reference estimators (01–04) with a curriculum table.
 ├── docs/            ← Full documentation; start at docs/README.md.
-├── tests/           ← Drift gates: README commands + local_engine parity.
+├── tests/           ← Drift gates: README commands, local_engine parity, flopscope billing facts.
+├── .whestignore     ← Controls what `whest package --estimator .` ships. Read it before your first submission.
 └── CHANGELOG.md     ← Rule, parameter and FLOP-figure changes are announced here.
 ```
 

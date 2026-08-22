@@ -8,25 +8,25 @@ Task-oriented guides. Each one answers "I want to do X — give me the steps and
 
 | Doc | When to read |
 |---|---|
-| [write-an-estimator.md](write-an-estimator.md) | Implementing your custom estimator from scratch — minimal structure, contract checklist, common first failure. |
+| [write-an-estimator.md](write-an-estimator.md) | Implementing your custom estimator from scratch: minimal structure, contract checklist, common first failure. |
 | [inspect-mlp-structure.md](inspect-mlp-structure.md) | Traversing the `MLP` object: fields, weights, shapes. |
-| [validate-run-package.md](validate-run-package.md) | The standard local loop: `validate` → `run` → `package`. Includes a "Useful flags" table covering `--seed`, `--n-samples`, `--profile`, `--max-threads`, etc. |
+| [validate-run-package.md](validate-run-package.md) | The standard local loop: `validate` → `run` → `package`. Includes a "Useful flags" table covering `--seed`, `--n-samples`, `--profile`, `--max-threads`, `--setup-timeout`, etc. |
 | [use-evaluation-datasets.md](use-evaluation-datasets.md) | Pre-creating an evaluation dataset for fast, reproducible iteration. |
 
 ## Optimizing
 
 | Doc | When to read |
 |---|---|
-| [algorithm-ideas.md](algorithm-ideas.md) | Survey of estimation strategies — Monte Carlo, mean propagation, covariance, hybrid routing, plus open directions (low-rank, layer-adaptive, spectral, importance sampling, higher moments). |
+| [algorithm-ideas.md](algorithm-ideas.md) | Survey of estimation strategies: Monte Carlo, mean propagation, covariance, and why one fixed strategy beats runtime routing at this budget. Plus open directions (low-rank, layer-adaptive, spectral, importance sampling, higher moments). |
 | [manage-flop-budget.md](manage-flop-budget.md) | Where your FLOPs go and how to fit a tighter budget. Includes a line-by-line walkthrough of `examples/02_mean_propagation.py`. |
-| [performance-tips.md](performance-tips.md) | Concrete patterns — matmul placement, free ops, diagonal vs covariance, env-var knobs. |
+| [performance-tips.md](performance-tips.md) | Concrete patterns: matmul placement, free ops, diagonal vs covariance, env-var knobs. |
 
 ## Debugging and shipping
 
 | Doc | When to read |
 |---|---|
-| [debugging-checklist.md](debugging-checklist.md) | Tiered checklist for "estimator runs but something feels wrong" — Tier 0 pure-Python loop, Tier 1 sanity, Tier 2 correctness, Tier 3 optimization. |
-| [pre-submission-checklist.md](pre-submission-checklist.md) | One-screen gate before you click "submit" on AIcrowd — including the Phase 2 allowed-code rules and the 10-submissions-per-UTC-day cap. |
+| [debugging-checklist.md](debugging-checklist.md) | Tiered checklist for "estimator runs but something feels wrong": Tier 0 pure-Python loop, Tier 1 sanity, Tier 2 correctness, Tier 3 optimization. |
+| [pre-submission-checklist.md](pre-submission-checklist.md) | One-screen gate before you click "submit" on AIcrowd, including the Phase 2 allowed-code rules and the 10-submissions-per-UTC-day cap. |
 | [ship-weights.md](ship-weights.md) | Pre-compute offline and load weights in `setup()` via `submission_dir`; where the permitted-data / prohibited-code line sits; the 5 s setup budget; multi-file submissions; 50 MiB / 50 file caps; `.whestignore`; package preview and `--dry-run`. |
 
 ## ➡️ Where to look next
