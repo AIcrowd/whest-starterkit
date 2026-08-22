@@ -1,7 +1,11 @@
-# Files excluded from the submission tarball (`whest package` / `whest submit`).
-# The grader only runs your `Estimator` (estimator.py) + any modules it imports
-# at scoring time. Everything below is local-only tooling/docs and would
-# otherwise trip the 50-file submission cap.
+# Files excluded from the submission tarball in FOLDER mode (`whest package --estimator .`).
+# Single-file mode (`whest package --estimator estimator.py`) ignores this file entirely —
+# it ships exactly one file, renamed to estimator.py.
+# whest reads BOTH .gitignore and .whestignore as one pattern list, and there is no `!`
+# negation: a pattern in .gitignore that matches a data file you mean to ship (weights.npz,
+# a lookup table) drops it silently. Always read the file list in the package preview.
+# Everything below is local-only tooling/docs; without it this repo packages 64 files and
+# trips the 50-file cap.
 
 # Version control / CI / envs
 .git/

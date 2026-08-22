@@ -11,10 +11,17 @@ __pycache__/
 
 # Build / packaging artifacts
 *.tar.gz
-*.npz
 build/
 dist/
 *.egg-info/
+
+# NOTE: do not add `*.npz` here. `whest package` reads .gitignore and .whestignore as one
+# pattern list with no `!` negation, so an ignored weights file is dropped from the
+# submission tarball *silently* — the command still reports success, and the failure only
+# surfaces on the grader as a setup() error that fails the whole submission. Shipping a
+# weights.npz beside estimator.py is a documented, supported workflow
+# (docs/how-to/ship-weights.md); nothing in this repo commits one, because
+# examples/04_shipped_weights.py writes to a tempdir.
 
 # OS
 .DS_Store
