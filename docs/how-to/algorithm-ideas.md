@@ -1,4 +1,4 @@
-# Algorithm Ideas
+# Algorithm ideas
 
 > [← Documentation](../README.md)
 
@@ -26,9 +26,9 @@ def predict_sampling(mlp, budget):
     return fnp.stack(rows, axis=0)
 ```
 
-**FLOP cost:** O(samples x depth x width^2). At the competition shape (`width=1024, depth=16`) this snippet costs 33,603,584 FLOPs for a single sample and 33,587,200 for each additional one, so 100 samples cost 3,358,736,384 and the full per-MLP budget of 2,199,023,255,552 buys roughly 65,000 samples (the snippet's own `0.9 * budget` headroom caps it near 59,000). The kit's ground-truth sampler, `local_engine.monte_carlo_layer_means`, bills slightly more (33,637,376 per additional sample) because it accumulates each layer mean in float64; that is the figure quoted in [Local Engine API](../reference/local-engine-api.md).
+**FLOP cost:** O(samples x depth x width^2). At the competition shape (`width=1024, depth=16`) this snippet costs 33,603,584 FLOPs for a single sample and 33,587,200 for each additional one, so 100 samples cost 3,358,736,384 and the full per-MLP budget of 2,199,023,255,552 is enough for roughly 65,000 samples (the snippet's own `0.9 * budget` headroom caps it near 59,000). The kit's ground-truth sampler, `local_engine.monte_carlo_layer_means`, bills slightly more (33,637,376 per additional sample) because it accumulates each layer mean in float64; that is the figure quoted in [Local Engine API](../reference/local-engine-api.md).
 
-**Memory:** the solution process is capped at 8 GB, and the FLOP budget is not the only ceiling. A 65,000-sample batch is ~270 MB per `(samples, width)` float32 activation tensor and the layer loop holds two at a time. Comfortable here, but chunk the batch rather than growing it if you push the sample count further.
+**Memory:** the solution process is capped at 8 GB, and the FLOP budget is not the only ceiling. A 65,000-sample batch is ~270 MB per `(samples, width)` float32 activation tensor and the layer loop holds two at a time. That fits, but chunk the batch rather than growing it if you push the sample count further.
 
 **When to use:** As a baseline or sanity check. Accuracy improves as 1/sqrt(samples), so convergence is slow.
 
@@ -38,7 +38,7 @@ Track per-neuron means and variances through each layer using the ReLU expectati
 
 **FLOP cost:** O(depth x width^2), from matrix-vector products per layer. At `width=1024, depth=16`: 86,639,616 FLOPs, about 0.004% of the per-MLP budget (see the worked walkthrough in [Manage Your FLOP Budget](./manage-flop-budget.md#worked-walkthrough-mean-propagation-line-by-line)).
 
-**When to use:** The cheapest reasonable starting point, and the baseline to beat. Fast and reasonably accurate, but it leaves almost the entire budget unspent. Treat it as a floor rather than a destination.
+**When to use:** The cheapest reasonable starting point, and the baseline to beat. Fast and reasonably accurate, but it leaves almost the entire budget unspent. Treat it as a starting point rather than a final design.
 
 **Example:** [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py)
 
@@ -59,13 +59,13 @@ at a fixed shape of `width=1024, depth=16`. For stable behavior, this starter
 kit uses single-strategy baselines (mean propagation and full covariance
 propagation), then encourages tuning one strategy for that fixed budget
 envelope. There is no need for runtime strategy selection: you already know
-the budget and the shape before you write a line of code.
+the budget and the shape before you start writing code.
 
 ## Open directions
 
 These are approaches the organizers think are promising but haven't been
-tried in this challenge. Each entry: one-line intuition, complexity, and
-when it's likely to pay off.
+tried in this challenge. Each entry gives a one-line intuition, the
+complexity, and when it is likely to help.
 
 **Low-rank covariance.** Carry a rank-`k` factor `U` of shape `(width, k)`
 so `cov ≈ U Uᵀ` instead of the full `(width, width)` matrix. Cost
@@ -77,24 +77,24 @@ Reference: any low-rank Kalman filter / Ensemble Kalman filter intro.
 
 **Layer-adaptive routing.** Use full covariance for the layers where
 correlations *build* and switch to diagonal once the joint distribution
-looks roughly factored. Cost is the integral of the per-layer choice.
+looks roughly factored. Cost is the sum of the per-layer choices.
 Look at per-layer `all_layers_mse` from a covariance-only baseline. The
 layer where the curve plateaus is your crossover point. At this
 shape full covariance for all 16 layers already fits in 2.4% of the budget,
-so routing is about spending your effort where it buys accuracy, not about
-making the run affordable.
+so routing is about spending your effort where it improves accuracy, not about
+making the run fit the budget.
 
 **Spectral / weight-statistics methods.** Compute singular values of
 each `W` once per MLP, then use them to predict per-layer gain and
 variance growth analytically without propagating any distribution
 through the layers. This has to happen inside `predict()` and is billed
 there: the weights are per-MLP, so they don't exist yet in `setup()`.
-And `setup()`'s off-budget status can't be used to dodge the
+And `setup()`'s off-budget status cannot be used to avoid the
 `O(depth · width³)` factorisation, because `setup()` runs once per worker
 process (several times per submission), each run under a 5 s wall-clock
 cap, and exceeding it fails the whole submission rather than a single
 MLP. What you get instead is a near-zero marginal cost once the spectra
-are in hand. Mostly an academic angle today, sensitive to depth and to
+are computed. Mostly an academic approach today, sensitive to depth and to
 the He-init scaling, but a candidate for extreme-budget regimes.
 References: Pennington & Worah (2017), Saxe et al. (2014).
 

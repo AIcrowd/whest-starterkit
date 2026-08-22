@@ -17,12 +17,12 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   budget `B_m` is **`2**41` = 2,199,023,255,552 FLOPs**, 8.085x the Phase 1 budget of
   ~2.72e11. Effective compute is now **`C_m = F_m`**: residual wall time is no longer
   priced and the residual-penalty rate λ does not apply in Phase 2. A Phase 1 estimator
-  that reads `mlp.width` / `mlp.depth` still runs, but its cost and its score both move;
+  that reads `mlp.width` / `mlp.depth` still runs, but its cost and its score both change;
   anything that hardcoded the Phase 1 shape or budget now returns the wrong array.
 - **Residual wall time is capped, not billed.** A hard cap of **400 ms per MLP** replaces
-  the λ pricing; exceeding it substitutes zero predictions for that MLP. The residual
-  bucket is for plumbing, not for computation. Meaningful compute there is
-  disqualifiable, not a cheap trade. See
+  the λ pricing; if you exceed it, the grader substitutes zero predictions for that MLP.
+  The residual bucket covers control flow, bookkeeping, and data handling, not computation.
+  Meaningful compute there is disqualifiable. See
   [docs/concepts/allowed-code.md](docs/concepts/allowed-code.md).
 - **Phase 2 limits.** Wall-clock cap **120 s per MLP** (was 60 s). Solution process memory
   **8 GB** (the Phase 1 box was 64 GB). `setup()` is capped at **5 s** and runs once.
@@ -46,13 +46,13 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   rule is enforced.
 - **docs**: add [Competition Rounds](docs/reference/rounds.md) — every round the challenge
   has run, side by side, with the flags needed to reproduce a score from an earlier one.
-- **docs**: add this changelog, so a parameter change in the kit has somewhere to be
-  announced.
+- **docs**: add this changelog, so the kit has somewhere to announce a parameter
+  change.
 - **deps**: pin `whestbench>=0.16.0,<0.17.0` and `flopscope>=0.12.0,<0.13.0`. whestbench 0.16.0
   is the first release whose *defaults* are the graded Phase 2 round (1024x16, `2**41`, a
   120 s predict cap, a 5 s `setup()` cap and a gated 400 ms residual), so under 0.15.0 the kit
   documented rules the local CLI did not enforce. flopscope 0.12.0 reprices ~40 operations
-  relative to 0.11.0, but none that these examples touch: `matmul`, tagged `einsum`,
+  relative to 0.11.0, but none that these examples use: `matmul`, tagged `einsum`,
   `as_symmetric`/`is_symmetric`, `fill_diagonal`, `stats.norm.*` and `astype` bill identically
   under both, so every FLOP figure in `docs/` is unchanged (`tests/test_flopscope_cost_docs.py`
   is the gate). The evaluator is still on `whestbench@v0.15.0` + `flopscope[server]==0.11.0`;
@@ -63,9 +63,10 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   `--wall-time-limit` default 60.0 -> 120.0, and `--no-residual-wall-time-limit` (new; needed
   only to re-score a Phase 1 round). `whestbench.budget.ROUNDS` / `CURRENT_ROUND` expose every
   round's settings as data.
-- **harness (whestbench 0.16.0), scoring-affecting**: a subprocess worker that dies mid-suite is
-  now replaced and the suite continues; previously one crash failed every remaining MLP, so a
-  crashy submission's suite score improves. MLP weights are float32 on every construction path.
+- **harness (whestbench 0.16.0), scoring-affecting**: the harness now replaces a subprocess
+  worker that crashes mid-suite and continues the suite; previously one crash failed every
+  remaining MLP, so a submission that crashes now scores better across the suite. MLP weights
+  are float32 on every construction path.
 - **local_engine**: re-default `compare_against_monte_carlo` to the real Phase 2 budget —
   `estimator_budget=2**41`, and a `5e12` sampling budget applied per sample-count row.
 
@@ -73,7 +74,7 @@ what has landed on `main` since the last dated entry. Read it before you tune an
 
 - Phase 2 content pass across `docs/` and `examples/`: every cost figure re-measured at
   1024 x 16 against whestbench 0.16.0 and flopscope 0.12.0 — and identical under flopscope
-  0.11.0, since 0.12.0's repricing misses every operation these examples use. The bundled
+  0.11.0, since 0.12.0's repricing covers no operation these examples use. The bundled
   examples now cost **86,639,616 FLOPs (0.0039% of `B_m`)** for `02_mean_propagation` and
   **51,709,240,799 FLOPs (2.3515% of `B_m`)** for `03_covariance_propagation` — a 597x
   ratio between them, up from 137.6x at the Phase 1 shape, because the covariance step is

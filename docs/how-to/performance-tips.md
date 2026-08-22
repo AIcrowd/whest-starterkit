@@ -1,4 +1,4 @@
-# Performance Tips
+# Performance tips
 
 > [← Documentation](../README.md)
 
@@ -11,9 +11,9 @@ Since flopscope 0.9, every op's cost is also scaled by a `dtype_rate`: 1.0× for
 NumPy promotion decides the billing dtype from your operands, so a single
 stray float64 array upgrades an entire expression to the 2× rate, matmuls
 included. `fnp.zeros()`/`fnp.ones()`/`fnp.eye()`/RNG draws all default to float64
-when you don't pass `dtype=`. This is usually the single biggest lever on your
-FLOP total: pass `dtype=fnp.float32` when you create arrays and don't need the
-extra precision.
+when you don't pass `dtype=`. This is usually the largest single reduction
+available on your FLOP total: pass `dtype=fnp.float32` when you create arrays
+and don't need the extra precision.
 
 **`mlp.weights` arrive as float32.** whestbench 0.16.0 pins them on every
 construction path (`domain.py` `MLP.from_row`, `generation.sample_mlp`), so
@@ -28,7 +28,7 @@ Casting anyway is not free: `w.astype(fnp.float32)` on an already-float32
 the 16 layers, for no change at all.
 
 **Seed your own state explicitly.** One `fnp.zeros(width)` with no `dtype=` is
-float64, and NumPy promotion drags every matmul against it onto the 2× rate no
+float64, and NumPy promotion moves every matmul against it onto the 2× rate no
 matter what the weights are.
 
 Both bundled analytical baselines seed at float32 for exactly this reason, and
@@ -40,7 +40,7 @@ the effect is measured, not theoretical. At the competition shape
 | [`02_mean_propagation`](../../examples/02_mean_propagation.py) | 153,913,344 | **86,639,616** | 43.7% | unchanged to 5 s.f. |
 | [`03_covariance_propagation`](../../examples/03_covariance_propagation.py) | 103,407,495,614 | **51,709,240,799** | 49.99% | unchanged to 5 s.f. |
 
-Roughly half the bill, for free, on estimators whose accuracy does not move.
+That removes roughly half the FLOP total, on estimators whose accuracy does not change.
 
 † The two counterfactuals are defined slightly differently. The `02` figure
 drops the `dtype=fnp.float32` seeds **and** the two `.astype(fnp.float32)`
@@ -51,8 +51,8 @@ its recasts.
 **Watch for silent re-promotion.** `flops.stats.norm.cdf` / `.pdf` promote
 float32 input to float64 to match `scipy.stats`, and flopscope emits a
 `FlopscopeWarning` saying so. If you let the promoted result flow onward, it
-re-infects the rest of the loop at the 2× rate and undoes the seeding. In
-`02_mean_propagation` that alone was the difference between a 2.7% saving and a
+applies the 2× rate to the rest of the loop and undoes the seeding. In
+`02_mean_propagation` that alone is the difference between a 2.7% saving and a
 43.7% one. Cast straight back:
 
 ```python
@@ -62,28 +62,28 @@ Phi_alpha = flops.stats.norm.cdf(alpha).astype(fnp.float32)
 
 `.astype()` bills 1 FLOP per element at the operand's dtype rate. Here the
 input is the float64 result of `flops.stats.norm`, so 1024 elements × 2.0 =
-2,048 FLOPs per call at width 1024, against the millions it protects. Check
-`ctx.summary()` if you suspect a promotion: a `float64` row where you expected
-`float32` is the tell.
+2,048 FLOPs per call at width 1024, against the millions it protects. If you
+suspect a promotion, check `ctx.summary()`: a `float64` row where you expected
+`float32` identifies it.
 
 ## Residual wall time is a hard gate, not a currency
 
 You are ranked on effective compute `C_m = F_m`. There is no λ term and no
-wall-clock term: you cannot buy accuracy with seconds, and seconds do not cost
-you FLOPs. What wall time does instead is gate the run. Residual wall time
+wall-clock term: wall-clock time does not enter the score in either direction.
+Wall time acts as a limit instead. Residual wall time
 (anything flopscope does not meter) is subject to a **hard cap of 400 ms per
-MLP**, on top of the **120 s** wall-clock cap on `predict()` as a whole. Cross
-either and that MLP's prediction is replaced by zeros: no partial credit, no
-warning, and the MSE for that MLP is whatever a zero prediction earns.
+MLP**, on top of the **120 s** wall-clock cap on `predict()` as a whole. If you
+cross either limit, the harness replaces that MLP's prediction with zeros: no
+partial credit, no warning, and the MSE for that MLP is the MSE of a zero
+prediction.
 
 Residual time exists for plumbing: unpacking `mlp`, control flow around your
 `fnp` calls, assembling the array you return. **It is not a compute budget.**
 Doing meaningful computation outside `flopscope.numpy` is prohibited, not
-priced: the rules treat it as an attempt to evade FLOP accounting.
+merely expensive: the rules treat it as an attempt to evade FLOP accounting.
 
-Concretely, all of the following are **prohibited**, and using them is grounds
-for disqualifying the submission. They are not a residual-time expense you can
-choose to pay:
+All of the following are **prohibited**, and using them is grounds
+for disqualifying the submission:
 
 - Vendoring or bundling your own `numpy`, `scipy`, or any BLAS.
 - Compiled kernels of any kind, and `ctypes` / `cffi` / any other FFI.
@@ -101,7 +101,7 @@ supported way to bring precomputed work with you.
 Staying comfortably inside the 400 ms cap:
 
 - **Vectorise per-neuron Python loops into `fnp` array ops.** A 1024-iteration
-  Python loop is the most common way to blow the residual cap, and it is doing
+  Python loop is the most common way to exceed the residual cap, and it is doing
   in slow Python exactly the work flopscope would have metered for you.
 - **Don't tune an internal deadline to your own machine's clock.** A
   `time.time()` cutoff calibrated locally can trip early elsewhere and return
@@ -111,8 +111,8 @@ Staying comfortably inside the 400 ms cap:
   read `residual_wall_time_s` per MLP. `--residual-wall-time-limit` already
   defaults to 0.4, the graded cap, so a plain run gates you exactly as the live
   round does. Pass the flag only to make the local run *stricter*. Anything
-  approaching 400 ms locally is a failure waiting to happen on hardware you
-  have not seen.
+  approaching 400 ms locally is likely to cross the cap on hardware you have
+  not tested.
 - **Stress the wall clock too:** re-running with `--max-threads 1` pins the BLAS
   pool so `wall_time_s` is comparable across machines. It is a pessimistic
   bound rather than a prediction, but it is a cheap way to see whether you are
@@ -139,7 +139,7 @@ These cost 0 FLOPs in flopscope:
 
 **Since flopscope 0.9, these look free but aren't; they bill 1×/element (2× at float64):** `fnp.ones()`, `fnp.eye()`, `fnp.full()`, `fnp.array()` (and any copying `asarray`), `.copy()`, `.astype()`, `fnp.reshape()`/`.reshape()` (billed even where NumPy itself would return a view), `fnp.concatenate()`, `fnp.stack()`, `tile()`, `repeat()`. Cheap next to a matmul, but no longer zero. Don't reach for them as a "free" replacement for real computation.
 
-Precompute anything you can using the still-free ops above; for the billed ones, computing once outside a per-layer loop still beats recomputing every iteration. There is no separate memory cost in FLOP terms: flopscope only meters compute, not allocation. Memory is not unlimited, though: the solution process gets **8 GB**, so a batch sized purely by the FLOP budget can still run you out of RAM.
+Precompute anything you can using the still-free ops above; for the billed ones, computing once outside a per-layer loop still costs less than recomputing every iteration. There is no separate memory cost in FLOP terms: flopscope only meters compute, not allocation. Memory is not unlimited, though: the solution process gets **8 GB**, so a batch sized purely by the FLOP budget can still exhaust RAM.
 
 ## Precompute outside the layer loop
 
@@ -177,7 +177,7 @@ start trading accuracy for FLOPs once you are pushing past that floor.
 
 ## Check your budget breakdown
 
-Use `flops.budget_summary()` inside a `BudgetContext` to see exactly where your FLOPs go:
+To see exactly where your FLOPs go, use `flops.budget_summary()` inside a `BudgetContext`:
 
 ```python
 import flopscope as flops

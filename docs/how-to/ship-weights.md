@@ -1,18 +1,18 @@
-# Ship Weights and Multi-File Submissions
+# Ship weights and multi-file submissions
 
 > [← Documentation](../README.md)
 
 ## When to use this page
 
-Use this page when you want to pre-compute something offline (e.g. a calibration
-scalar, a learned projection matrix, a lookup table) and load it inside
+Use this page when you want to pre-compute something offline (for example, a
+calibration scalar, a learned projection matrix, or a lookup table) and load it inside
 `setup()`, or when your estimator spans more than one Python module.
 
 > **Where the Phase 2 rules put this.** Shipping **data** (weights, lookup
-> tables, precomputed artifacts) is explicitly permitted, and it is a better
-> deal than it was in Phase 1: with `C_m = F_m`, everything you compute before
-> you package costs you exactly nothing. Shipping **code** is where the line
-> sits. Vendored numpy/scipy/BLAS, compiled kernels of any kind, and anything
+> tables, precomputed artifacts) is explicitly permitted, and it costs less
+> than it did in Phase 1: with `C_m = F_m`, everything you compute before
+> you package adds nothing to your score. Shipping **code** is what the rules
+> restrict. Vendored numpy/scipy/BLAS, compiled kernels of any kind, and anything
 > reached through `ctypes`/`cffi` are prohibited outright, and a submission
 > carrying them is disqualifiable rather than merely broken; see
 > [Allowed Code](../concepts/allowed-code.md) for the full rule.
@@ -54,9 +54,9 @@ writing, and warns if a `.py` file isn't reachable by import from `estimator.py`
 
 > ⚠ Packaging the file alone (`whest package --estimator estimator.py`) ships
 > **only that file**, renamed to `estimator.py` inside the archive whatever you
-> called it locally. Since whestbench 0.16.0 the command **refuses** rather than
-> handing you an archive that would `ImportError` on the grader, if
-> `estimator.py` imports a sibling module:
+> called it locally. Since whestbench 0.16.0, if `estimator.py` imports a
+> sibling module the command **refuses** rather than producing an archive that
+> would `ImportError` on the grader:
 >
 > ```
 > ⚠ Single-file submission: only estimator.py will be submitted. 2 items beside it will NOT be included: helper.py, weights.npz.
@@ -76,7 +76,7 @@ flopscope only loads **pickle-free** array data. Locally `fnp.load` (and
 on the grader flopscope-client parses the `.npy`/`.npz` with its own codec and
 cannot unpickle at all. Either way a pickled model (`torch.save`, `joblib`,
 `pickle`) will **not** load. Author your weights as a `flopscope.Module`;
-public array attributes are saved and restored automatically:
+flopscope saves and restores public array attributes automatically:
 
 ```python
 import flopscope
@@ -93,10 +93,10 @@ w.scale = fnp.asarray(2.0)            # replace with your real precomputation
 w.save("weights.npz")                 # plain .npz, no pickle
 ```
 
-`.save()` writes a plain `.npz`; nested `Module`s and lists/tuples/dicts of arrays
-are flattened automatically. (For a single bare array you can also `np.savez` /
+`.save()` writes a plain `.npz` and flattens nested `Module`s and lists, tuples,
+and dicts of arrays automatically. (For a single bare array you can also `np.savez` /
 `fnp.load` directly, but `Module` keeps multi-array weights structured and reloads
-them into a typed object.) For the save call itself, do it offline with plain `numpy` (`np.savez`): inside `predict()`, `fnp.save`/`fnp.savez` bill an egress cost since flopscope 0.9 (≈4 FLOPs per element × dtype rate, plus small headers), while `fnp.load` stays free.
+them into a typed object.) Make the save call offline with plain `numpy` (`np.savez`): inside `predict()`, `fnp.save`/`fnp.savez` bill an egress cost since flopscope 0.9 (≈4 FLOPs per element × dtype rate, plus small headers), while `fnp.load` stays free.
 
 The [Flopscope Primer](../reference/flopscope-primer.md) and
 [Code Patterns](../reference/code-patterns.md) cover **designing the weights
@@ -107,7 +107,7 @@ module surface (array creation, RNG, reductions, matmul, einsum).
 
 ## (c) Loading in `setup()` via `submission_dir`
 
-`context.submission_dir` is set by the runner to the folder containing your
+The runner sets `context.submission_dir` to the folder containing your
 `estimator.py`, both locally (`whest validate` / `whest run`) and on the
 grader (the extracted submission root).  Always guard against `None` before
 constructing a `Path` from it; it is `None` outside the runner context:
@@ -169,9 +169,10 @@ debug_weights.pkl
 ```
 
 `whest init` creates a starter `.whestignore` for you. The built-in ignore list
-already excludes common non-submission artefacts (`.git/`, `__pycache__/`,
-`*.pyc`, etc.) and **all credential files** (`.env`, `*.pem`, `*.key`, private
-keys) for security, so you only need to add project-specific entries.
+already excludes common non-submission artefacts such as `.git/`,
+`__pycache__/`, and `*.pyc`, plus **all credential files** (`.env`, `*.pem`,
+`*.key`, private keys) for security, so you only need to add project-specific
+entries.
 
 ---
 
@@ -206,29 +207,29 @@ uv run whest submit --estimator . --dry-run
 
 It packages into a temporary directory, runs the same `validate-package`
 integrity check `whest submit` runs before upload, prints the file list, sizes,
-the resolved `flopscope==` / `whestbench==` versions and the archive size it
+the resolved `flopscope==` / `whestbench==` versions, and the archive size it
 would have uploaded, then discards it.
 
 ---
 
 ## (f) Grader timing note
 
-The grader runs two clocks, and they are separate. Your module import plus
+The grader applies two separate time limits. Your module import plus
 `setup()` share a hard **5 s** budget, spent **once per worker process, not
-once per submission**. A submission is served by several workers (roughly 5-15
-setup runs in practice), and since whestbench 0.16.0 a worker that dies
-mid-suite is replaced, which re-runs your `setup()` and re-spends the 5 s. Each
-`predict()` call then gets its own hard **120 s**. Setup doesn't eat into
-predict's window and can't borrow from it.
+once per submission**. Several workers serve one submission (roughly 5-15
+setup runs in practice), and since whestbench 0.16.0 the grader replaces a
+worker that dies mid-suite, which re-runs your `setup()` and re-spends the 5 s.
+Each `predict()` call then gets its own hard **120 s**. The setup limit and the
+`predict()` limit are independent of each other.
 
 Setup's cost is not billed: not to the FLOP budget, not to
-`residual_wall_time_s`. It is simply short, and unforgiving. Five seconds
+`residual_wall_time_s`. The limit is short and strict. Five seconds
 covers a file read and an unpack, and nothing more; overrunning them fails the
 **whole submission** with `SETUP_TIMEOUT`, not one MLP, and takes one of that
-day's ten submission slots with it. It is the most expensive mistake on this
-page, so time your `setup()` on a cold cache before you ship, not after. And
-because setup can run many times, an expensive setup is paid many times. That
-is a second reason to load rather than compute.
+day's ten submission slots with it. Time your `setup()` on a cold cache before
+you ship, not after. And because setup can run many times, an expensive setup
+costs that time on every worker. That is a second reason to load rather than
+compute.
 
 So keep `setup()` to cheap operations: load files, unpack arrays, set up data
 structures. Do not train a model in `setup()`.

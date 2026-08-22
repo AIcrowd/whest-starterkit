@@ -2,11 +2,11 @@
 
 The starter kit teaches you to write a Python estimator that predicts
 per-neuron mean activations of a randomly-initialized ReLU MLP under a
-FLOP budget. **Score = `final_layer_mse × max(0.1, C_m/B_m)`; lower wins**:
+FLOP budget. **Score = `final_layer_mse × max(0.1, C_m/B_m)`; lower is better**:
 accuracy on the last layer, times the budget fraction you spent, floored at
-10%. New here? See the [60-second
-overview](../README.md#-60-second-overview) in the root README, then
-jump in below.
+10%. If you are new, read the [60-second
+overview](../README.md#-60-second-overview) in the root README first, then
+use the map below.
 
 ## 🗺️ Map
 
@@ -21,7 +21,7 @@ jump in below.
 
 ## 🧭 Reading paths
 
-Pick the line that sounds like you.
+Pick the line that matches your situation.
 
 ### "I just cloned the kit."
 
@@ -37,13 +37,13 @@ Pick the line that sounds like you.
 
 ### "The numbers I'm reading don't match the numbers I'm getting."
 
-[rounds](reference/rounds.md) (which rulebook you're under, and why a pre-Phase-2 number doesn't compare) → [scoring-model](concepts/scoring-model.md) → [score-report-fields](reference/score-report-fields.md).
+[rounds](reference/rounds.md) (which round's rules apply to you, and why a pre-Phase-2 number doesn't compare) → [scoring-model](concepts/scoring-model.md) → [score-report-fields](reference/score-report-fields.md).
 
 ### "I'm about to submit."
 
 [pre-submission-checklist](how-to/pre-submission-checklist.md) → [Stage 5](getting-started/stage-5-package.md) → [score-report-fields](reference/score-report-fields.md) (so you can read the leaderboard report).
 
-## 🪜 By Stage (the ladder)
+## 🪜 By stage (the ladder)
 
 1. [Stage 1: Iterate locally](getting-started/stage-1-standalone.md)
 2. [Stage 2: Validate the contract](getting-started/stage-2-validate.md)
@@ -51,14 +51,14 @@ Pick the line that sounds like you.
 4. [Stage 4: Subprocess runner](getting-started/stage-4-run-subprocess.md)
 5. [Stage 5: Package your submission](getting-started/stage-5-package.md)
 
-## 🎯 By Need
+## 🎯 By need
 
 | I want to... | Read |
 |---|---|
 | Understand the math | [concepts/problem-setup.md](concepts/problem-setup.md), [concepts/scoring-model.md](concepts/scoring-model.md), [concepts/ground-truth.md](concepts/ground-truth.md) |
 | Know what success looks like at each stage | the **Expected outcome** callout at the bottom of each [stage doc](getting-started/), and the [example benchmarks](concepts/scoring-model.md#example-estimator-benchmarks) |
-| Improve my score (0.9 → 2e-4, the mean-propagation rung) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
-| Push from 2e-4 → 4e-6 (the covariance rung) and beyond | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
+| Improve my score (0.9 → 2e-4, the mean-propagation level) | [how-to/algorithm-ideas.md](how-to/algorithm-ideas.md), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md), [how-to/performance-tips.md](how-to/performance-tips.md) |
+| Push from 2e-4 → 4e-6 (the covariance level) and beyond | [reference/code-patterns.md](reference/code-patterns.md) (ReLU expectation, when it breaks), [how-to/algorithm-ideas.md#open-directions](how-to/algorithm-ideas.md#open-directions), [how-to/manage-flop-budget.md](how-to/manage-flop-budget.md) (`--profile`) |
 | Debug a broken estimator | [troubleshooting/common-participant-errors.md](troubleshooting/common-participant-errors.md), [troubleshooting/faq.md](troubleshooting/faq.md), [how-to/debugging-checklist.md](how-to/debugging-checklist.md) |
 | Know what code I'm allowed to ship | [concepts/allowed-code.md](concepts/allowed-code.md) |
 | Ship precomputed weights or multiple modules | [how-to/ship-weights.md](how-to/ship-weights.md) |

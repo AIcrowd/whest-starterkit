@@ -1,4 +1,4 @@
-# Problem Setup
+# Problem setup
 
 > [← Documentation](../README.md)
 
@@ -18,9 +18,9 @@ Use this page to understand the technical framing of the problem.
 
 This challenge targets an open question in mechanistic estimation:
 
-> **Can you predict a model's behavior by analyzing its structure, rather than just running it on many inputs?**
+> **Can you predict a model's behavior by analyzing its structure, rather than running it on many inputs?**
 
-The natural baseline for estimating a network's expected output is **sampling**: feed in thousands of random inputs, propagate them through the network, and average the results. Sampling is the ground truth. With enough samples it converges to the exact answer. But it's inefficient: it scales as 1/√k and learns nothing from the network's structure.
+The natural baseline for estimating a network's expected output is **sampling**: feed in thousands of random inputs, propagate them through the network, and average the results. Sampling is the ground truth. With enough samples it converges to the exact answer. But it's inefficient: it scales as 1/√k and makes no use of the network's structure.
 
 **Mechanistic estimation** means predicting network behavior using mathematical properties of the architecture (weight statistics, activation functions, input distributions) instead of running forward passes. It is distinct from mechanistic interpretability (understanding what neurons represent) and from symbolic execution (exact but intractable computation). Because sampling scales so poorly, there is room for structural methods to reach the same accuracy in far less compute.
 
@@ -53,15 +53,15 @@ Every neuron in a layer receives input from **all** neurons in the previous laye
 
 ## Why depth makes the problem hard
 
-At shallow depth, neurons are nearly independent. A simple approach like **mean propagation** — tracking `E[x]` per neuron and propagating through the ReLU nonlinearity — works reasonably well.
+At shallow depth, neurons are nearly independent. An approach such as **mean propagation** — tracking `E[x]` per neuron and propagating through the ReLU nonlinearity — works reasonably well.
 
-As depth grows, the dense weight matrices create correlations between neurons. ReLU compounds this: it clips negative values, making the output distribution depend on the full joint distribution of its inputs, not just their marginals. These correlations accumulate layer by layer, and the independence assumption that mean propagation relies on breaks down.
+As depth grows, the dense weight matrices create correlations between neurons. ReLU compounds this: it clips negative values, making the output distribution depend on the full joint distribution of its inputs, not only their marginals. These correlations accumulate layer by layer, and the independence assumption that mean propagation relies on breaks down.
 
 So you need methods that account for (or at least manage) these growing dependencies without spending as much compute as sampling would.
 
 ## The sampling baseline
 
-The simplest approach is **Monte Carlo sampling**:
+The most direct approach is **Monte Carlo sampling**:
 
 1. Draw `k` random input vectors (each neuron independently sampled from `N(0, 1)`).
 2. Propagate each input vector through all `d` layers (matmul + ReLU per layer).
@@ -71,7 +71,7 @@ This is unbiased and converges as `k → ∞`, but the error decreases slowly (`
 
 Sampling here is expensive, not weak. One forward pass at this shape meters at ~33.6M FLOPs, so the `2**41` per-MLP budget buys roughly **65,000** of them. Measured over the graded 100-MLP `mini` split of `arc-whestbench-public-2026@v2-phase2`: 1,000 passes cost 33,637,441,536 FLOPs (1.5% of budget) and reach a final-layer MSE of `7.8e-05`, about 0.93% RMS relative error; 10,000 passes cost 336,373,825,536 FLOPs (15.3% of budget) and reach `7.6e-06`, about 0.29%. Mean propagation (one O(depth × width²) propagation, no sampling at all) costs 86,639,616 FLOPs, 0.004% of budget, and reaches `2.2e-04`, the accuracy Monte Carlo already has at under 400 passes. So mean propagation is a **~140x compute saving at equal accuracy**, not an accuracy win over sampling.
 
-On the metric you are actually ranked on, the bar is sharper still. A plain sampler bottoms out at an `adjusted_final_layer_score` of about `1.2e-06`: measured `1.19e-06` at 6,500 passes (9.9% of budget) and `1.16e-06` at 10,000. Below ~6,500 passes the 0.1 multiplier floor still applies and more samples strictly help; above it the extra multiplier cancels the extra accuracy, so the score goes flat. Mean propagation scores `2.2e-05`, roughly **19x worse** than that sampler. Covariance propagation scores `4.1e-07`, **2.9x better**. Beating sampling is the research milestone this challenge targets, and of the bundled examples only covariance propagation clears it.
+On the metric you are ranked on, the comparison changes. A plain sampler bottoms out at an `adjusted_final_layer_score` of about `1.2e-06`: measured `1.19e-06` at 6,500 passes (9.9% of budget) and `1.16e-06` at 10,000. Below ~6,500 passes the 0.1 multiplier floor still applies and more samples strictly help; above it the extra multiplier cancels the extra accuracy, so the score goes flat. Mean propagation scores `2.2e-05`, roughly **19x worse** than that sampler. Covariance propagation scores `4.1e-07`, **2.9x better**. Beating sampling is the research milestone this challenge targets, and of the bundled examples only covariance propagation clears it.
 
 ## What the estimator receives
 
@@ -97,9 +97,9 @@ The evaluator computes empirical means by depth and neuron, stored as `ground_tr
 
 ## Further reading
 
-If you want to dig into the literature behind structural estimation,
-these are useful starting points (each link should pull through the
-public web; none required to do the challenge):
+To read further into the literature behind structural estimation,
+start with these. Each link resolves on the public web,
+and none of them is required to do the challenge.
 
 - [ARC: Competing with sampling](https://www.alignment.org/blog/competing-with-sampling/) — the framing post for this challenge.
 - [ARC: AlgZoo — uninterpreted models with fewer than 1,500 parameters](https://www.alignment.org/blog/algzoo-uninterpreted-models-with-fewer-than-1-500-parameters/) — concrete examples of how structural understanding compresses computation.

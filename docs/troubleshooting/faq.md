@@ -1,4 +1,4 @@
-# Frequently Asked Questions
+# Frequently asked questions
 
 > [← Documentation](../README.md)
 
@@ -10,7 +10,7 @@ Shipping your own copy is not a way around it. Vendored array libraries, compile
 
 ## Can I use scipy (or PyTorch, or any other PyPI package)?
 
-No. At grading time your estimator runs in a locked-down sandbox whose only importable libraries are `flopscope` (incl. `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the Python standard library. There is **no `requirements.txt` install step**: third-party packages (`scipy`, `numpy`, `torch`, …) are not installed and won't import. For the standard normal CDF, use the pure-flopscope `norm_cdf` recipe in [Code Patterns](../reference/code-patterns.md#standard-normal-cdf). For anything heavier (e.g. a model trained with PyTorch), do the work **offline** before packaging and ship the result as a pickle-free `.npz`, loaded in `setup()` via `fnp.load(str(path))` (0 FLOPs); see [Ship Weights](../how-to/ship-weights.md). Bundling the package into your submission instead is prohibited and disqualifiable: ship the *result*, never the library.
+No. At grading time your estimator runs in a locked-down sandbox whose only importable libraries are `flopscope` (incl. `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`, `MLP`, `SetupContext`), and the Python standard library. There is **no `requirements.txt` install step**: third-party packages (`scipy`, `numpy`, `torch`, …) are not installed and won't import. For the standard normal CDF, use the pure-flopscope `norm_cdf` recipe in [Code Patterns](../reference/code-patterns.md#standard-normal-cdf). For anything heavier, such as a model trained with PyTorch, do the work **offline** before packaging and ship the result as a pickle-free `.npz`, loaded in `setup()` via `fnp.load(str(path))` (0 FLOPs); see [Ship Weights](../how-to/ship-weights.md). Bundling the package into your submission instead is prohibited and disqualifiable: ship the *result*, never the library.
 
 ## Why is one MLP scoring much worse than the others?
 
@@ -20,7 +20,7 @@ The suite mean stays finite: one failed MLP no longer poisons the whole run, but
 
 Diagnose by reading the failure flags on the failing per-MLP entry: `budget_exhausted`, `time_exhausted`, `residual_wall_time_exhausted`, `combined_budget_exhausted`, `error` / `error_code` / `traceback`. The suite-level `failure_breakdown` gives counts per flag, and `n_failed_mlps` is the total count of MLPs that hit any failure path.
 
-Run with `--debug` to see tracebacks; `--fail-fast` to halt at the first failure:
+To see tracebacks, run with `--debug`; to halt at the first failure, add `--fail-fast`:
 
 ```bash
 uv run whest run --estimator estimator.py --debug
@@ -31,16 +31,18 @@ See [Estimator Contract: Failure semantics](../reference/estimator-contract.md#f
 
 ## Do I need to use the `budget` argument in `predict()`?
 
+No. flopscope enforces the budget whether you read the argument or not: if your
+operations exceed it, `BudgetExhaustedError` is raised and your predictions are
+zeroed.
+
 The `budget` argument tells you how many FLOPs you are allowed. It's usually best
 to use it as a fixed hard cap and stay with one strategy throughout the run.
-
-flopscope enforces the budget regardless: if your operations exceed it, `BudgetExhaustedError` is raised and your predictions are zeroed.
 
 ## Can I precompute things in `setup()`?
 
 Yes, and the FLOPs really are free: `setup()` runs outside the per-MLP FLOP budget, and its wall time is not charged to `residual_wall_time_s` either.
 
-The catch is the clock. `setup()` runs under a hard **5 s** ceiling, and blowing it fails the whole submission with `SETUP_TIMEOUT` — not one MLP, all of them.
+The constraint is wall clock. `setup()` runs under a hard **5 s** ceiling, and overrunning it fails the whole submission with `SETUP_TIMEOUT` — not one MLP, all of them.
 
 And it is not a once-per-submission hook. The grader runs `setup()` once per worker process, a submission is served by several workers, and a worker that dies mid-suite is replaced and re-runs it — roughly **5-15 times** per submission in practice. Each run gets its own 5 s, so anything expensive is paid for again on every worker. Keep it idempotent and cheap on every call. See [Estimator Contract: Lifecycle](../reference/estimator-contract.md#lifecycle).
 
@@ -109,7 +111,7 @@ the cap allows, don't engineer around it; write to
 
 ## What happens if I exceed the FLOP budget?
 
-flopscope raises `BudgetExhaustedError` before the over-budget operation executes. The framework catches this, zeros all your predictions for that MLP, and forces the per-MLP multiplier to **1.0** (no compute discount). You will see `budget_exhausted: true` in the per-MLP report and `adjusted_final_layer_score_m = final_layer_mse_m × 1.0` for the affected MLP. There is also a **post-hoc** combined-budget check: after `predict()` returns, the scoring layer re-checks effective compute against the budget and surfaces `combined_budget_exhausted: true` (same zero/×1.0 outcome). In Phase 2 effective cost is simply `C_m = F_m` (residual wall time is capped at 400 ms, not priced into it), so that check is a backstop on the same FLOP count; blowing the residual cap surfaces separately as `residual_wall_time_exhausted`.
+flopscope raises `BudgetExhaustedError` before the over-budget operation executes. The framework catches this, zeros all your predictions for that MLP, and forces the per-MLP multiplier to **1.0** (no compute discount). You will see `budget_exhausted: true` in the per-MLP report and `adjusted_final_layer_score_m = final_layer_mse_m × 1.0` for the affected MLP. There is also a **post-hoc** combined-budget check: after `predict()` returns, the scoring layer re-checks effective compute against the budget and surfaces `combined_budget_exhausted: true` (same zero/×1.0 outcome). In Phase 2 effective cost is `C_m = F_m` (residual wall time is capped at 400 ms, not priced into it), so that check is a backstop on the same FLOP count; blowing the residual cap surfaces separately as `residual_wall_time_exhausted`.
 
 ## Is there a memory limit?
 
@@ -119,7 +121,7 @@ Yes, two. Your solution process gets **8 GB of RAM** in total, and the grading s
 
 Yes, two that can cut a running evaluation short, and they apply to the submission as a whole rather than to any one MLP. The grader finalizes your evaluation when **no MLP has finished for 8 minutes**, or when the evaluation has been running for **40 minutes in total**, whichever comes first. Any MLP not finished by then is recorded as `WATCHDOG_TIMEOUT` and counts as a failed MLP (predictions zeroed, multiplier forced to 1.0); MLPs already scored keep their scores. These are grader-side operational limits, not whestbench settings; they can change without a kit release.
 
-A third submission-level bound is not a watchdog at all: if the cluster never serves your session, it is finalized with `truncation.reason = "no_worker_capacity"` rather than `no_progress`. That one is entirely on our side: nothing in your submission caused it and there is no partial result to read. Re-submit.
+A third submission-level bound is not a watchdog at all: if the cluster never serves your session, it is finalized with `truncation.reason = "no_worker_capacity"` rather than `no_progress`. That one is a grader-side fault: nothing in your submission caused it, and there is no partial result to read. Re-submit.
 
 There is **no per-worker time budget**. The 40 minutes is a single wall-clock ceiling on the whole submission, not a per-machine allowance that gets divided up. A working estimator does not come close: the 120 s per-MLP cap bounds each call and MLPs are graded in parallel. But an estimator that sits near the per-MLP cap on every MLP has no margin left. The limits are there to terminate a stuck evaluation, not to constrain a slow one. See [Whole-submission timeout](common-participant-errors.md#whole-submission-timeout-watchdog_timeout). (Local `whest run` has no equivalent timer, so this only appears on the server.)
 
@@ -141,29 +143,29 @@ Partly.
 shapes and dtypes, so it is identical on your laptop and on the grader.
 
 **`R_m`, the residual wall time, is.** Phase 2 does not price it (effective
-compute is simply `C_m = F_m`), but it does cap it, at **400 ms per MLP**, and
+compute is `C_m = F_m`), but it does cap it, at **400 ms per MLP**, and
 overrunning the cap zeroes that MLP. Everything flopscope does *not* meter
 (pure-Python loops, control flow, GC, I/O) runs at the speed of whatever machine
 the grader hands you, so a loop sitting at 300 ms on your laptop can trip a cap
 you thought you were under. Moving real computation into that window is not an
 option either: raw `numpy`, compiled extensions you ship yourself, threads,
-subprocesses and multiprocessing are **prohibited** in Phase 2, and using them
+subprocesses, and multiprocessing are **prohibited** in Phase 2, and using them
 is disqualifiable rather than merely expensive.
 
 The rules do not guarantee any particular evaluation hardware. Do not assume
 the grader matches your development machine in core count, clock speed, or
-BLAS backend. A submission whose cost or behaviour depends on a fixed amount
+BLAS backend. A submission whose cost or behavior depends on a fixed amount
 of wall clock is carrying a risk it does not need to carry.
 
 The way to stay hardware-independent is to keep the work inside
 `flopscope.numpy`, where it is metered analytically and your local number is
-the grader's number. Whatever you push outside it, you are being timed on.
+the grader's number. Anything you move outside it is timed instead of metered.
 
 **If your estimator has an internal deadline** (`time.time()` checks, a
 `PREDICT_TIMEOUT` constant, an anytime algorithm that stops refining when the
 clock runs out), do not calibrate it against your own machine's speed. On
 slower hardware a locally-tuned deadline trips early and your estimator
-silently returns its fallback answer: no exception, no failed MLP, just a
+silently returns its fallback answer: no exception, no failed MLP, only a
 valid-looking score computed from the degraded path. Prefer a **budget-based**
 cutoff over a clock-based one: `predict()` is handed `budget`, and
 `flops.budget_summary()` tells you what you have spent. If you must use a clock, make the
@@ -192,11 +194,11 @@ You are ranked by the **budget-adjusted** `adjusted_final_layer_score = final_la
 
 Almost always one of four things:
 
-1. **State carries between MLPs locally, but the grader spreads your suite over several workers.** Module-level and instance state survives from one `predict()` to the next in *both* local runners: one worker serves the whole local suite, `setup()` runs once, and `--runner subprocess` behaves exactly like `--runner local` here. The grader does not. It serves one submission from several worker processes, so `setup()` runs roughly 5-15 times and each worker sees only the MLPs it was handed; a worker that dies mid-suite is replaced and starts over. A cache that quietly assumes it has seen every previous MLP is therefore warm locally and cold in production. **Fix:** make each `predict()` correct on its own, and treat anything built across calls as an optimisation that may be missing. Populate what you can in `setup()` from `self._...` attributes, and ship precomputed data as a file loaded from `submission_dir` ([Ship Weights](../how-to/ship-weights.md)). Do **not** plan caching around `SetupContext.scratch_dir`: it is reserved and `None` on every whestbench 0.16.0 path, so touching it raises inside `setup()`, which fails the entire submission rather than one MLP.
+1. **State carries between MLPs locally, but the grader spreads your suite over several workers.** Module-level and instance state survives from one `predict()` to the next in *both* local runners: one worker serves the whole local suite, `setup()` runs once, and `--runner subprocess` behaves exactly like `--runner local` here. The grader does not. It serves one submission from several worker processes, so `setup()` runs roughly 5-15 times and each worker sees only the MLPs it was handed; a worker that dies mid-suite is replaced and starts over. A cache that assumes it has seen every previous MLP is therefore populated locally and empty in production. **Fix:** make each `predict()` correct on its own, and treat anything built across calls as an optimization that may be missing. Populate what you can in `setup()` from `self._...` attributes, and ship precomputed data as a file loaded from `submission_dir` ([Ship Weights](../how-to/ship-weights.md)). Do **not** plan caching around `SetupContext.scratch_dir`: it is reserved and `None` on every whestbench 0.16.0 path, so touching it raises inside `setup()`, which fails the entire submission rather than one MLP.
 
 2. **Imports that work locally fail in the grader sandbox.** Two flavors: (a) a helper module that didn't ship (you packaged the single file instead of the folder) or a side-effecting top-level statement, caught by running `uv run whest run --estimator estimator.py --runner subprocess` locally before submitting, then reading the "Estimator Errors" panel; (b) an `import` of a package the grader doesn't provide. The sandbox has **only** `flopscope`, the `whestbench` API, and the Python stdlib: no `numpy`/`scipy`/`torch`. Your local venv *does* have those, so a local run won't flag them; the fix is to not import them (use `flopscope.numpy as fnp`, and precompute heavier work offline; see [Ship Weights](../how-to/ship-weights.md)).
 
-3. **Numerical non-determinism without a seed.** Random MLP generation, Monte-Carlo ground truth, or your estimator's own RNG. **Fix:** add `--seed N` to your local runs to compare apples-to-apples, and avoid time-based seeds in your estimator.
+3. **Numerical non-determinism without a seed.** Random MLP generation, Monte-Carlo ground truth, or your estimator's own RNG. **Fix:** add `--seed N` to your local runs so successive runs are comparable, and avoid time-based seeds in your estimator.
 
 4. **Work that flopscope never metered.** Raw `numpy`, a bundled BLAS, threads, and `multiprocessing` are **prohibited** in Phase 2: a submission that computes outside flopscope is disqualified, not re-priced. Even legitimate plumbing (Python loops, control flow, GC, I/O) runs at whatever speed the grader's machine gives it, and `residual_wall_time_s` can be several times larger there than at home. Symptom: `flops_used` matches your local run exactly, while `residual_wall_time_exhausted` fires on MLPs that passed locally. A clock-based internal deadline can also trip early and silently substitute a fallback answer. **Fix:** move the math into `flopscope.numpy` so it is metered analytically, and rehearse with `--residual-wall-time-limit 0.4 --max-threads 1`. See [Is scoring hardware-dependent?](#is-scoring-hardware-dependent).
 
@@ -235,7 +237,7 @@ when the tagged buffer is written (re-validate with `as_symmetric()` to keep the
 as `examples/03_covariance_propagation.py` shows), and `einsum(..., out=)` following
 NumPy's casting rules so calls that used to silently truncate now raise
 `TypeError`. whestbench 0.15.0 adopted flopscope 0.11: a contraction past the
-52-letter subscript budget now bills the honest fused-multiply-add count instead of
+52-letter subscript budget now bills the full fused-multiply-add count instead of
 multiplies only, `ix_` moved from free to billed, and non-numeric dtypes
 (`object`, `str_`, `bytes_`, `datetime64`, structured) now raise
 `UnsupportedDtypeError` anywhere they reach a metered op. Convert those with plain
@@ -258,9 +260,9 @@ The kit resolves **flopscope 0.12.0** with **whestbench 0.16.0**: whestbench 0.1
 declares `flopscope>=0.12.0,<0.13.0`, so the two are an atomic pair rather than
 independent choices. The three repos move as one unit, in this order: whestbench cuts
 a release naming a flopscope minor, the evaluator re-pins to that pair, and the kit
-follows. While a move is in flight the kit and the grader can sit one minor apart, and
+follows. While a move is in progress the kit and the grader can sit one minor apart, and
 FLOP counts you measure locally may not be the ones your submission is scored under.
-`pyproject.toml` records which step we are on; read the comment at the top of it
+`pyproject.toml` records which step the kit is on; read the comment at the top of it
 before trusting a local total to match the leaderboard.
 
 Whenever the meter moves, `F_m` (and therefore `C_m` and the multiplier) can

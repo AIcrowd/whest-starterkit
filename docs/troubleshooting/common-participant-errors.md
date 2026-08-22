@@ -1,4 +1,4 @@
-# Common Participant Errors
+# Common participant errors
 
 > [← Documentation](../README.md)
 
@@ -28,7 +28,7 @@ Tip: For estimator-level tracebacks, rerun with --runner local --debug.
 ```
 
 The text after `SETUP_ERROR:` is your own exception's message, so it will not
-match this example; `[setup:SETUP_ERROR]` is the part to recognise.
+match this example; `[setup:SETUP_ERROR]` is the part to recognize.
 
 Exact follow-up:
 
@@ -36,7 +36,7 @@ Exact follow-up:
 uv run whest run --estimator estimator.py --runner local --debug
 ```
 
-> **Local runs use the full flopscope; the grader uses the flopscope *client*.** `whest run` (both `--runner local` and `--runner subprocess`) executes against the full, locally-installed `flopscope` package, while the grader runs the lighter flopscope *client*, a numpy-compatible proxy. The two are designed to match, so the single best habit is to write all array code against `flopscope.numpy` (`import flopscope.numpy as fnp`) and never reach for plain numpy. A few client-only parity gaps can still pass locally and surface **only** in grading; the local runner does not exercise the client/server split. Most of the failures documented below are exactly those gaps; when the grader reports one, the fix is on this page.
+> **Local runs use the full flopscope; the grader uses the flopscope *client*.** `whest run` (both `--runner local` and `--runner subprocess`) executes against the full, locally-installed `flopscope` package, while the grader runs the lighter flopscope *client*, a numpy-compatible proxy. The two are designed to match, so the single best habit is to write all array code against `flopscope.numpy` (`import flopscope.numpy as fnp`) and never use plain numpy. A few client-only parity gaps can still pass locally and surface **only** in grading; the local runner does not exercise the client/server split. Most of the failures documented below are exactly those gaps; when the grader reports one, the fix is on this page.
 
 ## Estimator returned wrong shape
 
@@ -70,7 +70,7 @@ uv run whest validate --estimator estimator.py
 
 Symptom: unexpectedly poor `adjusted_final_layer_score` despite reasonable prediction logic, with one or more MLPs showing `budget_exhausted: true` or `combined_budget_exhausted: true`.
 
-Why it happens: your estimator's effective compute exceeded `flop_budget`. In Phase 2 that is simply your analytical FLOP count, `C_m = F_m`, against a per-MLP budget of `2**41` (2,199,023,255,552 FLOPs). The affected MLP's predictions are replaced with zeros and the per-MLP multiplier is forced to **1.0** (no compute discount), so `adjusted_final_layer_score_m = MSE(0, Y_m) × 1.0` — strictly worse than a trivial-zero submission that succeeds (which gets the 0.1 multiplier floor).
+Why it happens: your estimator's effective compute exceeded `flop_budget`. In Phase 2 that is your analytical FLOP count, `C_m = F_m`, against a per-MLP budget of `2**41` (2,199,023,255,552 FLOPs). The affected MLP's predictions are replaced with zeros and the per-MLP multiplier is forced to **1.0** (no compute discount), so `adjusted_final_layer_score_m = MSE(0, Y_m) × 1.0` — strictly worse than a trivial-zero submission that succeeds (which gets the 0.1 multiplier floor).
 
 `budget_exhausted` fires when flopscope itself trips (the operation about to run would exceed the cap). `combined_budget_exhausted` fires on the post-hoc check `C_m > B` after `predict()` returns; because Phase 2 scores `C_m = F_m`, that is a backstop on the same FLOP count rather than a second way to fail. Residual wall time is no longer priced into `C_m`; it has its own 400 ms cap, reported as `residual_wall_time_exhausted` (next section).
 
@@ -94,9 +94,9 @@ If you have profiled an operation and believe flopscope is billing it wrongly, s
 
 Symptom: a per-MLP entry with `residual_wall_time_exhausted: true` — locally, a `ResidualWallTimeExhaustionWarning` naming the MLP and the measured time. Predictions for that MLP are zeroed and the multiplier is forced to **1.0**.
 
-Why it happens: everything that is not a metered flopscope call (your Python control flow, per-neuron loops, GC, I/O) accumulates in `residual_wall_time_s`, and it is capped at **400 ms per MLP**. The cap is not priced: unused FLOPs do not buy more of it, and going over is a failure rather than a surcharge.
+Why it happens: everything that is not a metered flopscope call (your Python control flow, per-neuron loops, GC, I/O) accumulates in `residual_wall_time_s`, and it is capped at **400 ms per MLP**. The cap is not priced: unused FLOPs do not extend it, and going over is a failure rather than a surcharge.
 
-That 400 ms is sized for **plumbing**: control flow, slicing inputs into blocks, bookkeeping between flopscope calls. It is not an allowance for computation. Doing meaningful compute outside flopscope (raw Python arithmetic over neurons, a vendored array library, a compiled kernel, threads or a subprocess) is prohibited and disqualifiable, whether or not it fits inside the cap. See [Allowed Code](../concepts/allowed-code.md) for the full boundary.
+That 400 ms is sized for **plumbing**: control flow, slicing inputs into blocks, bookkeeping between flopscope calls. It is not an allowance for computation. Doing meaningful compute outside flopscope (raw Python arithmetic over neurons, a vendored array library, a compiled kernel, threads, or a subprocess) is prohibited and disqualifiable, whether or not it fits inside the cap. See [Allowed Code](../concepts/allowed-code.md) for the full boundary.
 
 Fix now:
 
@@ -124,7 +124,8 @@ Why it happens: flopscope 0.9 re-priced the cost model (billing is now
 **destination** dtype's rate, so a float32→float64 cast bills 2×/element.
 `eye` is billed too, but only for the diagonal cells it writes (`min(m, n)`),
 so `fnp.eye(1024)` costs 2,048 FLOPs at its default float64 (1,024 at
-float32), not a million. Your math didn't get slower — the meter got honest.
+float32), not a million. Your estimator does not perform more arithmetic than
+before; flopscope 0.9 prices that arithmetic differently.
 Scores produced under whestbench 0.12.x are not comparable to 0.13.x.
 
 Fix now: keep estimator state in float32 (`dtype=fnp.float32` on `zeros`/
@@ -149,7 +150,7 @@ Symptom: on the **grading server** (not local runs), a per-MLP failure whose mes
 
 Why it happens: the flopscope runtime on the grading sandbox caps any single array at **4 GiB** (a memory-safety guard). It applies to both arrays you build via `flopscope.numpy` and the array you return from `predict()`. A single array that large almost always means an over-vectorized "all layers × all samples at once" buffer, or `float64` where the MLP weights are `float32`.
 
-Local `whest run` uses an in-process backend **without** this cap, so you won't reproduce it locally; keep your peak single-array size under 4 GiB as a rule. The solution process also gets **8 GB of RAM** in total on the grader, so your peak *combined* footprint matters too, not just the largest single array.
+Local `whest run` uses an in-process backend **without** this cap, so you won't reproduce it locally; keep your peak single-array size under 4 GiB as a rule. The solution process also gets **8 GB of RAM** in total on the grader, so your peak *combined* footprint matters too, not only the largest single array.
 
 Fix now:
 
@@ -225,7 +226,7 @@ uv run whest validate --estimator estimator.py
 
 ## Predict raised an unexpected exception
 
-Symptom: `whest run` exits with status `1` and prints an "Estimator Errors" panel listing one or more MLPs with a `PREDICT_ERROR` code. A stderr line reads e.g. `2 of 10 MLP(s) raised during predict; rerun with --debug for tracebacks...`.
+Symptom: `whest run` exits with status `1` and prints an "Estimator Errors" panel listing one or more MLPs with a `PREDICT_ERROR` code. A stderr line reads, for example, `2 of 10 MLP(s) raised during predict; rerun with --debug for tracebacks...`.
 
 Why it happens: your `predict()` raised an exception that is neither `BudgetExhaustedError` nor `TimeExhaustedError`. WhestBench routes the failure through the zero-prediction path: the affected MLP scores `final_layer_mse_m × 1.0` (no compute discount) and the suite mean stays finite. The non-zero exit code signals that the submission is not yet passing.
 
@@ -247,7 +248,7 @@ Symptom: locally, `whest run` prints `Error [setup:SETUP_ERROR]: <your exception
 
 Why it happens: your estimator's `setup()` raised. Unlike a `predict()` failure (which is isolated to a single MLP and zero-scored), an exception in `setup()` rejects the **whole** submission: there is nothing to grade if setup never completes. Common causes: a weights/`.npz` file that didn't ship or loads with the wrong path, an assertion or config read that's brittle on the grader, or work that's fine locally but trips on a sandbox difference.
 
-Fix now: make `setup()` exception-proof. Load files via the path the framework gives you, guard fallible work defensively (try/except with a sane fallback), and keep it to loading rather than computing; heavy precompute belongs **offline**, shipped as an artifact you read here (it also avoids the [setup timeout](#setup-timeout)). Don't move it into `predict()` instead: `predict()` is the billed side. Reproduce locally with the isolated runner before submitting:
+Fix now: make `setup()` exception-proof. Load files via the path the framework gives you, guard fallible work defensively (try/except with a safe fallback), and keep it to loading rather than computing; heavy precompute belongs **offline**, shipped as an artifact you read here (it also avoids the [setup timeout](#setup-timeout)). Don't move it into `predict()` instead: `predict()` is the billed side. Reproduce locally with the isolated runner before submitting:
 
 ```bash
 uv run whest run --estimator estimator.py --runner subprocess --debug
@@ -259,9 +260,9 @@ Symptom: `SETUP_TIMEOUT` error.
 
 Why it happens: on the grader, `setup()` (plus your module import) has a hard **5 second** budget, and it overran. This is session-level: it fails the **whole** submission, not one MLP.
 
-`setup()` is not a once-per-submission hook. It runs once per worker process, roughly **5-15 times** per submission, since a submission is served by several workers and a worker that dies mid-suite is replaced and re-runs `setup()`. Each run gets its own 5 s, and any one of them overrunning fails the submission. Keep it idempotent and cheap on every call, not just the first. See [Estimator Contract: Lifecycle](../reference/estimator-contract.md#lifecycle).
+`setup()` is not a once-per-submission hook. It runs once per worker process, roughly **5-15 times** per submission, since a submission is served by several workers and a worker that dies mid-suite is replaced and re-runs `setup()`. Each run gets its own 5 s, and any one of them overrunning fails the submission. Keep it idempotent and cheap on every call, not only the first. See [Estimator Contract: Lifecycle](../reference/estimator-contract.md#lifecycle).
 
-Locally, `whest run` and `whest validate` use the same 5 s default, so a local `SETUP_TIMEOUT` means what a graded one does. Rehearse a tighter cap with `--setup-timeout` to see your headroom. A setup that lands close to the ceiling is already a problem: the grader's machine is not guaranteed to be as fast as yours.
+Locally, `whest run` and `whest validate` use the same 5 s default, so a local `SETUP_TIMEOUT` means what a graded one does. To see your headroom, rehearse a tighter cap with `--setup-timeout`. A setup that lands close to the ceiling is already a problem: the grader's machine is not guaranteed to be as fast as yours.
 
 Fix now: precompute offline and ship the result as an artifact your `setup()` loads (see [Ship Weights](../how-to/ship-weights.md)). Do **not** move the work into `predict()`: `setup()` is off the FLOP budget and off the residual, `predict()` is billed for both, so that trade makes your score worse.
 
@@ -304,9 +305,9 @@ Whichever fires first, every MLP not yet finished is recorded as `WATCHDOG_TIMEO
 
 These are the aggregate limits. In particular there is no per-worker time budget: the 40 minutes is one wall-clock ceiling on the whole submission, measured from when your evaluation starts, and it is not divided among the machines that run it. Both are grader-side operational limits, not whestbench settings; they can change without a kit release.
 
-One further submission-level bound is not a watchdog at all: if the cluster never serves your session, it is finalized with `truncation.reason = "no_worker_capacity"` rather than `no_progress`. That one is entirely on our side: nothing in your submission caused it and there is no partial result to read. Re-submit.
+One further submission-level bound is not a watchdog at all: if the cluster never serves your session, it is finalized with `truncation.reason = "no_worker_capacity"` rather than `no_progress`. That one is a grader-side fault: nothing in your submission caused it, and there is no partial result to read. Re-submit.
 
-You are unlikely to reach either limit with a working estimator: the 120 s per-MLP cap bounds each call and MLPs are graded in parallel. But an estimator that sits near the per-MLP cap on every MLP has no margin left. These limits exist to terminate a genuinely stuck evaluation rather than to constrain a slow one. If you do see `WATCHDOG_TIMEOUT`, the usual causes are an estimator that hangs (see **Predict timeout** above) or a transient infrastructure fault on our side.
+You are unlikely to reach either limit with a working estimator: the 120 s per-MLP cap bounds each call and MLPs are graded in parallel. But an estimator that sits near the per-MLP cap on every MLP has no margin left. These limits exist to terminate a genuinely stuck evaluation rather than to constrain a slow one. If you do see `WATCHDOG_TIMEOUT`, the usual causes are an estimator that hangs (see **Predict timeout** above) or a transient grader-side infrastructure fault.
 
 Fix now: if only some MLPs carry the code and the rest scored normally, re-submit; a partial `WATCHDOG_TIMEOUT` is more often infrastructure than your code. If every MLP carries it, look for a hang in `predict()` or `setup()`.
 

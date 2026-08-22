@@ -38,8 +38,8 @@ class Estimator(BaseEstimator):
     all show the pattern. ``self._setup_rng`` is the submission-level RNG seeded
     from ``ctx.seed`` inside ``setup``; the ``_rng`` line at the top of
     ``predict`` is the per-MLP RNG seeded from ``mlp.seed``. Both are unused
-    here because the algorithm is purely analytical -- a randomized estimator
-    (e.g. Monte Carlo sampling, randomized projections) would consume them.
+    here because the algorithm is purely analytical -- a randomized estimator,
+    such as Monte Carlo sampling or randomized projections, would consume them.
     """
 
     def __init__(self) -> None:
@@ -98,8 +98,8 @@ class Estimator(BaseEstimator):
             # Evaluate the PDF and CDF at alpha.
             # `flops.stats.norm.*` promotes float32 input to float64 to match
             # scipy.stats, and flopscope warns about exactly this. Left alone, the
-            # promoted result would re-infect the rest of the loop at the 2x rate and
-            # undo the float32 seeding above, so cast straight back.
+            # promoted result would spread through the rest of the loop at the 2x
+            # rate and undo the float32 seeding above, so cast straight back.
             phi_alpha = flops.stats.norm.pdf(alpha).astype(fnp.float32)  # phi(alpha)
             Phi_alpha = flops.stats.norm.cdf(alpha).astype(fnp.float32)  # Phi(alpha)
 

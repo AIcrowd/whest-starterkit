@@ -1,21 +1,21 @@
-# Pre-Submission Checklist
+# Pre-submission checklist
 
 > [← Documentation](../README.md)
 
 ## 🎯 When to use this page
 
-The minute before you click "submit" on AIcrowd. Run through these
-checks; each one maps to a single command or a one-line confirmation.
+Use this page in the minutes before you click "submit" on AIcrowd. Run through
+these checks; each one maps to a single command or a one-line confirmation.
 
 > **You get 10 submissions per team per UTC day.** The counter resets at
 > 00:00 UTC and unused slots do not roll over, so every submission that fails
-> on something mechanical costs you a tenth of the day. Every check below
-> costs less than the slot it saves.
+> on something mechanical costs you a tenth of the day. Each check below takes
+> less time than a wasted slot.
 
 ## Correctness
 
 - [ ] **`uv run whest validate --estimator estimator.py`** — read the
-      **Checks table**, not just the panel header. Every row must say `OK`. A
+      **Checks table**, not only the panel header. Every row must say `OK`. A
       `FAIL` on `setup(context) within the graded cap` still prints
       `Status: success` and still exits `0`, so a green panel alone is not
       proof. `--json` is not a substitute: it emits `{"ok": true, …}` with no
@@ -37,7 +37,7 @@ checks; each one maps to a single command or a one-line confirmation.
       `B_m = 2,199,023,255,552` FLOPs (2^41), and what it caps is
       `C_m = F_m`: your analytical FLOP count, nothing else.
 - [ ] **`residual_wall_time_s` stays under 0.4 s on every MLP.** Residual
-      wall time is not priced into your score; it is capped. Spend more than
+      wall time does not contribute to your score; it is capped. Spend more than
       **400 ms** outside flopscope ops on one MLP and that MLP's prediction
       is replaced with zeros. The residual exists for plumbing (loops,
       control flow, bookkeeping), not for computation, and doing meaningful
@@ -45,7 +45,7 @@ checks; each one maps to a single command or a one-line confirmation.
       Reproduce the cap locally with `--residual-wall-time-limit 0.4` and
       confirm **`residual_wall_time_exhausted` is `false`**. If you believe
       a legitimate estimator cannot fit the cap, write to
-      [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) rather than shipping and hoping.
+      [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) rather than submitting without checking.
 - [ ] **`per_mlp[i].time_exhausted` is `false`.** The grader allows **120 s
       of wall time per MLP**; confirm the value you were scored under in
       `run_config.wall_time_limit_s` in your own run report rather than
@@ -53,11 +53,11 @@ checks; each one maps to a single command or a one-line confirmation.
       grader your solution process gets **2 pinned vCPUs** (the flopscope
       backend has its own 14), and the rules guarantee no particular
       evaluation hardware, so work that finishes in time locally only
-      because it is spread across your laptop's cores is a bet, not a plan.
-      See
+      because it is spread across your laptop's cores can exceed the cap on
+      the grader. See
       [Is scoring hardware-dependent?](../troubleshooting/faq.md#is-scoring-hardware-dependent).
 - [ ] **You fit in 8 GB.** That is the whole solution process, and width 1024
-      makes it a live constraint: one full covariance matrix is 1024×1024,
+      makes it a real constraint: one full covariance matrix is 1024×1024,
       sixteen times the elements of the Phase 1 256×256. If you keep a
       per-layer covariance, count the layers before you ship.
 - [ ] **No internal deadline calibrated to your own machine's clock.** If
@@ -83,19 +83,19 @@ estimator is fifty lines of `fnp`; the full rule is in
 - [ ] **No FFI.** `ctypes`, `cffi`, and any other route out of the
       interpreter are prohibited.
 - [ ] **No concurrency.** `asyncio`, `threading`, `subprocess`, and
-      `multiprocessing` are prohibited, including the "just to overlap I/O"
+      `multiprocessing` are prohibited, including the "only to overlap I/O"
       uses.
 - [ ] **No compute while a flopscope op is in flight.** Doing your own work
       alongside an in-flight flopscope call is prohibited; it is the same
       offence as computing in the residual, and it is disqualifiable.
-- [ ] **Hands off the accounting.** Do not patch, wrap, replace, or
+- [ ] **Do not modify the accounting.** Do not patch, wrap, replace, or
       otherwise reach into the flopscope client, its transport, or its FLOP
       accounting.
 - [ ] **Data files are still allowed.** Weights, lookup tables, and
       precomputed artifacts are explicitly permitted, and with `C_m = F_m`
       they are the cheapest thing you can ship; see
-      [ship-weights.md](./ship-weights.md), which also covers where the
-      data/code line sits.
+      [ship-weights.md](./ship-weights.md), which also covers the boundary
+      between data and code.
 - [ ] **Only sandbox-available imports.** The sandbox enforces the rule from
       the other side: your estimator can import **only** `flopscope` (incl.
       `flopscope.numpy as fnp`), the `whestbench` API (`BaseEstimator`,
@@ -106,8 +106,8 @@ estimator is fifty lines of `fnp`; the full rule is in
       PyTorch-trained model, a scipy routine) goes **offline** → ship a
       pickle-free `.npz`, loaded in `setup()`.
 
-Unsure whether a technique you have in mind is inside the line? Ask
-[arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) before you spend a week on it.
+Unsure whether a technique you have in mind is allowed? Ask
+[arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) before you build on it.
 
 ## Reproducibility
 
@@ -119,7 +119,7 @@ Unsure whether a technique you have in mind is inside the line? Ask
       participant-chosen seeds. If your estimator uses randomness inside
       `predict()`, seed it from `mlp.seed`:
       `fnp.random.default_rng(mlp.seed)`. If your estimator uses randomness
-      inside `setup()` (e.g. a fixed random projection basis), seed it from
+      inside `setup()` (for example, a fixed random projection basis), seed it from
       `ctx.seed`: `fnp.random.default_rng(ctx.seed)`. Custom seeds at either
       site may be disqualified for prize eligibility; see
       [Estimator Contract: Reproducibility](../reference/estimator-contract.md#reproducibility-under-the-grader-seed).
@@ -145,7 +145,7 @@ Unsure whether a technique you have in mind is inside the line? Ask
       precompute belongs offline: ship the artifact next to your estimator and
       load it (see [how-to/ship-weights.md](./ship-weights.md)).
 - [ ] No `print()` left in `predict()`. The grader runs many MLPs;
-      stdout flooding is a reliable way to lose `residual_wall_time_s`.
+      stdout flooding consumes `residual_wall_time_s`.
 
 ## Final command
 

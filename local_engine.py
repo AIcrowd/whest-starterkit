@@ -6,14 +6,14 @@ NumPy-shaped API (``flopscope.numpy``).
 This module deliberately stays single-file and uses the canonical flopscope
 idiom, ``import flopscope as flops; import flopscope.numpy as fnp`` (see
 ``docs/reference/code-patterns.md``). Most operations are ``fnp.*`` calls;
-``flops`` is only reached for ``BudgetContext``. The narrow surface mirrors
-how participants will mostly write their code.
+``flops`` is only reached for ``BudgetContext``. That narrow surface matches
+how most participants write their own code.
 
-Drift from whestbench is detected by ``tests/test_local_engine_parity.py``.
+``tests/test_local_engine_parity.py`` detects drift from whestbench.
 The ``MLP`` / ``BaseEstimator`` imports below are deliberate; they are the
 participant-facing types. What must NOT be imported is whestbench's own
-engine (``sample_mlp``, ``sample_layer_statistics``): re-implementing those
-in ``fnp`` is the whole point of this file.
+engine (``sample_mlp``, ``sample_layer_statistics``): this file exists to
+re-implement those in ``fnp``.
 """
 
 from __future__ import annotations
@@ -28,8 +28,8 @@ _REPO_ROOT = Path(__file__).resolve().parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-# Friendly import guard: surface a clear "run `uv sync`" message instead of a
-# bare ImportError traceback if dependencies are missing.
+# Import guard: if a dependency is missing, surface a clear "run `uv sync`"
+# message instead of a bare ImportError traceback.
 try:
     import flopscope as flops
     import flopscope.numpy as fnp
@@ -65,12 +65,12 @@ def monte_carlo_layer_means(
 ) -> fnp.ndarray:
     """Forward `n_samples` N(0,1) float32 inputs through `mlp.weights` and average per layer.
 
-    Draws in float32 and accumulates the mean in float64, mirroring
-    whestbench's own ground-truth sampler (and flopscope bills
-    float64 ops at 2x, so the f32 draw is also the cheap idiom).
+    Draws in float32 and accumulates the mean in float64, matching
+    whestbench's own ground-truth sampler. flopscope also bills float64 ops at
+    2x, so the float32 draw costs less.
 
-    Returns shape `(depth, width)`, the same shape as `Estimator.predict`, so the
-    two can be subtracted directly.
+    Returns shape `(depth, width)`, the same shape as `Estimator.predict`, so you
+    can subtract the two directly.
     """
     rng = fnp.random.default_rng(seed)
     width = mlp.width
@@ -112,7 +112,7 @@ def compare_against_monte_carlo(
     `all_layers_mse` is whestbench's secondary metric; it is the more forgiving
     of the two, so do not tune against it alone.
 
-    Friendly preflight: before the MC sweep, validate the estimator returns an
+    Preflight: before the MC sweep, validate the estimator returns an
     `fnp.ndarray` of the right shape on the actual MLP (dtype is not checked
     here; the grader casts with `fnp.asarray(..., dtype=fnp.float32)`). On
     failure, print a one-line diagnostic pointing at the contract doc, then exit
@@ -129,8 +129,9 @@ def compare_against_monte_carlo(
     # `submission_dir` is where the grader puts your packaged folder, and it is how
     # the shipped-weights pattern (examples/04) finds its `.npz`. Default it to the
     # directory the estimator class was defined in, which is what the grader does
-    # for a folder submission, so estimator.py + weights.npz side by side just
-    # works. Pass `submission_dir=` explicitly when the weights live elsewhere
+    # for a folder submission, so an estimator.py and weights.npz sitting side by
+    # side resolve with no extra configuration.
+    # Pass `submission_dir=` explicitly when the weights live elsewhere
     # (examples/04 saves into a tempdir rather than committing an .npz to the repo).
     try:
         _src = inspect.getsourcefile(type(estimator))
@@ -201,10 +202,10 @@ def compare_against_monte_carlo(
             f"— the grader would FAIL this MLP (multiplier forced to 1.0).\n"
         )
 
-    # `final_layer_mse` goes LAST on purpose: it is the ranked metric, so it is
-    # the number the eye lands on. tests/test_local_engine.py pins both MSE columns
-    # by position, so reordering this row will fail CI rather than silently move
-    # what is tested. sampling_flops is 17 chars wide at n=100,000
+    # `final_layer_mse` goes last on purpose: it is the ranked metric, so it ends
+    # the row that reports the result. tests/test_local_engine.py pins both MSE
+    # columns by position, so reordering this row fails CI rather than silently
+    # moving what is tested. sampling_flops is 17 chars wide at n=100,000
     # (3,363,737,665,536).
     row = "{:>10} | {:>17} | {:>15} | {:>14} | {:>15}".format
     header = row(

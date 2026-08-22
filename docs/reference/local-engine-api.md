@@ -2,9 +2,9 @@
 
 > [← Documentation](../README.md)
 
-`local_engine.py` is a pedagogical re-implementation of whestbench's MLP factory and Monte-Carlo simulator in raw `flopscope` code. You can read the whole file in 5 minutes — that's the point.
+`local_engine.py` is a pedagogical re-implementation of whestbench's MLP factory and Monte-Carlo simulator in raw `flopscope` code. You can read the whole file in 5 minutes.
 
-> **Why pedagogical?** Stage 1 is about understanding the math. Re-implementing in raw flopscope means there's no library magic between you and the forward pass.
+> **Why pedagogical?** Stage 1 is about understanding the math. Re-implementing in raw flopscope puts no library abstraction between you and the forward pass.
 
 ## `build_mlp(width, depth, seed=0) -> MLP`
 
@@ -60,7 +60,7 @@ The FLOP columns are the measured costs at `width=1024, depth=16` with
 MSE column is whatever your own estimator achieves. `estimator_flops` is
 constant down the column, because your estimator runs once, before the sweep.
 
-**Friendly preflight:** before the MC sweep, the function checks that `estimator.predict(mlp, budget)` returns a `flopscope.numpy.ndarray` of shape `(depth, width)`. On failure it prints a one-line diagnostic pointing at [estimator-contract.md](estimator-contract.md) and raises `SystemExit(2)` — no numpy traceback. It does **not** check dtype: an integer-dtype return of the right shape passes here *and* passes `whest run`, so cast to `fnp.float32` yourself.
+**Preflight check:** before the MC sweep, the function checks that `estimator.predict(mlp, budget)` returns a `flopscope.numpy.ndarray` of shape `(depth, width)`. On failure it prints a one-line diagnostic pointing at [estimator-contract.md](estimator-contract.md) and raises `SystemExit(2)` — no numpy traceback. It does **not** check dtype: an integer-dtype return of the right shape passes here *and* passes `whest run`, so cast to `fnp.float32` yourself.
 
 Returns `None` — this is a print helper for stage-1 dev loops.
 

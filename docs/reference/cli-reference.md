@@ -1,4 +1,4 @@
-# CLI Reference
+# CLI reference
 
 > [← Documentation](../README.md)
 
@@ -16,7 +16,7 @@ The `whest` CLI is shipped by [whestbench](https://github.com/AIcrowd/whestbench
 | `whest dataset bake/download/info/merge` | Build or fetch a real evaluation dataset | 3-4 |
 | `whest run --runner local` | Score in-process | 3 |
 | `whest run --runner subprocess` | Score in subprocess | 4 |
-| `whest package` | Build submission archive. A **file** ships just that file, renamed to `estimator.py` inside the archive; a single file that imports a sibling module is refused at package time (package the folder instead). A **folder** ships the whole folder and must contain `estimator.py`. | 5 |
+| `whest package` | Build submission archive. A **file** ships only that file, renamed to `estimator.py` inside the archive; a single file that imports a sibling module is refused at package time (package the folder instead). A **folder** ships the whole folder and must contain `estimator.py`. | 5 |
 | `whest validate-package <archive>` | Check a built `.tar.gz` against its manifest before you spend a submission slot | 5 |
 | `whest login` | Store your AIcrowd API key; do this before `whest submit` | 5 |
 | `whest submit` | Package (if `--estimator` given) and upload to AIcrowd | 5 |
@@ -24,8 +24,8 @@ The `whest` CLI is shipped by [whestbench](https://github.com/AIcrowd/whestbench
 | `whest profile-simulation` | Benchmark backend correctness/timing | any |
 | `whest version` | Print the installed whestbench version | any |
 
-> **One Phase 2 thing the CLI won't tell you.** `whest submit` is capped at
-> **10 submissions per team per UTC day**.
+> **Submission quota.** `whest submit` is capped at **10 submissions per team
+> per UTC day**. The CLI does not report this limit.
 
 ## `whest run` limit flags
 
@@ -42,13 +42,13 @@ the one thing a local run does not match:
 | Ground-truth draws per MLP | `--n-samples` (dataset-less) | `200_000` | no — the Phase 2 dataset was baked at 1e9 |
 
 So a bare `uv run whest run --estimator estimator.py --runner local` already
-rehearses every graded limit; the flags exist to *change* them.
+applies every graded limit; the flags exist to *change* them.
 `--no-residual-wall-time-limit` disables the residual gate entirely. You need it
 only to re-score an earlier round, and never on its own: that round's budget,
-lambda, wall cap and dataset revision all have to be restored together, or the
+lambda, wall cap, and dataset revision all have to be restored together, or the
 run is scored under a mix of two rulebooks and the number matches neither. The
 complete per-round recipe is in [Competition Rounds](rounds.md#reproducing-a-score-from-an-earlier-round).
-Confirm what you actually ran under with `--format json` and read `run_config`.
+To confirm which limits a run applied, pass `--format json` and read `run_config`.
 
 See [Competition Rounds](rounds.md) for every round's values side by side, and
 [Estimator Contract: Phase 2 limits](estimator-contract.md#phase-2-limits) for

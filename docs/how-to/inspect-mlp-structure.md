@@ -1,4 +1,4 @@
-# Inspect and Traverse MLP Structure
+# Inspect and traverse MLP structure
 
 > [← Documentation](../README.md)
 
@@ -77,7 +77,7 @@ class Estimator(BaseEstimator):
 | `MLP` | `depth` | Number of weight matrices (layers) | `int` |
 | `MLP` | `weights` | Ordered weight matrices from layer 0 to `depth-1` | `list[fnp.ndarray]`, each `(width, width)` **float32** |
 | `MLP` | `seed` | Per-MLP grader-supplied seed. Seed predict-time randomness from it (`fnp.random.default_rng(mlp.seed)`) or your submission will not reproduce under regrade. `0` when unavailable. | `int` |
-| `MLP` | `name` | Human-readable per-MLP slug, e.g. `kathleen-mueller`. Stable across runs; useful in log lines. Empty string outside an evaluator path. | `str` |
+| `MLP` | `name` | Human-readable per-MLP slug, for example `kathleen-mueller`. Stable across runs; useful in log lines. Empty string outside an evaluator path. | `str` |
 
 Each weight matrix has shape `(width, width)`, 1024×1024 in Phase 2. The pre-activation for layer `l` is computed as `W_l^T @ x` where `x` is the post-activation output of the previous layer.
 
@@ -101,7 +101,7 @@ You can inspect any layer's weight matrix and implement layer-wise update rules 
 
 - Weight matrices are dense: each `(width, width)` matrix encodes all neuron connections at that layer.
 - Estimators must return a `(mlp.depth, mlp.width)` array, `(16, 1024)` in Phase 2.
-- Width 1024 also makes memory a real constraint: the solution process gets 8 GB, and one `(width, width)` covariance now holds 16× the elements it did at width 256. Count how many of them you keep alive at once.
+- Width 1024 also makes memory a real constraint: the solution process gets 8 GB, and one `(width, width)` covariance now holds 16× the elements it did at width 256. Count how many of them you hold in memory at once.
 
 ## ➡️ Next step
 

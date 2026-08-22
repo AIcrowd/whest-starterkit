@@ -1,4 +1,4 @@
-# Code Patterns
+# Code patterns
 
 > [← Documentation](../README.md)
 
@@ -8,7 +8,7 @@ import flopscope.numpy as fnp`.
 ## Operators are tracked
 
 Python arithmetic operators (`+`, `-`, `*`, `/`, `@`) on `fnp.ndarray` values are
-FLOP-tracked. You do not need the verbose `fnp.add`, `fnp.multiply`, etc. forms.
+FLOP-tracked. You do not need the verbose `fnp.add` and `fnp.multiply` forms.
 
 ```python
 import flopscope as flops
@@ -65,7 +65,7 @@ for w in mlp.weights:
 You will **not** get a warning here. `fill_diagonal` voids the tag silently, and
 the `multiply` above it keeps the tag because `outer(gain, gain)` is itself
 symmetry-inferred, so nothing tells you the discount has gone. Re-tag
-unconditionally after any write into `cov`. Confirm it worked with
+unconditionally after any write into `cov`. To confirm it worked, call
 `ctx.summary()`: the einsum should read 3,220,700,672 per layer, not
 4,292,870,144. (`SymmetryLossWarning` does exist: it fires when a tagged
 operand meets one that shares no symmetry group, as in the anti-pattern above,
@@ -151,7 +151,7 @@ sub_a, sub_b, sub_c = (
 )
 ```
 
-**Setup-time** (run-level randomness, e.g. fixed random projections):
+**Setup-time** (run-level randomness, such as fixed random projections):
 
 ```python
 import flopscope.numpy as fnp
@@ -172,7 +172,7 @@ file ([Ship Weights](../how-to/ship-weights.md)). See
 
 Do **not** call `fnp.random.seed(ctx.seed)`: it mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
 
-Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility; see [Estimator Contract: Reproducibility under the grader seed](./estimator-contract.md#reproducibility-under-the-grader-seed).
+Participant-chosen seeds (for example, `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility; see [Estimator Contract: Reproducibility under the grader seed](./estimator-contract.md#reproducibility-under-the-grader-seed).
 
 ### Standard normal PDF and CDF (built-in)
 
@@ -228,11 +228,10 @@ def norm_cdf(x):
 > `flopscope`, the `whestbench` API, and the Python standard library. `scipy`
 > and every other third-party PyPI package are absent, and only flopscope
 > operations are FLOP-counted. Do not route around that by vendoring
-> `numpy`/`scipy`/a BLAS into your submission, or by reaching for compiled
-> kernels or `ctypes`/`cffi`: those are prohibited and are grounds for
-> disqualification, not a matter of paying a higher bill. Shipping *data*
-> files (weights, lookup tables, precomputed artifacts) remains permitted;
-> see [Ship Weights](../how-to/ship-weights.md) and
+> `numpy`/`scipy`/a BLAS into your submission, or by using compiled kernels or
+> `ctypes`/`cffi`: those are prohibited and are grounds for disqualification.
+> Shipping *data* files (weights, lookup tables, precomputed artifacts) remains
+> permitted; see [Ship Weights](../how-to/ship-weights.md) and
 > [Allowed Code](../concepts/allowed-code.md).
 
 ### ReLU expectation (E[max(0, z)] where z ~ N(mu, sigma^2))
@@ -258,10 +257,10 @@ E[ReLU(z)] = ∫_0^∞ z · f(z) dz
 
 Here `Φ` is the standard-normal CDF, `φ` is the standard-normal PDF, and
 `α` measures how many standard deviations the mean sits above zero.
-Intuitively: `µ · Φ(α)` is "what survives if the distribution is mostly
-positive"; `σ · φ(α)` is the "edge correction" for the part of the bell
-that's clipped at zero. This is the (rectified Gaussian) first moment;
-see e.g. Frey & Hinton (1999), Williams (1998) for derivations.
+`µ · Φ(α)` is the contribution of the probability mass above zero, and
+`σ · φ(α)` corrects for the mass that the rectification clips at zero. This is
+the (rectified Gaussian) first moment; see Frey & Hinton (1999) and Williams
+(1998) for derivations.
 
 #### Where the assumption breaks
 
@@ -276,12 +275,12 @@ fit for moderate widths). The approximation degrades when:
 - **Activations cluster near zero.** When `α ≈ 0`, the rectified-Gaussian
   approximation is accurate, but `µ` is small and relative errors spike.
 
-The Phase 2 shape (`width=1024, depth=16`) sits on the friendly side of the
-first two: wide layers make the CLT argument bite, and there are only sixteen
-of them for error to compound through.
+The Phase 2 shape (`width=1024, depth=16`) avoids the first two: 1024 neurons
+per layer is wide enough for the CLT argument to hold, and 16 layers is few
+enough to limit compounding.
 
-If your `final_layer_mse` is fine but `all_layers_mse` blows up, this assumption
-is usually the culprit. See [algorithm-ideas.md](../how-to/algorithm-ideas.md)
+If your `final_layer_mse` is low but `all_layers_mse` is high, this assumption
+is the usual cause. See [algorithm-ideas.md](../how-to/algorithm-ideas.md)
 for advanced moment-matching strategies.
 
 See [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) for a complete working estimator using these patterns.

@@ -1,8 +1,8 @@
-# Tutorial — The 5-stage ladder
+# Tutorial — the 5-stage ladder
 
 > [← Documentation](../README.md)
 
-The tutorial trail. Each stage is a single command on the same `estimator.py`, with the harness adding one more level of formality at each step. Read top-to-bottom. Stage 4 runs your estimator the way the grader does, through a pipe in a separate process, so it surfaces packaging and import bugs Stage 3 cannot.
+Each stage is a single command on the same `estimator.py`, with the harness adding one more level of formality at each step. Read top-to-bottom. Stage 4 runs your estimator the way the grader does, through a pipe in a separate process, so it surfaces packaging and import bugs Stage 3 cannot.
 
 | Stage | Command | What it adds | Doc |
 |---|---|---|---|
@@ -12,7 +12,7 @@ The tutorial trail. Each stage is a single command on the same `estimator.py`, w
 | 4 | `uv run whest run --estimator estimator.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2 --split mini --runner subprocess` | Process isolation — the grader's transport. Catches dirty imports, stdout writes, and (on Linux) runaway memory. State does **not** reset between MLPs: one worker serves the suite. | [stage-4-run-subprocess.md](stage-4-run-subprocess.md) |
 | 5 | `uv run whest package --estimator estimator.py --output submission.tar.gz` | Package the submission tarball for AIcrowd. | [stage-5-package.md](stage-5-package.md) |
 
-Each stage doc carries an "Expected outcome" callout so you know what success looks like before climbing, and a "Ladder" strip at the top so you always know where you are.
+Each stage doc carries an "Expected outcome" callout that states what a successful run produces, and a "Ladder" strip at the top that marks which stage you are on.
 
 ## ➡️ Where to look next
 

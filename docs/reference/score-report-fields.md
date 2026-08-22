@@ -1,4 +1,4 @@
-# Score Report Fields
+# Score report fields
 
 > [← Documentation](../README.md)
 
@@ -11,7 +11,7 @@ Use this page to interpret `whest run` output fields.
 Typical report sections include:
 
 - `schema_version`
-- `whestbench_version` — the whestbench that produced this report (e.g. `"0.16.0"`).
+- `whestbench_version` — the whestbench that produced this report (for example, `"0.16.0"`).
 - `mode`
 - `run_meta`
 - `run_config`
@@ -51,7 +51,7 @@ Each entry in `per_mlp`:
 | Field | Type | Description |
 |---|---|---|
 | `mlp_index` | `int` | Index of the MLP in the evaluation set |
-| `mlp_name` | `str` | Deterministic human-readable slug for this MLP (e.g. `"megan-chang"`). Use it as a stable label in your own logs. |
+| `mlp_name` | `str` | Deterministic human-readable slug for this MLP (for example, `"megan-chang"`). Use it as a stable label in your own logs. |
 | `flops_used` | `int` | Total FLOPs used by your estimator for this MLP (`F_m`) |
 | `effective_compute` | `float` | `C_m = F_m + λ·R_m`. With the round's default λ = 0 this is exactly equal to `flops_used`; check `run_config.lambda_flops_per_second` if it isn't. |
 | `adjusted_final_layer_score` | `float` | `s_m` — the per-MLP budget-adjusted score that flows into the suite mean. |
@@ -62,7 +62,7 @@ Each entry in `per_mlp`:
 | `wall_time_s` | `float` | Total elapsed wall-clock time measured for this MLP's estimator context |
 | `flopscope_backend_time_s` | `float` | Wall time inside counted flopscope numpy kernels — the participant's actual numpy compute |
 | `flopscope_overhead_time_s` | `float` | Wall time inside flopscope's own dispatch code (wrapper preambles, FLOP bookkeeping, namespace push/pop). Framework cost, not participant cost. |
-| `residual_wall_time_s` | `float` | Wall time inside the predict context that is neither flopscope backend execution nor flopscope dispatch — i.e. participant Python (loops, control flow), GC, and Python-callback op time. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual. Gated against the 400 ms residual cap; it does not enter the score (Phase 1 charged it as `λ·R_m`). |
+| `residual_wall_time_s` | `float` | Wall time inside the predict context that is neither flopscope backend execution nor flopscope dispatch — that is, participant Python (loops, control flow), GC, and Python-callback op time. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) count as `flopscope_backend_time_s`, not residual. Gated against the 400 ms residual cap; it does not enter the score (Phase 1 charged it as `λ·R_m`). |
 | `final_layer_mse` | `float` | MSE of your final-layer predictions vs ground truth (no multiplier) |
 | `all_layers_mse` | `float` | MSE of your all-layer predictions vs ground truth (no multiplier) |
 | `per_layer_mse` | `list[float]` | Per-layer MSE for this MLP, length `depth`. |
@@ -74,7 +74,7 @@ If the estimator raised an error, the entry also includes:
 | Field | Type | Description |
 |---|---|---|
 | `error` | `str` \| `dict` | Legacy string message, or structured object: `{"message": str, "details": object}` |
-| `error_code` | `str` | The `RunnerError`'s own code (e.g. `PREDICT_ERROR`) when the failure crossed a runner boundary, or the Python exception class name when it was raised in-process. **Not stable across runners**: the same wrong-shape return reports `"ValueError"` under `--runner local` (the default) and `"PREDICT_ERROR"` under `--runner subprocess`. Branch on `error.details` or on the boolean failure flags, not on this string. |
+| `error_code` | `str` | The `RunnerError`'s own code (for example, `PREDICT_ERROR`) when the failure crossed a runner boundary, or the Python exception class name when it was raised in-process. **Not stable across runners**: the same wrong-shape return reports `"ValueError"` under `--runner local` (the default) and `"PREDICT_ERROR"` under `--runner subprocess`. Branch on `error.details` or on the boolean failure flags, not on this string. |
 
 For structured `error` objects, `error.details` includes:
 
@@ -101,7 +101,7 @@ Where `F_m` is the analytical FLOPs counted by flopscope (`flops_used`) and `B` 
 > wall-time bucket into the score as `C_m = F_m + λ·R_m`, with `λ` a
 > contest-configured conversion rate (1e11 FLOP-equivalents per second of
 > residual). Phase 2 drops `λ`: residual wall time is capped at 400 ms per MLP
-> instead of billed, so the scored `C_m` is just `F_m`.
+> instead of billed, so the scored `C_m` is `F_m`.
 
 ### Which cost model produced this report
 
@@ -184,16 +184,16 @@ MLPs.
 ## Interpretation guide
 
 - `final_layer_mse` is your most actionable accuracy diagnostic — it directly drives `adjusted_final_layer_score`.
-- `mean_compute_utilization` and `mean_score_multiplier` together tell you whether you're hitting the **0.1 multiplier floor**. If `mean_compute_utilization` is well below 0.1, you have headroom to spend more compute "for free" (more compute will not hurt your score until utilization rises above 0.1).
+- `mean_compute_utilization` and `mean_score_multiplier` together tell you whether you're hitting the **0.1 multiplier floor**. If `mean_compute_utilization` is well below 0.1, spending more compute does not change your score until utilization rises above 0.1.
 - `n_failed_mlps` and `failure_breakdown` should be `0` and all-zeros for a healthy submission. Any failure (budget bust, time bust, exception, wrong shape, non-finite) means the affected MLP scored `final_layer_mse_m × 1.0` (no compute discount).
-- `budget_exhausted` is the first thing to check if your score is unexpectedly high — exceeded budget means your predictions were zeroed.
+- If your score is unexpectedly high, check `budget_exhausted` first: an exceeded budget means your predictions were zeroed.
 - `time_exhausted` means the estimator crossed the wall-clock limit configured through `wall_time_limit_s` / `--wall-time-limit` — 120 s per MLP on the grader.
 - `residual_wall_time_exhausted` means residual wall time crossed WhestBench's `residual_wall_time_limit_s` / `--residual-wall-time-limit` — 400 ms per MLP on the grader.
 - `combined_budget_exhausted` fires when the post-hoc check `C_m > B` trips because residual wall time pushed effective compute past the cap. Phase 2 scores `C_m = F_m`, so there is nothing left for it to catch.
-- `flops_used` vs `flop_budget` is the whole budget story in Phase 2: the FLOPs flopscope counted are exactly what sets your multiplier. `effective_compute` is the same number while λ = 0.
+- In Phase 2 your multiplier depends only on `flops_used` against `flop_budget`: the FLOPs flopscope counted are exactly what sets it. `effective_compute` is the same number while λ = 0.
 - High `flopscope_backend_time_s` relative to wall: numpy compute is the dominant cost. Healthy for a numpy-heavy estimator.
-- High `flopscope_overhead_time_s` relative to wall: many small ops are paying the per-call dispatch tax. Consider batching with larger numpy primitives.
-- High `residual_wall_time_s` relative to wall: participant Python is the bottleneck (tight loops, per-element attribute access, calls into uninstrumented libraries). This bucket costs you no FLOPs, but it is capped at 400 ms per MLP and crossing the cap zeroes that MLP's predictions. It is there for plumbing (moving results around between flopscope calls), and doing real numerical work in it is a rules violation, not a purchase; see [Estimator Contract](./estimator-contract.md#phase-2-limits).
+- High `flopscope_overhead_time_s` relative to wall: many small ops are accumulating per-call dispatch overhead. Consider batching with larger numpy primitives.
+- High `residual_wall_time_s` relative to wall: participant Python is the bottleneck (tight loops, per-element attribute access, calls into uninstrumented libraries). This bucket costs you no FLOPs, but it is capped at 400 ms per MLP and crossing the cap zeroes that MLP's predictions. It is there for plumbing (moving results around between flopscope calls), and doing real numerical work in it is a rules violation; see [Estimator Contract](./estimator-contract.md#phase-2-limits).
 - `adjusted_final_layer_score` is the budget-adjusted score (≤ raw `final_layer_mse` mean since the multiplier is ≤ 1.0). A value close to the raw mean means you used near-full budget; a value close to 1/10 of the raw mean means you used ≤10% of budget and got the maximum discount.
 
 ## Dataset traceability fields

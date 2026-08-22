@@ -1,18 +1,18 @@
-# Use Evaluation Datasets
+# Use evaluation datasets
 
 > [← Documentation](../README.md)
 
 ## 🎯 When to use this page
 
-Every `whest run` *without* `--dataset` generates fresh random MLPs and runs millions of forward passes to establish ground-truth means. That's slow when you're iterating: you pay the ground-truth tax on every run, and you can't compare two estimator versions on identical MLPs.
+Every `whest run` *without* `--dataset` generates fresh random MLPs and runs millions of forward passes to establish ground-truth means. That's slow when you're iterating: you regenerate the ground truth on every run, and you can't compare two estimator versions on identical MLPs.
 
-Pre-baked evaluation datasets fix both, and buy you something the generated path cannot:
+Pre-baked evaluation datasets fix both, and add something the generated path cannot:
 
 - **Fast iteration** — ground truth is precomputed; `whest run --dataset ...` skips MLP generation and Monte-Carlo sampling entirely.
 - **Fair comparisons** — every estimator you test scores against the exact same MLPs against the exact same ground-truth means.
 - **Reproducibility** — the dataset's `metadata.json` pins the schema, the seed protocol, and the bake provenance, so anyone can verify your numbers.
 
-For day-to-day estimator work, you almost never need to bake your own. The AIcrowd team publishes a pre-baked dataset on HuggingFace Hub; just point `whest run` at it.
+For day-to-day estimator work, you almost never need to bake your own. The AIcrowd team publishes a pre-baked dataset on HuggingFace Hub; point `whest run` at it.
 
 ## 🚀 Do this now (HF Hub, no bake required)
 
@@ -41,13 +41,14 @@ The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`
 
 > **Pin the `v2-phase2` revision.** Every command below pins `@v2-phase2`. Don't
 > drop the tag and rely on bare `main`: `main` advances each contest phase, so an
-> unpinned load can silently change the dataset underneath you, and an offline
-> cache can just as silently keep serving an older phase. The tag is immutable
+> unpinned load can silently change which dataset you get, and an offline
+> cache can silently keep serving an older phase. The tag is immutable
 > and reproducible.
 >
-> Each tag is one round's rulebook, not just one bake: `@v1-phase1` is 256×32 at
-> a `2.72e11` budget with residual time *priced*, `@v2-phase2` is 1024×16 at
-> `2**41` with residual time *gated*. [Competition Rounds](../reference/rounds.md)
+> Each tag pins a whole round's configuration, not only one bake: `@v1-phase1`
+> is 256×32 at a `2.72e11` budget with residual time *included in the score*,
+> and `@v2-phase2` is 1024×16 at `2**41` with residual time *capped*.
+> [Competition Rounds](../reference/rounds.md)
 > lays every round out side by side, including which flags you have to restore to
 > reproduce an old score, and why a number from before Phase 2 does not compare.
 
@@ -91,7 +92,7 @@ full = load_dataset("aicrowd/arc-whestbench-public-2026",
                     "full", revision="v2-phase2", split="full")
 ```
 
-Weights are **float32** on the wire (the stored feature is `Array3D(shape=(16, 1024, 1024), dtype='float32')`), and `whestbench.load_dataset` / `whest run` keep them float32. Without `.with_format("numpy")` a row's `weights` is a plain Python list; `np.asarray(...)` on it silently gives you float64, which flopscope bills at 2x.
+Weights are **float32** as stored (the stored feature is `Array3D(shape=(16, 1024, 1024), dtype='float32')`), and `whestbench.load_dataset` / `whest run` keep them float32. Without `.with_format("numpy")` a row's `weights` is a plain Python list; `np.asarray(...)` on it silently gives you float64, which flopscope bills at 2x.
 
 The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), so re-downloads dedupe at the chunk level and parallel multi-shard fetches are fast. For maximum download throughput on a fast connection, set `HF_XET_HIGH_PERFORMANCE=1` in your environment before the load.
 
@@ -176,7 +177,7 @@ uv add 'whestbench[gpu]'      # pulls torch>=2.1 into the project venv
 #   uv pip install 'whestbench[gpu]'
 ```
 
-Then add `--torch` to engage it:
+To engage it, add `--torch`:
 
 ```bash
 uv run whest dataset bake \
@@ -188,7 +189,7 @@ uv run whest dataset bake \
     --depth 16
 ```
 
-> ⚠️ **`--device` does nothing without `--torch`.** Running `whest dataset bake --device cuda` *without* `--torch` silently falls back to the slow CPU path and ignores your GPU. Always pass `--torch` for a GPU bake.
+> ⚠️ **`--device` does nothing without `--torch`.** Running `whest dataset bake --device cuda` *without* `--torch` silently falls back to the slow CPU path and ignores your GPU. For a GPU bake, always pass `--torch`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -220,7 +221,7 @@ uv run whest dataset bake --torch --device cuda --mlp-seeds seeds.json \
 uv run whest dataset merge ./shard-0 ./shard-1 ./shard-2 ./shard-3 --output ./my-big-eval
 ```
 
-Each shard writes a *partial* dataset (its `metadata.json` carries `is_partial: true`, `mlp_range`, and `total_n_mlps`); `whest dataset merge` stitches the partials back into one complete dataset. Prefer `--mlp-range START-END` (inclusive on both ends) over `--slice K/N` if you'd rather address explicit MLP ranges. The shared `--mlp-seeds` file is what keeps per-MLP identities and names stable across shards; don't let each shard roll its own seeds.
+Each shard writes a *partial* dataset (its `metadata.json` carries `is_partial: true`, `mlp_range`, and `total_n_mlps`); `whest dataset merge` combines the partials back into one complete dataset. Prefer `--mlp-range START-END` (inclusive on both ends) over `--slice K/N` if you'd rather address explicit MLP ranges. The shared `--mlp-seeds` file is what keeps per-MLP identities and names stable across shards; don't let each shard generate its own seeds.
 
 ## ✅ Expected outcome
 

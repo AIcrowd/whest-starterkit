@@ -1,7 +1,7 @@
 """Random-baseline estimator.
 
-Demonstrates the canonical contract surface (``setup`` / ``predict`` /
-``teardown``) *and* the whestbench RNG-seeding contract:
+Demonstrates the canonical contract surface (``setup``, ``predict``, and
+``teardown``) and the whestbench RNG-seeding contract:
 
 * ``self._setup_rng = fnp.random.default_rng(ctx.seed)`` inside ``setup`` --
   one-time setup RNG seeded from the grader-supplied ``ctx.seed``. Used for

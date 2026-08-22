@@ -1,4 +1,4 @@
-# Competition Rounds
+# Competition rounds
 
 > [← Reference](README.md)
 
@@ -7,7 +7,7 @@ rules for how wall time is charged. All three are kept side by side rather than
 replaced, so a score from an earlier round can still be reproduced under the rulebook
 it actually ran against.
 
-**If you only read one line:** you are being scored under `v2-phase2` — width 1024,
+**Current round:** you are being scored under `v2-phase2` — width 1024,
 depth 16, `2**41` FLOPs per MLP, `C_m = F_m`.
 
 ## The round you are being scored under
@@ -48,9 +48,9 @@ He-initialized weights with no biases, `N(0, I)` inputs, and a 100-MLP graded su
 
 ### The budget has always bought ~65,000 forward passes
 
-The Phase 2 budget is **8.08×** Phase 1's, which reads like a windfall until you
-notice the MLP got 8× more expensive to run. Every round has been calibrated to the
-same place:
+The Phase 2 budget is **8.08×** Phase 1's, and the MLP is 8× more expensive to run,
+so the ratio between them barely moves. Every round has been calibrated to the
+same ratio:
 
 | round | budget ÷ one forward pass |
 |---|---|
@@ -60,12 +60,13 @@ same place:
 
 So the shape is the variable, not the budget. Brute-force Monte Carlo has been held
 at roughly the same 65k samples per MLP in every round, and in every round that is
-nowhere near enough to win. A bigger budget has never been an invitation to sample
-harder.
+far short of what a competitive score needs. A larger budget has never made
+brute-force sampling viable.
 
-What changed at Phase 2 is *where* the cost lives. At 256 × 32 the work is
-mostly depth; at 1024 × 16 it is mostly width, and anything with an `O(width³)` term
-gets 64× more expensive while an `O(width²)` term gets only 16× more. That is why
+What changed at Phase 2 is where the cost sits. At 256 × 32 most of the work comes
+from depth; at 1024 × 16 most of it comes from width, and anything with an
+`O(width³)` term gets 64× more expensive while an `O(width²)` term gets only 16×
+more. That is why
 [`examples/03_covariance_propagation.py`](../../examples/03_covariance_propagation.py)
 costs **597×** what [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py)
 costs at this shape, against 137.6× at the Phase 1 shape.
@@ -80,20 +81,22 @@ rulebook otherwise.
 1. **Shape: 256 × 32 → 1024 × 16.** Wider and shallower. An estimator that hardcoded
    the Phase 1 shape now returns a wrong-shaped array; one that reads `mlp.width` /
    `mlp.depth` still runs, but both its cost and its score move.
-2. **Residual wall time stopped being priced.** See below.
-3. **The box shrank.** Solution-process memory went from 64 GB to **8 GB**. That is
-   the one Phase 2 change that tightens rather than rescales, and the one most
-   likely to break a working Phase 1 estimator that materialized large intermediates.
+2. **Residual wall time stopped being priced.** See
+   [Residual wall time: priced, then gated](#residual-wall-time-priced-then-gated).
+3. **Memory dropped.** Solution-process memory went from 64 GB to **8 GB**. This is
+   the one Phase 2 change that tightens a limit rather than rescaling it, and the one
+   most likely to break a working Phase 1 estimator that materialized large
+   intermediates.
 
 ## Residual wall time: priced, then gated
 
 "Residual" is the part of `predict()` that flopscope does not meter: your Python,
-control flow, GC. Unconstrained it would allow work the FLOP budget does not see,
+control flow, GC. Unconstrained, it would allow work the FLOP budget does not measure,
 so every round has constrained it. The mechanism changed at Phase 2.
 
 **Priced (`v1-warmup`, `v1-phase1`).** Residual seconds were converted to FLOPs at
-λ = 1e11 and added to the bill, so `C = F + λR`. Wall time was allowed but cost
-budget, and the two resources traded against each other.
+λ = 1e11 and added to the metered total, so `C = F + λR`. Wall time was allowed but
+consumed budget, so spending more of it left fewer FLOPs.
 
 **Gated (`v2-phase2`, current).** λ = 0, so residual pricing is **deprecated**.
 Residual time is capped separately at 0.4 s, and exceeding the cap fails the MLP.
@@ -109,11 +112,11 @@ Phase 1 charged residual seconds at λ = 1e11 FLOPs per second. Phase 2 sets λ 
 and caps residual time instead. Three properties of the priced model motivated the
 change.
 
-**Pricing permits the purchase of unmetered compute.** Under λ, arithmetic performed
-outside flopscope was billable rather than disallowed: it had a defined cost, and a
-submission that paid it stayed within the rules. Phase 2
+**A rate makes unmetered compute permitted rather than prohibited.** Under λ,
+arithmetic performed outside flopscope had a defined cost, so a submission that spent
+the corresponding budget stayed within the rules. Phase 2
 [prohibits](../concepts/allowed-code.md#what-is-prohibited) computation outside
-flopscope, so there is no transaction for a rate to price. The remaining use of
+flopscope, so there is nothing for a rate to convert. The remaining use of
 residual time is plumbing, which a cap bounds directly.
 
 **The priced score depended on the grading machine.** `R_m` is wall-clock time, so
@@ -136,9 +139,8 @@ that MLP's predictions.
 
 ## Reproducing a score from an earlier round
 
-Restoring **all** of a round's settings is the whole point of keeping them named. A
-partial restore scores the run under a mix of two rulebooks and produces a number
-that matches neither.
+Restore **all** of a round's settings. A partial restore scores the run under a mix
+of two rulebooks and produces a number that matches neither.
 
 ```bash
 uv run whest run --estimator estimator.py \
@@ -149,8 +151,8 @@ uv run whest run --estimator estimator.py \
     --wall-time-limit 60
 ```
 
-The two easiest to forget are the last two. A submission that took between 60 s and
-120 s was `time_exhausted` under Phase 1 but passes under today's default. Phase 1
+The last two flags matter as much as the budget. A submission that took between 60 s
+and 120 s was `time_exhausted` under Phase 1 but passes under today's default. Phase 1
 also gated nothing, so leaving today's 0.4 s residual cap in place fails MLPs that
 round would have allowed.
 
@@ -190,7 +192,7 @@ r.width, r.depth                     # (256, 32)
 
 The two exceptions are derived rather than read, because `RoundConfig` carries no
 forward-pass field. **One forward pass** is the arithmetic count `depth · 2 · width²`,
-and **Budget ÷ forward pass** divides by it. flopscope's actual bill is a little higher:
+and **Budget ÷ forward pass** divides by it. flopscope's measured cost is slightly higher:
 the kit's own sampler measures **33,637,376 FLOPs** per pass at 1024×16, giving **65,374**
 passes per budget. Use the arithmetic figure to compare rounds, since it depends only on
 the shape; use [Local Engine API](local-engine-api.md) when you need the metered number.
@@ -198,7 +200,7 @@ The ~65,000 invariant holds either way. Measured, the three rounds come out at 6
 64,281 / 65,374.
 
 `tests/test_rounds_doc.py` asserts this page against that API on every CI run, so a
-round change upstream fails the kit's build rather than silently rotting the table.
+round change upstream fails the kit's build instead of leaving the table stale.
 
 The two evaluator-side limits (the 8 GB memory cap and the 5 s `setup()` timeout)
 live in `whestbench.scoring.ContestSpec` rather than in `RoundConfig`, and earlier

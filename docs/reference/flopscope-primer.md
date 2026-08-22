@@ -1,4 +1,4 @@
-# Flopscope Primer
+# Flopscope primer
 
 > [← Documentation](../README.md)
 
@@ -8,7 +8,7 @@ Source: [github.com/AIcrowd/flopscope](https://github.com/AIcrowd/flopscope)
 
 ## BudgetContext
 
-All estimator predictions run inside a `BudgetContext`. When the budget is exhausted, a `BudgetExhaustedError` is raised and your predictions are zeroed out.
+All estimator predictions run inside a `BudgetContext`. When the budget is exhausted, flopscope raises `BudgetExhaustedError` and the harness zeroes your predictions.
 
 ```python
 import flopscope as flops
@@ -22,11 +22,10 @@ with flops.BudgetContext(flop_budget=1_000_000) as ctx:
 ```
 
 That budget is deliberately too small: the two fills cost 10,000 each and the
-matmul 1,990,000, for 2,010,000 against a 1,000,000 cap. Raise it to
-`10_000_000` if you want the snippet to run; `ctx.flops_used` then reads
-`2010000`.
+matmul 1,990,000, for 2,010,000 against a 1,000,000 cap. To run the snippet,
+raise it to `10_000_000`; `ctx.flops_used` then reads `2010000`.
 
-You don't need to create `BudgetContext` yourself. Something else opens it for you, and your `predict()` body runs inside that scope. Who that "something else" is depends on which stage you're in:
+You do not create `BudgetContext` yourself. The caller opens it, and your `predict()` body runs inside that scope. Which caller depends on the stage:
 
 | Stage | Who opens the `BudgetContext` | Where to look |
 |---|---|---|
@@ -43,7 +42,7 @@ You don't need to create `BudgetContext` yourself. Something else opens it for y
 > deliberately, or to reproduce an earlier round (`272000000000` for
 > v1-phase1, `68000000000` for v1-warmup).
 
-In stages 1, 3 and 4 the `budget` integer your `predict(mlp, budget)` receives
+In stages 1, 3, and 4 the `budget` integer your `predict(mlp, budget)` receives
 matches the `flop_budget` of the surrounding context and is the hard cap for
 that call. In stage 2 it does not: `whest validate` hands you `100` purely as
 a value to branch on and enforces nothing. Branch on it if you have both a
@@ -61,7 +60,7 @@ The timer starts when the context is entered and is checked before and after
 each counted flopscope/NumPy call. If it is exceeded, flopscope raises
 `TimeExhaustedError`.
 
-## Operation FLOP Costs
+## Operation FLOP costs
 
 As of flopscope 0.9, every operation is billed as
 
@@ -69,10 +68,10 @@ As of flopscope 0.9, every operation is billed as
 charged = flop_cost × weight × dtype_rate × complex_factor
 ```
 
-- `flop_cost` — the op's shape-derived count (e.g. `M·N·(2K−1)` for a `(M,K) @ (K,N)` matmul: K multiplies + K−1 adds per output element).
+- `flop_cost` — the op's shape-derived count (for example, `M·N·(2K−1)` for a `(M,K) @ (K,N)` matmul: K multiplies + K−1 adds per output element).
 - `weight` — the op's tier, one of **{0, 1, 4, 16}**.
 - `dtype_rate` — **1.0 for 32-bit-or-smaller dtypes, 2.0 for float64/int64, up to 4.0 for float128**. The billing dtype follows NumPy promotion over the operands, so one stray float64 vector makes the whole expression bill 2×.
-- `complex_factor` — real-FLOP equivalents for complex dtypes (e.g. complex multiply = 6).
+- `complex_factor` — real-FLOP equivalents for complex dtypes (for example, complex multiply = 6).
 
 | Tier | Operations | Cost at float32 |
 |------|-----------|------|
@@ -91,7 +90,7 @@ charged = flop_cost × weight × dtype_rate × complex_factor
 - Matmul still dominates: `(100,100) @ (100,100)` in float32 costs ~2M FLOPs (`M·N·(2K−1)` = 1,990,000).
 - **Stay in float32.** The same code on float64 arrays bills exactly 2×. `fnp.zeros(n)` defaults to float64 — pass `dtype=fnp.float32` when you don't need the precision.
 - **Write `x * x`, not `x ** 2`** — power routes through the 16× transcendental tier.
-- **`var` costs 4× what `mean` costs** (4,000 vs 1,000 FLOPs on 1,000 float32 elements), and since flopscope 0.12.0 most `nan*` reductions add an N-element NaN scan on top of their plain counterpart: roughly 2× on the cheap ones (`nansum` 1,999 vs `sum` 999), proportionally less on the dear ones (`nanvar` 5,000 vs `var` 4,000), and nothing at all on `nanmax`/`nanmin` (999 either way). Drop the `nan` prefix when your data cannot contain NaNs. Tiers are weights, not costs; the cost formula is separate, which is why `var` sits in the 1× tier and still bills 4·N.
+- **`var` costs 4× what `mean` costs** (4,000 vs 1,000 FLOPs on 1,000 float32 elements), and since flopscope 0.12.0 most `nan*` reductions add an N-element NaN scan on top of their plain counterpart: roughly 2× on the cheap ones (`nansum` 1,999 vs `sum` 999), proportionally less on the expensive ones (`nanvar` 5,000 vs `var` 4,000), and nothing at all on `nanmax`/`nanmin` (999 either way). Drop the `nan` prefix when your data cannot contain NaNs. Tiers are weights, not costs; the cost formula is separate, which is why `var` sits in the 1× tier and still bills 4·N.
 - Composite helpers bill their internals: `flops.stats.norm.pdf` ≈ 54/element and `flops.stats.norm.cdf` ≈ 96/element.
 
 The weight and rate tables above are a summary. The audited, authoritative
@@ -102,7 +101,7 @@ integer reductions, and per-family formulas) is flopscope's
 `tests/test_flopscope_cost_docs.py` in this kit pins the claims made on this
 page so a future flopscope bump flags them.
 
-## Array Creation
+## Array creation
 
 ```python
 import flopscope as flops
@@ -120,7 +119,7 @@ Fills (`ones`, `eye`, `full`) and copies (`fnp.array`, copying `asarray`,
 `.astype()`, `.copy()`) bill 1× per element written, small next to any matmul
 but no longer zero.
 
-## Random Number Generation
+## Random number generation
 
 ```python
 import flopscope as flops
@@ -133,7 +132,7 @@ x32 = rng.standard_normal((1000, 64), dtype=fnp.float32)  # 64,000 × 16 FLOPs �
 
 Random samplers **are FLOP-counted** ([flopscope#81](https://github.com/AIcrowd/flopscope/pull/81)):
 `rng.standard_normal(...)`, `rng.uniform(...)`, and the module-level
-analogs (`fnp.random.standard_normal(...)`, etc.) all deduct from the
+analogs such as `fnp.random.standard_normal(...)` all deduct from the
 active `BudgetContext` and return `FlopscopeArray`. The same holds for
 `fnp.random.RandomState(seed)`. Constructing the RNG itself is free;
 only the sampling methods cost FLOPs. Cross-API parity is guaranteed:
@@ -153,7 +152,7 @@ inside the installed wheel:
 uv run python -c "import json, pathlib, flopscope; w=json.loads((pathlib.Path(flopscope.__file__).parent/'data/default_weights.json').read_text())['weights']; print({k: v for k, v in w.items() if k.startswith('random.')})"
 ```
 
-## Budget Inspection
+## Budget inspection
 
 Inside an active `BudgetContext`, the `ctx` object exposes the following
 public attributes and methods. Most are only useful while debugging or
@@ -169,13 +168,13 @@ that the harness passed in.
 | `wall_time_limit_s` | `float \| None` | Cap configured at construction time. |
 | `flopscope_backend_time_s` | `float` | Time spent inside counted flopscope calls. |
 | `flopscope_overhead_time_s` | `float` | Time spent inside flopscope's own dispatch (wrapper preambles, FLOP bookkeeping, namespace push/pop) — framework cost, not participant cost. |
-| `residual_wall_time_s` | `float` | Wall time inside the context that is neither flopscope backend execution nor flopscope's own dispatch — i.e. participant Python (loops, control flow) and GC. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) are counted as `flopscope_backend_time_s`, not residual; Python-callback ops bill their callback time here. |
+| `residual_wall_time_s` | `float` | Wall time inside the context that is neither flopscope backend execution nor flopscope's own dispatch — that is, participant Python (loops, control flow) and GC. As of flopscope 0.7.0, data-movement NumPy ops (concatenate, stack, tile, repeat, take, pad, …) are counted as `flopscope_backend_time_s`, not residual; Python-callback ops bill their callback time here. |
 | `elapsed_s` | `float` | Alias of `wall_time_s` for symmetry with the report. |
 | `namespace` | `str \| None` | Namespace this context attributes ops to (set via `with flops.namespace("name")`). |
 | `op_log` | `list[OpRecord]` | Per-op record, populated in **every** `BudgetContext` — no flag needed. Each `OpRecord` carries `op_name`, `subscripts`, `shapes`, `flop_cost`, `cumulative`, `namespace`, per-op backend/overhead timings, and `resolved_dtype` (which dtype priced the op — the fastest way to find a stray float64). (`whest run --profile` is a separate, unrelated flag: it controls whether the *report* renders the breakdowns.) |
 | `summary()` | method | Pretty-printed summary for the current context. |
 | `summary_dict(...)` | method | Same data as a `dict` (machine-readable). |
-| `deduct(op_name, *, flop_cost, shapes, dtypes, …)` | method | Manually attribute FLOPs. The signature changed in flopscope 0.9: name the op and pass `flop_cost` plus the operand `dtypes` — the dtype rate is applied on top (e.g. `ctx.deduct("my_op", flop_cost=10, subscripts=None, shapes=(), dtypes=(fnp.float64,))` charges 20). Pass `dtypes=()` for a dtype-neutral charge; `dtypes=None` raises. |
+| `deduct(op_name, *, flop_cost, shapes, dtypes, …)` | method | Manually attribute FLOPs. The signature changed in flopscope 0.9: name the op and pass `flop_cost` plus the operand `dtypes` — the dtype rate is applied on top (for example, `ctx.deduct("my_op", flop_cost=10, subscripts=None, shapes=(), dtypes=(fnp.float64,))` charges 20). Pass `dtypes=()` for a dtype-neutral charge; `dtypes=None` raises. |
 
 ```python
 with flops.BudgetContext(flop_budget=10_000_000) as ctx:
@@ -221,7 +220,7 @@ WhestBench exposes some of those concepts as run-level CLI knobs:
   using the reported `residual_wall_time_s`. Because `residual_wall_time_s`
   excludes flopscope backend and dispatch time, this gate measures only your
   Python and uninstrumented work, not numpy backend execution or the
-  framework's bookkeeping tax. The grader sets it to **400 ms per MLP**.
+  framework's own bookkeeping. The grader sets it to **400 ms per MLP**.
 
 So if you see `time_exhausted`, that came from Flopscope's `wall_time_limit_s`.
 If you see `residual_wall_time_exhausted`, that came from WhestBench scoring
@@ -229,23 +228,23 @@ logic comparing Flopscope's measured `residual_wall_time_s` with the configured
 `--residual-wall-time-limit`.
 
 Both are hard caps: crossing either one zeroes that MLP's predictions. Neither
-is priced. There is no rate at which you can buy extra residual time by
-accepting a worse multiplier. The 400 ms allowance exists so your Python can
-move results between flopscope calls; performing meaningful computation in it
-is a rules violation and grounds for disqualification. See
+is priced: no setting converts extra residual time into a worse compute
+multiplier. The 400 ms allowance exists so your Python can move results between
+flopscope calls; performing meaningful computation in it is a rules violation
+and grounds for disqualification. See
 [Estimator Contract: Phase 2 limits](estimator-contract.md#phase-2-limits).
 
-## Common Gotchas
+## Common gotchas
 
-**numpy arrays still count FLOPs.** Since `fnp.ndarray` is backed by numpy, a raw numpy array passed to flopscope operations will still be tracked. Use `fnp.array()` or `fnp.asarray()` to convert explicitly.
+**numpy arrays still count FLOPs.** Since `fnp.ndarray` is backed by numpy, a raw numpy array passed to flopscope operations is still tracked. Use `fnp.array()` or `fnp.asarray()` to convert explicitly.
 
 **Pythonic operators are tracked.** `x @ w` counts the same FLOPs as `fnp.matmul(x, w)`. Use whichever reads better.
 
 **dtype now matters for FLOPs too.** Since flopscope 0.9, float64 operations
 bill 2× float32 (`dtype_rate`). NumPy promotion decides the billing dtype, so
 one float64 operand upgrades the whole expression. Keep estimator state in
-float32 unless you need the precision, and note that `fnp.zeros(...)` defaults
-to float64. flopscope admits only numeric dtypes: `dtype.kind in "biufc"` (bool,
+float32 unless you need the precision; `fnp.zeros(...)` defaults to float64.
+flopscope admits only numeric dtypes: `dtype.kind in "biufc"` (bool,
 signed/unsigned integer, float, complex). Anything else (object, str, bytes,
 datetime64, timedelta64, structured/void) raises `UnsupportedDtypeError` before
 any FLOPs are charged, whether the offending dtype arrives as an operand, an

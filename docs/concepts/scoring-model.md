@@ -1,4 +1,4 @@
-# Scoring Model
+# Scoring model
 
 > [← Documentation](../README.md)
 
@@ -116,12 +116,12 @@ final_layer_mse_m  = ─── ∑  ( pred_m[d-1, i] − truth_m[d-1, i] )²
 
 > **Changed in Phase 2.** Phase 1 ranked on *effective compute*
 > `C_m = F_m + λ·R_m`, with λ = `1e11` FLOPs/sec converting residual wall-time
-> into FLOP-equivalents. Slow Python was simply expensive, and you could choose
+> into FLOP-equivalents. Slow Python was expensive, and you could choose
 > to pay for it. Phase 2 removes λ entirely: `C_m = F_m`, and residual wall-time
 > is governed by a hard **400 ms** cap per MLP instead of a price. The residual
 > bucket is there for plumbing, not for computation (see
 > [Budget enforcement rules](#budget-enforcement-rules)). Every round's shape,
-> budget, λ and caps sit side by side in
+> budget, λ, and caps sit side by side in
 > [Competition Rounds](../reference/rounds.md), along with the flags that
 > re-score a Phase 1 submission under its own rulebook.
 
@@ -165,7 +165,7 @@ a fixed hard cap for the run, so fixed-strategy estimators are a good default,
 as long as they stay within budget. Because
 the score scales with `C_m / B`, spending **less** compute lowers (improves) your
 score, but only until you hit the 0.1 floor at 10% budget use; below that,
-further savings don't help and accuracy is the only lever left.
+further savings don't help and only accuracy changes your score.
 
 ## Budget enforcement rules
 
@@ -173,18 +173,18 @@ The FLOP budget is enforced analytically and feeds the score multiplier; the
 time caps are pass/fail and do not feed the multiplier at all:
 
 - **Exceeded FLOP budget.** If `C_m` exceeds `flop_budget`, flopscope trips mid-run, **all** predictions for that MLP are replaced with zeros, and the multiplier is forced to `1.0`. This is a hard cutoff, not per-depth. (A failed MLP therefore scores 10× worse than the cheapest valid submission, which earns the 0.1 floor.)
-- **Exceeded residual wall-time.** Residual wall-time `R_m` (Python-side work outside a flopscope kernel) is capped at **400 ms per MLP**. Overrun it and that MLP's predictions are zeroed and the multiplier forced to `1.0`, exactly as for a blown FLOP budget. The cap is not a price: there is no exchange rate that lets you buy residual time with score.
+- **Exceeded residual wall-time.** Residual wall-time `R_m` (Python-side work outside a flopscope kernel) is capped at **400 ms per MLP**. Overrun it and that MLP's predictions are zeroed and the multiplier forced to `1.0`, exactly as for a blown FLOP budget. The cap is not a price: no amount of unused FLOP budget converts into extra residual time.
 - **Exceeded wall-clock.** A **120 s** wall-clock cap per MLP catches runs that hang rather than overspend. Same consequence: zeros, multiplier `1.0`.
 - **Exceeded the `setup()` timeout.** `setup()` gets a hard **5 s** wall clock (`--setup-timeout`, default `5.0`, the graded cap). It is the one cap that is not per-MLP: overrunning it fails the whole submission with `SETUP_TIMEOUT`, the run aborts, and no MLP is scored. Load in `setup()`, don't compute there (see [Ship Weights](../how-to/ship-weights.md)).
 - **Under budget.** Predictions are used as-is, and the multiplier `max(0.1, C_m / B)` rewards using less of the budget, down to a 10× discount at 10% utilization.
 - **Multiplier floor.** Below 10% budget use the multiplier clamps at `0.1`, so there is no further reward for getting cheaper; accuracy is what remains.
 
 > **The residual bucket is for plumbing, not for computation.** Its 400 ms cap
-> exists to absorb array marshalling, control flow and bookkeeping, not to give
-> you a second, unmetered compute lane. Doing meaningful numerical work outside
-> flopscope's accounting is a rules violation, not a trade-off you are allowed to
-> make, and it is grounds for disqualification however cheap it looks on the
-> leaderboard. If a legitimate estimator genuinely cannot fit its plumbing into
+> exists to absorb array marshalling, control flow, and bookkeeping, not to give
+> you a second, unmetered path for computation. Doing meaningful numerical work
+> outside flopscope's accounting is a rules violation, not a trade-off you are
+> allowed to make, and it is grounds for disqualification whatever it does to
+> your leaderboard position. If a legitimate estimator genuinely cannot fit its plumbing into
 > 400 ms, write to [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) rather than working around the
 > cap; the same address takes reports of ops you believe flopscope mis-prices.
 
@@ -198,7 +198,7 @@ Scores below what sampling would achieve at that budget indicate your structural
 
 - Start with a safe method that consistently emits valid rows and stays within budget.
 - Use `flop_budget` for hard-cap-aware implementation choices (not budget-time routing).
-- Keep Python-side work small enough to clear the 400 ms residual cap comfortably. It buys you nothing on the score, and overrunning it costs you the whole MLP.
+- Keep Python-side work small enough to clear the 400 ms residual cap comfortably. Residual time does not affect your score, and overrunning the cap zeroes that MLP.
 - Tune your implementation for the fixed budget profile you care about; the multiplier rewards staying well under budget, but only down to the 10% floor.
 - Compare `final_layer_mse` and `all_layers_mse` in your reports to see which depths hurt your accuracy, and watch `mean_score_multiplier` to see how much the budget factor is scaling that accuracy.
 - Use [evaluation datasets](../how-to/use-evaluation-datasets.md) to fix networks and ground truth across runs, which makes score comparisons meaningful and skips repeated sampling.
@@ -222,7 +222,7 @@ The leaderboard `adjusted_final_layer_score` is the **mean of these per-MLP `adj
 
 Two things calibrate an estimator: what it costs, and how accurate it is. Both
 tables below are Phase 2 measurements, and both are exact, so take the absolute
-values, not just the ranking. Cost is fixed by the 1024×16 shape and the `2**41`
+values, not only the ranking. Cost is fixed by the 1024×16 shape and the `2**41`
 budget. Accuracy is measured over all 100 MLPs of the `mini` split of
 `arc-whestbench-public-2026@v2-phase2`, against its baked N=1e9 ground truth,
 under whestbench 0.16.0 / flopscope 0.12.0. Re-running the command at the end of
@@ -238,11 +238,11 @@ Measured with flopscope against the per-MLP budget `B = 2**41 = 2,199,023,255,55
 | [`mean_propagation`](../../examples/02_mean_propagation.py) | 86,639,616 | 0.004% | 0.1 (floor) |
 | [`covariance_propagation`](../../examples/03_covariance_propagation.py) | 51,709,240,799 | 2.351% | 0.1 (floor) |
 
-Every bundled example lands under the 10% threshold, so all three bottom out at the **0.1 floor**: each one's ranked score is exactly its `final_layer_mse ÷ 10`. None of them has any compute discount left to gain; accuracy is the only lever they have.
+Every bundled example lands under the 10% threshold, so all three bottom out at the **0.1 floor**: each one's ranked score is exactly its `final_layer_mse ÷ 10`. None of them has any compute discount left to gain, so accuracy is the only remaining way to improve.
 
-Covariance propagation costs **597x** what mean propagation costs at this shape (the same two examples at the Phase 1 shape, 256x32, are **137.6x** apart; quadrupling the width grows the O(width^3) term far faster than the O(width^2) one), and it still spends under 3% of `B`. Almost all of that is a single `fnp.einsum` per layer: 99.66% of its total. Because that term is cubic in width, the remaining headroom is smaller than it looks: at depth 16, a width of roughly **3,570** would consume the whole `2**41` budget.
+Covariance propagation costs **597x** what mean propagation costs at this shape (the same two examples at the Phase 1 shape, 256x32, are **137.6x** apart; quadrupling the width grows the O(width^3) term far faster than the O(width^2) one), and it still spends under 3% of `B`. Almost all of that is a single `fnp.einsum` per layer: 99.66% of its total. Because that term is cubic in width, the remaining headroom is limited: at depth 16, a width of roughly **3,570** would consume the whole `2**41` budget.
 
-Both figures above are what the examples cost *after* seeding their state at float32. flopscope bills float64 at twice the float32 rate, and `fnp.zeros`/`fnp.ones`/`fnp.eye` default to float64, so an estimator that leaves the default in place pays 2x on everything those arrays touch, even though `mlp.weights` is already float32. Measured on these two examples, the float32 seeding is worth **43.7%** and **50.0%** respectively, with the final-layer MSE unchanged to five significant figures. It is the single cheapest saving available, and it is easy to lose again: `flops.stats.norm.*` promotes float32 back to float64 to match scipy, so cast its result back. See [Performance Tips](../how-to/performance-tips.md).
+Both figures above are what the examples cost *after* seeding their state at float32. flopscope bills float64 at twice the float32 rate, and `fnp.zeros`/`fnp.ones`/`fnp.eye` default to float64, so an estimator that leaves the default in place pays 2x on everything those arrays touch, even though `mlp.weights` is already float32. Measured on these two examples, the float32 seeding is worth **43.7%** and **50.0%** respectively, with the final-layer MSE unchanged to five significant figures. It is the single cheapest saving available, and one call can undo it: `flops.stats.norm.*` promotes float32 back to float64 to match scipy, so cast its result back. See [Performance Tips](../how-to/performance-tips.md).
 
 ### How accurate the examples are
 
@@ -257,11 +257,11 @@ Measured over the `mini` split of the public release, [`arc-whestbench-public-20
 **How to read these numbers:**
 
 - The **zeros baseline** (`estimator.py`, 0.9095) and the **random estimator** (0.6856) give you the "doing nothing" scale; their MSE reflects the natural magnitude of the ground-truth activations.
-- **Mean propagation** is 4,104x more accurate than zeros from a simple analytical formula, and at the Phase 2 shape it costs 86,639,616 FLOPs, 0.004% of budget.
+- **Mean propagation** is 4,104x more accurate than zeros from an analytical formula, and at the Phase 2 shape it costs 86,639,616 FLOPs, 0.004% of budget.
 - **Covariance propagation** is another 54.7x better, but costs O(width^3) per layer: 51,709,240,799 FLOPs at 1024×16, 2.351% of budget.
 - The **leaderboard score** (`adjusted_final_layer_score`) is not shown directly: it scales each estimator's `final_layer_mse` by `max(0.1, C_m / budget)`. Every bundled example spends at most 2.351% of the budget, still below the 10% floor threshold, so all of them bottom out at the **0.1 floor**, and each one's ranked score is exactly its `final_layer_mse ÷ 10`.
 
-To reproduce both tables: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2` (e.g. `examples/02_mean_propagation.py`). Leave `--n-mlps` off; with `--dataset` it defaults to the whole split, which is what these numbers were measured over. The FLOPs column is the report's `mean_effective_compute`.
+To reproduce both tables: `uv run whest run --estimator examples/<NN>_<name>.py --dataset hf://aicrowd/arc-whestbench-public-2026@v2-phase2`, for example `examples/02_mean_propagation.py`. Leave `--n-mlps` off; with `--dataset` it defaults to the whole split, which is what these numbers were measured over. The FLOPs column is the report's `mean_effective_compute`.
 
 No seed flag is needed. `random_estimator` draws from `mlp.seed`, which the dataset fixes, so the row reproduces bit-identically with any seed or none. That is the seeding contract every submission must follow (see the docstring in [`examples/01_random.py`](../../examples/01_random.py)).
 

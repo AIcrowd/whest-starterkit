@@ -1,12 +1,12 @@
-# Stage 1: Iterate Locally (Just `flopscope`)
+# Stage 1: Iterate locally (just `flopscope`)
 
 > [← Tutorial](README.md)
 
 > Ladder: **1** · [2](stage-2-validate.md) · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · [5](stage-5-package.md)
 
-"*Just `flopscope`*" means: **no `whest` CLI required**. You run `python estimator.py` and the bundled [`local_engine.py`](../../local_engine.py) constructs an MLP, calls your `predict()` inside a `flopscope.BudgetContext`, and sweeps Monte-Carlo sample counts to print a FLOPs-vs-MSE table. The `whestbench.BaseEstimator` and `whestbench.MLP` types you'll see imported are the participant-facing types: a plain base class and a plain dataclass. Importing them *does* pull in the whestbench package and its `datasets`/`pyarrow` dependencies (about half a second of startup); what Stage 1 avoids is the CLI, not the import.
+"*just `flopscope`*" means: **no `whest` CLI required**. You run `python estimator.py` and the bundled [`local_engine.py`](../../local_engine.py) constructs an MLP, calls your `predict()` inside a `flopscope.BudgetContext`, and sweeps Monte-Carlo sample counts to print a FLOPs-vs-MSE table. The `whestbench.BaseEstimator` and `whestbench.MLP` types you'll see imported are the participant-facing types: a plain base class and a plain dataclass. Importing them *does* pull in the whestbench package and its `datasets`/`pyarrow` dependencies (about half a second of startup); what Stage 1 avoids is the CLI, not the import.
 
-Iterate here until `predict()` converges, then climb to Stage 2 to confirm the contract.
+Iterate here until `predict()` converges, then go to Stage 2 to confirm the contract.
 
 ## 🚀 Run it
 
@@ -30,19 +30,18 @@ MLP: width=1024 depth=16 seed=0  (MC sampling seed=0)
 ```
 
 Two MSE columns. `final_layer_mse`, the right-hand one, is what the grader
-ranks you on; `all_layers_mse` is whestbench's more forgiving secondary
-metric.
+ranks you on; `all_layers_mse` is whestbench's secondary metric, and it is
+less strict.
 
 The stub `predict()` returns all zeros, so `estimator_flops` is `0` and both
 columns plateau at the variance of the true outputs. Once you put real math in
-`predict()`, they come alive and the MSE should shrink roughly as
-`1/n_samples` (a 10x sample increase buys about 10x MSE, not about 3x,
-because MSE is a squared error) until it flattens out at your estimator's own
-error. That plateau is the number you are actually trying to lower; the rows
-before it are just the Monte-Carlo reference getting quiet. You can watch it
-happen with `--baseline mean_propagation`: `all_layers_mse` runs 0.020202,
-0.001866, 0.000398, 0.000195, 0.000171 — a 10.8x drop over the first decade,
-then flattening as bias takes over.
+`predict()`, the MSE should shrink roughly as `1/n_samples` (a 10x increase in
+samples lowers MSE about 10x, not about 3x, because MSE is a squared error)
+until it flattens out at your estimator's own error. That plateau is the number
+you are trying to lower; the rows before it show the Monte-Carlo reference
+converging. To see this, run `--baseline mean_propagation`: `all_layers_mse`
+runs 0.020202, 0.001866, 0.000398, 0.000195, 0.000171 — a 10.8x drop over the
+first decade, then flattening as bias dominates.
 
 ## Edit `predict()`
 
@@ -66,7 +65,7 @@ On the default MLP, `n_samples=100,000` row:
 | `--baseline mean_propagation` | 0.000300 | 0.000171 | ~3,800x better on the ranked metric; first-order analytical |
 | `--baseline covariance_propagation` | 0.000004 | 0.000004 | ~72x better than mean; tracks neuron correlations |
 
-You're ready for Stage 2 once your estimator's MSE is comfortably below
+You're ready for Stage 2 once your estimator's MSE is below
 the zeros floor and `estimator_flops` stays under the per-MLP budget.
 `local_engine` applies the grader's own `2**41` (2,199,023,255,552 FLOPs), so
 Stage 1 and Stage 3 hold you to exactly the same cap.

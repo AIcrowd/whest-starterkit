@@ -1,4 +1,4 @@
-# Troubleshooting — When something breaks
+# Troubleshooting — when something breaks
 
 > [← Documentation](../README.md)
 

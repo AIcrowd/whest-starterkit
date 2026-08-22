@@ -3,8 +3,8 @@
 
 Companion to `make demo-cast` / `scripts/record-demo.sh`. `asciinema rec` needs a
 PTY, which isn't available in some CI runners and agent sandboxes (`asciinema rec`
-falls back to headless mode and then dies with `ENXIO: No such device`). This
-script reproduces the *same* walkthrough without a PTY: it runs each command,
+falls back to headless mode and then exits with `ENXIO: No such device`). This
+script reproduces the same walkthrough without a PTY: it runs each command,
 captures its real (colored) output, strips transient spinner frames, assembles an
 asciicast-v3, and renders the GIF with `agg`.
 
@@ -39,7 +39,7 @@ RESET = ESC + "[0m"
 CSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # (displayed command, shell command to run | None, output filename | None, tail_lines | None)
-# `None` run command = display-only step (e.g. `cd`). Mirrors scripts/record-demo.sh.
+# `None` run command = display-only step, such as `cd`. Mirrors scripts/record-demo.sh.
 STEPS = [
     (f"git clone {CLONE_URL}", "git clone --quiet {source} whest-starterkit", None, None),
     ("cd whest-starterkit", None, None, None),
@@ -68,12 +68,12 @@ AGG_ARGS = ["--theme", "monokai", "--font-size", "14", "--last-frame-duration", 
 def _env() -> dict:
     e = dict(os.environ)
     # Drop the recorder's own virtualenv from the child environment. If VIRTUAL_ENV
-    # points somewhere other than the clone's `.venv` (it always does: we record
-    # from a checkout and the demo runs in a tempdir clone), every `uv` invocation
-    # prefixes its output with a `warning: \`VIRTUAL_ENV=<abs path>\` does not match
-    # the project environment path` line. That bakes the maintainer's local
-    # filesystem path into a public asset. Same motivation as the tempdir-name
-    # handling in capture() below.
+    # points somewhere other than the clone's `.venv` (it always does: this script
+    # records from a checkout and the demo runs in a tempdir clone), every `uv`
+    # invocation prefixes its output with a `warning: \`VIRTUAL_ENV=<abs path>\`
+    # does not match the project environment path` line. That writes the
+    # maintainer's local filesystem path into a public asset. Same motivation as
+    # the tempdir-name handling in capture() below.
     for var in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT"):
         e.pop(var, None)
     e.update(TERM="xterm-256color", FORCE_COLOR="1", CLICOLOR_FORCE="1", COLUMNS="90")
@@ -83,12 +83,12 @@ def _env() -> dict:
 def capture(capture_dir: Path, source: str = CLONE_URL) -> None:
     """Run the sequence in a fresh clone, writing each step's output to capture_dir.
 
-    ``source`` is what actually gets cloned; the *displayed* command always shows
-    the public URL, because that is what a participant types. Point it at a local
-    checkout to record the working tree instead of whatever is on GitHub ``main``.
-    That is the only way to produce a correct asset for a release that has not
-    merged yet. ``git clone`` of a local path takes committed state only, so commit
-    first.
+    ``source`` is what actually gets cloned; the displayed command always shows
+    the public URL, because that is what a participant types. To record the
+    working tree instead of whatever is on GitHub ``main``, point ``source`` at a
+    local checkout. That is the only way to produce a correct asset for a release
+    that has not merged yet. ``git clone`` of a local path takes committed state
+    only, so commit first.
 
     Pass an ABSOLUTE path: the clone runs with ``cwd`` set to a scratch tempdir, so
     a relative path would resolve against that tempdir rather than against this
@@ -99,8 +99,8 @@ def capture(capture_dir: Path, source: str = CLONE_URL) -> None:
     # Step 1 clones into `work/whest-starterkit` (mirroring what a bare
     # `git clone <url>`, with no destination arg, produces) rather than directly
     # into the raw mkdtemp. That keeps the scratch tempdir's opaque OS-assigned
-    # name out of tool output that echoes the cwd (e.g. uv's `file://...`
-    # self-reference for the local package). Subsequent steps run there.
+    # name out of tool output that echoes the cwd, such as uv's `file://...`
+    # self-reference for the local package. Subsequent steps run there.
     clone_dir = work / "whest-starterkit"
     for i, (_disp, cmd, outfile, tail) in enumerate(STEPS):
         if cmd is None:
@@ -110,12 +110,13 @@ def capture(capture_dir: Path, source: str = CLONE_URL) -> None:
         res = subprocess.run(cmd, shell=True, cwd=rundir, env=_env(),
                              capture_output=True, text=True)
         # stderr before stdout: progress/log lines stream to stderr while a command
-        # runs, the payoff (report, table, "Next:" hint) prints to stdout last. Verified
-        # empirically per step: `uv sync` is stderr-only, `estimator.py`/`whest validate`
-        # are stdout-only (so this ordering is a no-op for them). Only `whest run
-        # --dataset` splits across both (whestbench routes `[run] ...` progress and
-        # warnings to stderr), where naive stdout-then-stderr concatenation buried the
-        # Final Score panel under 100+ lines of `[run] scoring: N/100` spam.
+        # runs, and the result (report, table, "Next:" hint) prints to stdout last.
+        # Verified empirically per step: `uv sync` is stderr-only, `estimator.py`
+        # and `whest validate` are stdout-only (so this ordering is a no-op for
+        # them). Only `whest run --dataset` splits across both (whestbench routes
+        # `[run] ...` progress and warnings to stderr), where stdout-then-stderr
+        # concatenation put the Final Score panel below 100+ lines of
+        # `[run] scoring: N/100` output.
         out = res.stderr + res.stdout
         if tail:
             out = "\n".join(out.splitlines()[-tail:]) + "\n"
@@ -133,8 +134,8 @@ def clean(s: str) -> str:
         plain = CSI.sub("", line)
         if "Importing estimator.py and running setup/predict checks" in plain:
             continue
-        # Safety net for the leak _env() prevents at the source: never let an
-        # absolute path from the recording machine reach a committed asset.
+        # Second guard against the leak _env() prevents at the source: no absolute
+        # path from the recording machine reaches a committed asset.
         if "VIRTUAL_ENV=" in plain:
             continue
         if any("⠀" <= ch <= "⣿" for ch in plain):  # braille spinner glyphs

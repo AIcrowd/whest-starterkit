@@ -1,4 +1,4 @@
-# Concepts — Why this challenge exists
+# Concepts — why this challenge exists
 
 > [← Documentation](../README.md)
 
@@ -13,7 +13,7 @@ Background reading. These docs explain the problem framing, the scoring metric, 
 
 > **Phase 2 changed the scoring model.** Compute is now the analytical FLOP count and nothing else (`C_m = F_m`); residual wall-time is a hard 400 ms cap per MLP rather than something you can pay for. If you competed in Phase 1, re-read [scoring-model.md](scoring-model.md) rather than assuming.
 
-Read in order if you want the full picture. **At minimum, skim `scoring-model.md`.** It drives every number you'll obsess over.
+Read in order if you want the full picture. **At minimum, skim `scoring-model.md`.** It defines the metric the leaderboard ranks on.
 
 ## ➡️ Where to look next
 

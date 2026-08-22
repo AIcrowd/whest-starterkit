@@ -1,10 +1,10 @@
-# Stage 2: Validate the Contract
+# Stage 2: Validate the contract
 
 > [← Tutorial](README.md)
 
 > Ladder: [1](stage-1-standalone.md) · **2** · [3](stage-3-run-local.md) · [4](stage-4-run-subprocess.md) · [5](stage-5-package.md)
 
-Stage 1 confirms your estimator runs and converges. Stage 2 confirms it satisfies the harness contract: right shapes, right types, finite values, optional lifecycle hooks behave.
+Stage 1 confirms your estimator runs and converges. Stage 2 confirms it satisfies the harness contract: right shapes, right types, finite values, and optional lifecycle hooks that behave.
 
 ## 🚀 Run it
 
@@ -40,7 +40,7 @@ run to run: ~20-30 ms here.)
 ## What each check does
 
 - **`class resolved`** — the loader found `class Estimator(BaseEstimator)` in your file (override with `--class CustomName`).
-- **`setup(context: SetupContext)`** — if you defined `setup()` (it's optional), the validator calls it with a probe `SetupContext` and confirms it returns without raising. See [SetupContext fields](../reference/estimator-contract.md#setupcontext-fields). The `0.00s (cap 5s)` detail is your `setup()` budget: it is the only limit whose breach fails the **whole** submission rather than one MLP, so rehearse a tighter one with `whest run --setup-timeout SECONDS`.
+- **`setup(context: SetupContext)`** — if you defined `setup()` (it's optional), the validator calls it with a probe `SetupContext` and confirms it returns without raising. See [SetupContext fields](../reference/estimator-contract.md#setupcontext-fields). The `0.00s (cap 5s)` detail is your `setup()` budget: it is the only limit whose breach fails the **whole** submission rather than one MLP. To rehearse against a tighter limit, run `whest run --setup-timeout SECONDS`.
 - **`predict() returned shape`** — invoked on a probe MLP (width=4, depth=2 by default) and asserts the returned array has shape `(mlp.depth, mlp.width)`.
 - **`values finite`** — no NaN or Inf in the returned array.
 

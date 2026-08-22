@@ -1,4 +1,4 @@
-# Profile Simulation Performance
+# Profile simulation performance
 
 > [← Documentation](../README.md)
 
@@ -6,12 +6,12 @@
 
 The starter kit uses flopscope as its single simulation backend. The `profile-simulation` command lets you verify the backend computes correct values and see how its wall-clock cost scales with network size.
 
-> This page covers the `whest profile-simulation` command for benchmarking the backend's correctness and timing. For managing your estimator's FLOP budget during development, see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
+> The `whest profile-simulation` command benchmarks the backend's correctness and timing. To manage your estimator's FLOP budget during development, see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
 
 Use this page when you want to:
 
-- **Verify flopscope is installed and correct** — the profiler runs a pre-flight correctness check before timing anything.
-- **Triage performance problems** (e.g. "fast on my laptop, slow in CI") — compare median wall-clock time for `run_mlp` and `sample_layer_statistics` across widths, depths, and sample counts.
+- **Verify flopscope is installed and correct** — the profiler runs a correctness check before timing anything.
+- **Triage performance problems** (for example, "fast on my laptop, slow in CI") — compare median wall-clock time for `run_mlp` and `sample_layer_statistics` across widths, depths, and sample counts.
 - **Collect reproducible timing data** — JSON output includes correctness results and per-configuration timing (median time, raw per-iteration times, warmup time) across network sizes, plus hardware/library-version metadata.
 
 ## 🚀 Do this now
@@ -22,7 +22,7 @@ Use this page when you want to:
 uv run whest profile-simulation --preset quick
 ```
 
-This finishes in seconds and gives you a first look at correctness and timing across a couple of network sizes.
+This finishes in seconds and gives you a first look at correctness and timing across a few network sizes.
 
 ### 2. Run the standard profile
 
@@ -30,7 +30,7 @@ This finishes in seconds and gives you a first look at correctness and timing ac
 uv run whest profile-simulation
 ```
 
-The default `standard` preset tests two widths (64, 256) and three depths (4, 32, 128). It gives a reliable picture of how run time scales across network sizes.
+The default `standard` preset tests two widths (64, 256) and three depths (4, 32, 128). It shows how run time scales across network sizes.
 
 ### 3. Save results for comparison
 
@@ -71,7 +71,7 @@ If the correctness check shows FAIL:
 uv run whest profile-simulation --preset quick --debug
 ```
 
-The error message will indicate whether the issue is a numerical tolerance failure or a missing dependency.
+The error message indicates whether the issue is a numerical tolerance failure or a missing dependency.
 
 ### Export timing data across machines or code changes
 
@@ -79,14 +79,14 @@ The error message will indicate whether the issue is a numerical tolerance failu
 uv run whest profile-simulation --preset exhaustive --output timing_data.json
 ```
 
-Compare the `timing` array's `median_time` field between two JSON files to see whether a code change, dependency bump, or a different machine affected simulation performance.
+To see whether a code change, dependency bump, or a different machine affected simulation performance, compare the `timing` array's `median_time` field between two JSON files.
 
 This command reports wall-clock timing only, not FLOP counts. To see how many FLOPs your *estimator* consumes, wrap it in a `flopscope.BudgetContext` and call `ctx.summary()`; see [Manage Your FLOP Budget](../how-to/manage-flop-budget.md).
 
 ## ✅ Expected outcome
 
 - The terminal displays a formatted table with correctness and timing results.
-- If `--output` is provided, a JSON file is written with hardware info, correctness results, and per-configuration timing data.
+- If you pass `--output`, the command writes a JSON file with hardware info, correctness results, and per-configuration timing data.
 
 ## ➡️ Next step
 

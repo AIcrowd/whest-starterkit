@@ -1,8 +1,8 @@
-# Reference — Exact contracts and APIs
+# Reference — exact contracts and APIs
 
 > [← Documentation](../README.md)
 
-Lookup material. No tutorials here. Go to [How-to](../how-to/) for guidance, [Concepts](../concepts/) for the why, [Tutorial](../getting-started/) for the climbing trail.
+Lookup material. No tutorials here. Go to [How-to](../how-to/) for procedures, [Concepts](../concepts/) for background, and [Tutorial](../getting-started/) for a step-by-step walkthrough.
 
 ## The round
 
@@ -29,7 +29,7 @@ Lookup material. No tutorials here. Go to [How-to](../how-to/) for guidance, [Co
 
 | Doc | What it covers |
 |---|---|
-| [cli-reference.md](cli-reference.md) | Which `whest` subcommand belongs to which stage, the daily submission quota, and the `whest run` limit and dataset flags with their 0.16.0 defaults. Full syntax lives upstream. |
+| [cli-reference.md](cli-reference.md) | Which `whest` subcommand belongs to which stage, the daily submission quota, and the `whest run` limit and dataset flags with their 0.16.0 defaults. Full syntax is documented upstream. |
 | [whest-doctor.md](whest-doctor.md) | Each `whest doctor` health check, what it verifies, and how to fix a `WARN` or `FAIL` row. |
 
 ## ➡️ Where to look next

@@ -22,9 +22,9 @@
   <img src="assets/demo.gif" alt="whest-starterkit walkthrough: clone, sync, estimate, validate, score" width="720">
 </div>
 
-## 🎬 60-Second Overview
+## 🎬 60-second overview
 
-You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input, without running anywhere near the budget's worth of forward passes. Your score is the error on the **final layer only** (`final_layer_mse`, against N=1e9 Monte-Carlo ground truth), multiplied by `max(0.1, C_m / B_m)` — the fraction of the FLOP budget you spent, floored at 10%. Once you are under 10% of budget, spending less buys nothing and accuracy is the only lever left; every bundled example is already at that floor. Lower is better.
+You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input, without spending the whole budget on forward passes. Your score is the error on the **final layer only** (`final_layer_mse`, against N=1e9 Monte-Carlo ground truth), multiplied by `max(0.1, C_m / B_m)` — the fraction of the FLOP budget you spent, floored at 10%. Once you are under 10% of budget the multiplier stays at 0.1, so spending less does not change your score and only a lower `final_layer_mse` does; every bundled example is already at that floor. Lower is better.
 
 Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(16, 1024)` array, and each MLP carries its own budget of `2**41` FLOPs (roughly 6.5e4 forward passes).
 
@@ -34,9 +34,9 @@ Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(1
   <sub><em>Per-neuron mean activations of a small MLP (width 4, depth 5) after Monte-Carlo ground truth, exactly what your estimator predicts. Generate your own at the <a href="https://aicrowd.github.io/whestbench-explorer/">hosted WhestBench Explorer</a>.</em></sub>
 </div>
 
-The kit is a five-stage **ladder of formality**: each stage adds one more layer of harness rigor. Start at Stage 1 (pure local math, zero CLI knowledge); climb to Stage 5 (a packaged submission) when you're ready.
+The kit is a five-stage ladder: each stage adds one more part of the harness. Stage 1 needs only local math and no CLI knowledge; Stage 5 produces a packaged submission.
 
-## 🚀 Your First 5 Minutes (Stage 1: just `python`)
+## 🚀 Your first 5 minutes (Stage 1: just `python`)
 
 ```bash
 git clone https://github.com/AIcrowd/whest-starterkit.git
@@ -47,7 +47,7 @@ cd whest-starterkit
 uv sync && uv run python estimator.py
 ```
 
-That run printed a Monte-Carlo convergence table: `n_samples`, the FLOPs the sampler spent, the FLOPs **your** `predict()` spent, then `all_layers_mse` and `final_layer_mse`. The leaderboard ranks the latter. Both compare your prediction against a fresh Monte-Carlo estimate at that sample count, not against ground truth, so read down the column: `n=10` is mostly sampling noise, and only the bottom row is a fair read on your estimator. (The grader compares against baked N=1e9 ground truth instead.) To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
+That run printed a Monte-Carlo convergence table: `n_samples`, the FLOPs the sampler spent, the FLOPs **your** `predict()` spent, then `all_layers_mse` and `final_layer_mse`. The leaderboard ranks the latter. Both compare your prediction against a fresh Monte-Carlo estimate at that sample count, not against ground truth, so read down the column: `n=10` is mostly sampling noise, and only the bottom row is a reliable measure of your estimator. (The grader compares against baked N=1e9 ground truth instead.) To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
 
 Compare against a bundled baseline:
 
@@ -55,7 +55,7 @@ Compare against a bundled baseline:
 uv run python estimator.py --baseline mean_propagation
 ```
 
-## 🧪 Try the Examples (still Stage 1)
+## 🧪 Try the examples (still Stage 1)
 
 ```bash-test
 uv run python examples/02_mean_propagation.py
@@ -63,11 +63,11 @@ uv run python examples/03_covariance_propagation.py
 uv run python examples/04_shipped_weights.py
 ```
 
-See [examples/README.md](examples/README.md) for the curriculum table.
+For the curriculum table, see [examples/README.md](examples/README.md).
 
-## 🪜 Climb the Ladder (Stages 2-5)
+## 🪜 Climb the ladder (Stages 2-5)
 
-Per-stage walkthroughs live in the [Tutorial](docs/getting-started/).
+The [Tutorial](docs/getting-started/) has a walkthrough for each stage.
 
 **Stage 1 — [Iterate locally](docs/getting-started/stage-1-standalone.md)** · the math: estimator vs Monte Carlo.
 
@@ -99,51 +99,52 @@ uv run whest run --estimator estimator.py \
     --runner subprocess
 ```
 
-**Stage 5 — [Package and Submit](docs/getting-started/stage-5-package.md)** · build the submission artifact, then ship it (run `whest login` once first; see [Submit to AIcrowd](#-submit-to-aicrowd) below).
+**Stage 5 — [Package and Submit](docs/getting-started/stage-5-package.md)** · build the submission artifact, then submit it (run `whest login` once first; see [Submit to AIcrowd](#-submit-to-aicrowd) below).
 
 ```bash
 uv run whest package --estimator estimator.py   # build & inspect the tarball
 uv run whest submit  --estimator estimator.py   # ship it (also packages, in one step)
 ```
 
-> These ship **only `estimator.py`**, the common case. To embed weights or split across modules, point `--estimator` at a folder instead: see [Stage 5 → Embedding weights or multiple modules](docs/getting-started/stage-5-package.md#-embedding-weights-or-multiple-modules-power-users).
+> These package **only `estimator.py`**, the common case. To embed weights or split across modules, point `--estimator` at a folder instead: see [Stage 5 → Embedding weights or multiple modules](docs/getting-started/stage-5-package.md#-embedding-weights-or-multiple-modules-power-users).
 
 ## 🏁 Submit to AIcrowd
 
-Climbed to Stage 5? Ship it from the CLI. Log in once with your
-[AIcrowd API key](https://www.aicrowd.com/participants/me/edit), or set `AICROWD_API_KEY`,
+Once you reach Stage 5, submit from the CLI. To authenticate, log in once with your
+[AIcrowd API key](https://www.aicrowd.com/participants/me/edit), set `AICROWD_API_KEY`,
 or pass `whest login --api-key <key>`:
 
 ```bash
 uv run whest login
 ```
 
-Then package + submit in one step (add `--watch` to follow it to a score):
+Then package + submit in one step (add `--watch` to follow the submission until it is scored):
 
 ```bash
 uv run whest submit --estimator estimator.py
 ```
 
-Your score and per-MLP detail land on the
+Your score and per-MLP detail appear on the
 [challenge leaderboard](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/leaderboards). Full walkthrough:
 [Stage 5 → Submit to AIcrowd](docs/getting-started/stage-5-package.md#-submit-to-aicrowd).
 
-## 🚑 When Something Breaks
+## 🚑 When something breaks
 
 ```bash-test
 uv run whest doctor
 ```
 
-Reads as a 6-row health check; see [docs/reference/whest-doctor.md](docs/reference/whest-doctor.md) for what each row means and how to fix warnings.
+`whest doctor` prints a 6-row health check. For what each row means and how to fix
+warnings, see [docs/reference/whest-doctor.md](docs/reference/whest-doctor.md).
 
-Or check [docs/troubleshooting/](docs/troubleshooting/).
+For other symptoms, see [Troubleshooting](docs/troubleshooting/).
 
-Rules questions, a FLOP price that looks wrong, or a residual-cap exception go to
+Send rules questions, a FLOP price that looks wrong, or a residual-cap exception request to
 [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com).
 
 ## 📚 Documentation
 
-Past Stage 1, the documentation is organized into six sections. Pick whichever matches your task. Full map and guided reading paths at **[docs/](docs/README.md)**.
+Past Stage 1, the documentation has six sections. Pick whichever matches your task. For the full map and guided reading paths, see **[Documentation](docs/README.md)**.
 
 <details>
 <summary>🪜 <b><a href="docs/getting-started/">Tutorial</a></b> — Climb the 5-stage ladder above</summary>
@@ -181,7 +182,7 @@ Past Stage 1, the documentation is organized into six sections. Pick whichever m
 - [Performance Tips](docs/how-to/performance-tips.md) — Matmul placement, free ops, env-var knobs.
 
 **Debugging and shipping**
-- [Debugging Checklist](docs/how-to/debugging-checklist.md) — Tiered procedure when something feels wrong.
+- [Debugging Checklist](docs/how-to/debugging-checklist.md) — Tiered procedure for when a result looks wrong.
 - [Pre-Submission Checklist](docs/how-to/pre-submission-checklist.md) — One-screen gate before you click submit.
 - [Ship Weights and Multi-File Submissions](docs/how-to/ship-weights.md) — Precompute offline, load in `setup()` via `submission_dir`, folder-mode packaging, the 50 MiB / 50-file caps.
 
@@ -191,7 +192,7 @@ Past Stage 1, the documentation is organized into six sections. Pick whichever m
 <summary>📚 <b><a href="docs/reference/">Reference</a></b> — Exact contracts, schemas, lookup material</summary>
 
 **The round**
-- [Competition Rounds](docs/reference/rounds.md) — Every round side by side: shape, budget, wall caps, and how residual time was charged. Read this first if a number you saw elsewhere doesn't match your local run, or if you need to reproduce a score from an earlier round.
+- [Competition Rounds](docs/reference/rounds.md) — Every round side by side: shape, budget, wall caps, and how residual time was charged. If a number you saw elsewhere doesn't match your local run, or if you need to reproduce a score from an earlier round, read this first.
 
 **Estimator API**
 - [Estimator Contract](docs/reference/estimator-contract.md) — `predict`/`setup`/`teardown` signatures, `SetupContext`, failure-semantics table, lifecycle diagram.
@@ -224,7 +225,7 @@ Past Stage 1, the documentation is organized into six sections. Pick whichever m
 
 </details>
 
-## 📁 Repo Layout
+## 📁 Repo layout
 
 ```
 ├── estimator.py     ← The participant's entry point; every stage operates on this file.
@@ -236,6 +237,6 @@ Past Stage 1, the documentation is organized into six sections. Pick whichever m
 └── CHANGELOG.md     ← Rule, parameter and FLOP-figure changes are announced here.
 ```
 
-## ⚖️ License & Contributing
+## ⚖️ License & contributing
 
-Released under the [MIT License](LICENSE). See [docs/RELEASING.md](docs/RELEASING.md) for the release process.
+Released under the [MIT License](LICENSE). For the release process, see [docs/RELEASING.md](docs/RELEASING.md).
