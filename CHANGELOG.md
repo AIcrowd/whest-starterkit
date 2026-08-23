@@ -35,9 +35,10 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   nothing else. Vendored numpy/scipy/BLAS, compiled kernels of any kind, ctypes/cffi/FFI,
   asyncio/threads/subprocess/multiprocessing, compute while a flopscope op is in flight,
   and touching the flopscope client/transport/accounting are prohibited. Data files
-  (weights, lookup tables, precomputed artifacts) remain permitted. Enforcement may be
-  retrospective and LLM-assisted, so a submission can be invalidated after it has been
-  graded.
+  (weights, lookup tables, precomputed artifacts) remain permitted. Automated checks run on every
+  submission, flagged submissions go through agent-assisted validation, and a person
+  reviews anything still unresolved. Review continues after grading, and a submission
+  that does not conform is invalidated once identified.
 
 ### Feat
 

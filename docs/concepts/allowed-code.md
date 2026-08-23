@@ -12,7 +12,7 @@ Read this page before you reach for anything that is not flopscope or the standa
 - Everything on the [prohibition list](#what-is-prohibited) is excluded: vendored numpy/scipy/BLAS, compiled kernels, FFI, concurrency, compute that overlaps a metered op, and anything that touches the flopscope client, transport, or accounting.
 - **Data files remain permitted.** Shipping weights, lookup tables, and precomputed artifacts is explicitly allowed. See [Ship Weights](../how-to/ship-weights.md).
 - **Residual wall time is for plumbing, not for computation.** It is not priced in Phase 2 (`C_m = F_m`); it is hard-capped at **400 ms per MLP**. Meaningful computation there is a breach of this rule, not a cheap trade. Pricing is exactly what Phase 1 did, and dropping it is a direct consequence of this rule ([why](../reference/rounds.md#why-phase-2-does-not-price-residual-time)).
-- Enforcement may be **retrospective and LLM-assisted**: submitted source is reviewed after the fact, and a submission can be invalidated after it has been scored.
+- **Every submission is reviewed.** Automated checks run first, flagged submissions go through agent-assisted validation, and a person reviews anything still unresolved. Review continues after grading, and a submission that does not conform is invalidated once identified.
 
 ## Why there is a rule at all
 
@@ -59,9 +59,16 @@ If your estimator genuinely needs more residual headroom than the cap allows for
 
 ## How this is enforced
 
-Enforcement is **retrospective**: submitted source is reviewed after grading, and review may be **LLM-assisted**. There is no gate at submission time that clears you. A submission that has already been graded, scored, and placed on the leaderboard can be invalidated later if review finds prohibited code.
+Automated checks run on every submission. Anything they flag goes through further
+agent-assisted validation, and anything still unresolved after that is reviewed by a
+person.
 
-"It passed grading" is therefore not evidence that a technique is allowed. If you are unsure whether something falls inside the rule, ask before you submit rather than after a ranked result is withdrawn.
+Review continues after grading, so a submission can be scored and listed on the
+leaderboard while its review is still open. Any submission that does not conform to
+these rules is invalidated once identified.
+
+If you are unsure whether a technique falls inside the rule, ask before you submit.
+See [Questions](#questions).
 
 ## Questions
 
