@@ -1,4 +1,4 @@
-# Code Patterns
+# Code patterns
 
 > [← Documentation](../README.md)
 
@@ -8,7 +8,7 @@ import flopscope.numpy as fnp`.
 ## Operators are tracked
 
 Python arithmetic operators (`+`, `-`, `*`, `/`, `@`) on `fnp.ndarray` values are
-FLOP-tracked — you do not need to use the verbose `fnp.add`, `fnp.multiply`, etc. forms.
+FLOP-tracked. You do not need the verbose `fnp.add` and `fnp.multiply` forms.
 
 ```python
 import flopscope as flops
@@ -37,7 +37,7 @@ flopscope tracks symmetry annotations on tensors. Operations that produce a
 mathematically-symmetric result will tag the output as symmetric **only if
 flopscope can prove it from the operands and the operation**. Chained
 matmuls (`A @ B @ C`) defeat this proof because each `matmul` runs in
-isolation — the intermediate `(A @ B)` is generally not symmetric, so the
+isolation: the intermediate `(A @ B)` is generally not symmetric, so the
 final `@ C` can't recover symmetry even when the full triple product
 mathematically is.
 
@@ -52,7 +52,8 @@ cov_pre = w.T @ cov @ w
 # contraction over a symmetric-tagged `cov`. Since flopscope 0.10.0 you must
 # also re-tag after any write into cov — a write voids the tag rather than
 # letting a stale claim keep its discount.
-cov = flops.as_symmetric(fnp.eye(width), symmetry=(0, 1))
+cov = fnp.eye(width, dtype=fnp.float32)   # already tagged — fnp.zeros/ones/eye on
+                                          # a square shape return a SymmetricTensor
 for w in mlp.weights:
     cov_pre = fnp.einsum("ij,ia,jb->ab", cov, w, w)   # symmetric rate
     ...
@@ -61,12 +62,24 @@ for w in mlp.weights:
     cov = flops.as_symmetric(cov, symmetry=(0, 1))      # re-validate, ~7n FLOPs
 ```
 
-The one-time `SymmetryLossWarning` you see on the first write is **expected** —
-it is the signal that the tag is gone and that you need the re-validation. At
-width 256 the re-tag costs 917,502 FLOPs and saves 33,358,080 on the next
-layer's einsum, so it repays itself ≈36×. (Both figures are at the float64
-default; `as_symmetric` bills `7n-1` per element-pass with `n = width²`, and
-float64 bills 2×.)
+You will **not** get a warning here. `fill_diagonal` voids the tag silently, and
+the `multiply` above it keeps the tag because `outer(gain, gain)` is itself
+symmetry-inferred, so nothing tells you the discount has gone. Re-tag
+unconditionally after any write into `cov`. To confirm it worked, call
+`ctx.summary()`: the einsum should read 3,220,700,672 per layer, not
+4,292,870,144. (`SymmetryLossWarning` does exist: it fires when a tagged
+operand meets one that shares no symmetry group, as in the anti-pattern above,
+or on a reshape across the symmetric block.)
+
+The re-tag is cheap next to the contraction it keeps on the symmetric rate: at
+the Phase 2 shape (`width=1024, depth=16`), the 16 per-layer `as_symmetric`
+calls in `examples/03_covariance_propagation.py` cost 117,440,496 FLOPs between
+them (0.23% of that estimator's bill), against 51,531,210,752 spent on the
+einsums themselves. (`as_symmetric` bills `7n-1` per element-pass with
+`n = width²`, so 7,340,031 FLOPs a call at the float32 rate the example seeds
+its covariance in; float64 would bill 2×. The example also wraps its seed identity
+in `as_symmetric`, which is redundant for the reason above; that is why its own
+summary reads 17 calls / 124,780,527.)
 
 See `examples/03_covariance_propagation.py` for the full pattern in
 context, and [whestbench#27](https://github.com/AIcrowd/whestbench/issues/27)
@@ -74,12 +87,16 @@ for the rationale.
 
 ## Operation costs
 
-> **flopscope 0.9 billing model.** Costs are `flop_cost × weight × dtype_rate`
-> (× a complex factor for complex dtypes). Practical rules: stay in float32
-> (float64 bills 2×); write `x * x` not `x ** 2` (power is 16-tier); `zeros`
-> and views are free but `ones`/`eye`/`stack`/`concatenate`/copies now bill
-> 1×/element; gathers and 3-arg `where` bill 4×/element; sorts bill
-> ≈4·N·⌈log₂N⌉ (per comparison). Full audited tables:
+> **flopscope 0.12 billing model** (the version this kit pins). Costs are
+> `flop_cost × weight × dtype_rate` (× a complex factor for complex dtypes).
+> Practical rules: stay in float32 (float64 bills 2×); write `x * x` not
+> `x ** 2` (power is 16-tier); `zeros` and views are free but
+> `ones`/`eye`/`stack`/`concatenate`/copies now bill 1×/element; gathers and
+> 3-arg `where` bill 4×/element; sorts bill ≈4·N·⌈log₂N⌉ (per comparison).
+> Since 0.11.0 a non-numeric dtype (`object`, `str_`, `bytes_`, `datetime64`,
+> structured) raises `UnsupportedDtypeError` at any metered op, free ones
+> included, so `fnp.array([1.0, None])` and `fnp.zeros(3, dtype=object)` now
+> fail rather than bill; convert with plain `numpy` first. Full audited tables:
 > [flopscope cost model](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/).
 
 | What you want | Code | FLOP cost | Notes |
@@ -88,7 +105,7 @@ for the rationale.
 | Create ones | `fnp.ones(n)` | 1 per element | Billed since 0.9 |
 | Identity matrix | `fnp.eye(n)` | n (diagonal only) | Billed since 0.9 |
 | Wrap existing data | `fnp.asarray(data)` | 0 | Free if no copy needed; `fnp.array()` always copies |
-| Matrix multiply | `fnp.matmul(A, B)` | O(m x n x k) | Dominates budgets |
+| Matrix multiply | `fnp.matmul(A, B)`, `A @ B` | `M·N·(2K−1)` for `(M,K) @ (K,N)` | ~2·M·N·K — K multiplies plus K−1 adds per output element. At `(1024,1024) @ (1024,1024)` float32 that is **2,146,435,072**, so `2**41` buys 1,024 of them, not 2,048. Dominates budgets. |
 | Element-wise add | `fnp.add(a, b)` | 1 per element | |
 | Element-wise multiply | `fnp.multiply(a, b)` | 1 per element | |
 | Element-wise divide | `fnp.divide(a, b)` | 1 per element | |
@@ -101,9 +118,8 @@ for the rationale.
 | Extract diagonal | `fnp.diag(M)` | 0 | Free |
 | Set diagonal | `fnp.fill_diagonal(M, v)` | n (diagonal only) | Billed since 0.9, in-place |
 | Outer product | `fnp.outer(a, b)` | n x m | |
-| Sum | `fnp.sum(x, axis=0)` | input size | |
-| Mean | `fnp.mean(x, axis=0)` | input size | |
-| Max | `fnp.max(x)` | input size | |
+| Sum / Max / Min | `fnp.sum(x, axis=0)`, `fnp.max(x)` | `numel − n_outputs` | One combine per step; ≈ input size |
+| Mean | `fnp.mean(x, axis=0)` | `numel` | The sum (`numel − n_outputs`), plus one divide per output |
 | Stack arrays | `fnp.stack(rows, axis=0)` | 1 per element | Billed since 0.9 |
 | Concatenate | `fnp.concatenate([a, b])` | 1 per element | Billed since 0.9 |
 | Index/slice | `x[0]`, `x[:, 3]` | 0 | Free |
@@ -112,7 +128,7 @@ for the rationale.
 
 ### Seed randomness from `mlp.seed` and `ctx.seed`
 
-The grader supplies two independent seeds: `mlp.seed` for per-MLP randomness inside `predict()`, and `ctx.seed` for one-time randomness inside `setup()`. Use them for any RNG inside your estimator.
+The grader supplies two independent seeds: `mlp.seed` for per-MLP randomness inside `predict()`, and `ctx.seed` for run-level randomness inside `setup()` (the same value on every `setup()` call in the run). Use them for any RNG inside your estimator.
 
 **Predict-time** (per-MLP randomness):
 
@@ -135,7 +151,7 @@ sub_a, sub_b, sub_c = (
 )
 ```
 
-**Setup-time** (run-level randomness, e.g. fixed random projections):
+**Setup-time** (run-level randomness, such as fixed random projections):
 
 ```python
 import flopscope.numpy as fnp
@@ -148,9 +164,15 @@ class Estimator(BaseEstimator):
         self.projection = self.setup_rng.standard_normal((ctx.width, 64))
 ```
 
-Do **not** call `fnp.random.seed(ctx.seed)` — that mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
+`setup()` runs once per worker process (several times per submission) under a
+hard 5 s ceiling each, so keep it to work of that size and make it idempotent.
+A projection basis fits comfortably; anything heavier belongs in a shipped data
+file ([Ship Weights](../how-to/ship-weights.md)). See
+[Estimator Contract: Lifecycle](./estimator-contract.md#lifecycle).
 
-Participant-chosen seeds (e.g. `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility — see [Estimator Contract](./estimator-contract.md).
+Do **not** call `fnp.random.seed(ctx.seed)`: it mutates the process-global RNG. Always use `fnp.random.default_rng(...)` for an isolated `Generator`.
+
+Participant-chosen seeds (for example, `fnp.random.default_rng(42)` inside `predict()` or `setup()`) may be disqualified for prize eligibility; see [Estimator Contract: Reproducibility under the grader seed](./estimator-contract.md#reproducibility-under-the-grader-seed).
 
 ### Standard normal PDF and CDF (built-in)
 
@@ -164,7 +186,12 @@ phi = flops.stats.norm.pdf(x)   # standard normal PDF
 Phi = flops.stats.norm.cdf(x)   # standard normal CDF
 ```
 
-These are the recommended approach — all example estimators use them. The manual implementations below are shown for reference.
+These are the built-ins, and the two propagation examples
+([`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) and
+[`examples/03_covariance_propagation.py`](../../examples/03_covariance_propagation.py))
+both use them. They cost more than the hand-rolled versions below
+(`flops.stats.norm.pdf` ≈ 54/element against ≈ 20, `.cdf` ≈ 96/element against
+≈ 48) and promote float32 input to float64 to match scipy, so pick deliberately.
 
 ### Standard normal PDF (for ReLU expectation)
 
@@ -197,10 +224,15 @@ def norm_cdf(x):
     return fnp.where(x >= 0, cdf, 1.0 - cdf)
 ```
 
-> Use the pure-flopscope version above. The grader sandbox does **not** provide
-> `scipy` (or any third-party PyPI package) — only `flopscope`, the `whestbench`
-> API, and the Python standard library are importable — and only flopscope
-> operations are FLOP-counted.
+> Use the pure-flopscope version above. The grader sandbox provides only
+> `flopscope`, the `whestbench` API, and the Python standard library. `scipy`
+> and every other third-party PyPI package are absent, and only flopscope
+> operations are FLOP-counted. Do not route around that by vendoring
+> `numpy`/`scipy`/a BLAS into your submission, or by using compiled kernels or
+> `ctypes`/`cffi`: those are prohibited and are grounds for disqualification.
+> Shipping *data* files (weights, lookup tables, precomputed artifacts) remains
+> permitted; see [Ship Weights](../how-to/ship-weights.md) and
+> [Allowed Code](../concepts/allowed-code.md).
 
 ### ReLU expectation (E[max(0, z)] where z ~ N(mu, sigma^2))
 
@@ -225,10 +257,10 @@ E[ReLU(z)] = ∫_0^∞ z · f(z) dz
 
 Here `Φ` is the standard-normal CDF, `φ` is the standard-normal PDF, and
 `α` measures how many standard deviations the mean sits above zero.
-Intuitively: `µ · Φ(α)` is "what survives if the distribution is mostly
-positive"; `σ · φ(α)` is the "edge correction" for the part of the bell
-that's clipped at zero. This is the (rectified Gaussian) first moment;
-see e.g. Frey & Hinton (1999), Williams (1998) for derivations.
+`µ · Φ(α)` is the contribution of the probability mass above zero, and
+`σ · φ(α)` corrects for the mass that the rectification clips at zero. This is
+the (rectified Gaussian) first moment; see Frey & Hinton (1999) and Williams
+(1998) for derivations.
 
 #### Where the assumption breaks
 
@@ -243,8 +275,12 @@ fit for moderate widths). The approximation degrades when:
 - **Activations cluster near zero.** When `α ≈ 0`, the rectified-Gaussian
   approximation is accurate, but `µ` is small and relative errors spike.
 
-If your `final_layer_mse` is fine but `all_layers_mse` blows up, this assumption
-is usually the culprit. See [algorithm-ideas.md](../how-to/algorithm-ideas.md)
+The Phase 2 shape (`width=1024, depth=16`) avoids the first two: 1024 neurons
+per layer is wide enough for the CLT argument to hold, and 16 layers is few
+enough to limit compounding.
+
+If your `final_layer_mse` is low but `all_layers_mse` is high, this assumption
+is the usual cause. See [algorithm-ideas.md](../how-to/algorithm-ideas.md)
 for advanced moment-matching strategies.
 
 See [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) for a complete working estimator using these patterns.

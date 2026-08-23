@@ -1,15 +1,18 @@
-"""Ship precomputed weights the safe way, with ``flopscope.Module``.
+"""Ship precomputed weights with ``flopscope.Module``.
 
 flopscope only loads **pickle-free** array weights (`np.load(allow_pickle=False)`),
-so you cannot ship a pickled model — and ``flopscope.Module`` is the structured way
-to author the ones it does support. Subclass it, set your weights as public array
-attributes; then ``.save(path)`` writes a plain ``.npz`` and ``.from_file(path)``
-reconstructs the object on the grader — no pickle, 0 FLOPs to load.
+so you cannot ship a pickled model. ``flopscope.Module`` is the structured way to
+author the weights it does support. Subclass it and set your weights as public
+array attributes. ``.save(path)`` then writes a plain ``.npz``, and
+``.from_file(path)`` reconstructs the object on the grader, with no pickle and
+0 FLOPs to load.
 
 Workflow:
-  1. Compute the weights offline (free — off the FLOP budget) and ``.save()`` them.
-  2. Keep the ``.npz`` next to your estimator and package the **folder**
-     (`whest package --estimator .`) so it ships.
+  1. Compute the weights offline (free, off the FLOP budget) and ``.save()`` them.
+  2. Copy this file to ``estimator.py`` in a folder of its own (folder submissions
+     require that exact filename), keep the ``.npz`` beside it, and package the
+     folder: ``whest package --estimator .`` (ships ``estimator.py``,
+     ``weights.npz``, ``manifest.json``).
   3. Load with ``Weights.from_file(...)`` in ``setup()``. ``context.submission_dir``
      points at your estimator's folder both locally and on the grader.
 
@@ -28,16 +31,23 @@ WEIGHTS_FILE = "weights.npz"
 
 
 class Weights(flopscope.Module):
-    """A pickle-free weight bundle. Public (non-underscore) array attributes are
-    saved and restored automatically; private (`_`-prefixed) attributes are not."""
+    """A pickle-free weight bundle. ``flopscope.Module`` saves and restores public
+    (non-underscore) array attributes automatically and skips private
+    (`_`-prefixed) ones."""
 
     def __init__(self) -> None:
-        self.scale = fnp.ones(())  # public array attribute -> saved & restored
+        # Public (non-underscore) array attribute -> saved & restored.
+        # `fnp.zeros`, not `fnp.ones`: zeros is on flopscope's free list, while
+        # `ones` bills 1 FLOP per element, and at the float64 default that is 2
+        # FLOPs even for this 0-d placeholder. Spelling the dtype out keeps the
+        # float32 rate. Measured under flopscope 0.12.0: `fnp.ones(())` = 2 FLOPs,
+        # `fnp.zeros((), dtype=fnp.float32)` = 0.
+        self.scale = fnp.zeros((), dtype=fnp.float32)
 
 
 def build_weights() -> Weights:
     """Compute the weights offline. This runs outside the challenge runner, so it
-    is free — only `predict()`-time FLOPs count toward your score."""
+    is free; only `predict()`-time FLOPs count toward your score."""
     w = Weights()
     w.scale = fnp.asarray(2.0)  # replace with your real precomputation
     return w
@@ -77,16 +87,11 @@ if __name__ == "__main__":
     submission_dir = tempfile.mkdtemp()
     build_weights().save(str(Path(submission_dir) / WEIGHTS_FILE))
 
-    mlp = build_mlp(width=256, depth=32, seed=0)  # phase-1 shape (warmup used depth=8)
-    estimator = Estimator()
-    # The framework always calls setup() before predict(); do the same here.
-    estimator.setup(
-        SetupContext(
-            width=256,
-            depth=32,
-            flop_budget=272_000_000_000,
-            api_version="1.0",
-            submission_dir=submission_dir,
-        )
-    )
-    compare_against_monte_carlo(estimator, mlp)
+    mlp = build_mlp(width=1024, depth=16, seed=0)  # competition shape
+    # The local engine calls setup() for you, exactly as the framework does before
+    # predict(). It defaults `submission_dir` to the folder this file lives in.
+    # This example overrides the default because the weights above went to a
+    # tempdir rather than being committed to the repo. In a real submission you
+    # would not pass it; the default already points at the folder holding your
+    # estimator and .npz.
+    compare_against_monte_carlo(Estimator(), mlp, submission_dir=submission_dir)

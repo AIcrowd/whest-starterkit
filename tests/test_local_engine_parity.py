@@ -15,7 +15,9 @@ def test_build_mlp_matches_whestbench_sample_mlp_distribution():
     width, depth = 256, 3
 
     local = build_mlp(width=width, depth=depth, seed=0)
-    # whestbench.sample_mlp takes `rng` (a Generator), not `seed` — bridge here.
+    # sample_mlp takes both: `rng` drives weight sampling, `seed` only stamps
+    # MLP.seed for the estimator to read. Pass rng here — `seed=` alone would
+    # leave the weights unseeded.
     upstream = sample_mlp(width=width, depth=depth, rng=fnp.random.default_rng(0))
 
     assert local.width == upstream.width
@@ -35,3 +37,15 @@ def test_build_mlp_matches_whestbench_sample_mlp_distribution():
         local_mean = float(fnp.mean(lw))
         upstream_mean = float(fnp.mean(uw))
         assert abs(local_mean - upstream_mean) < 0.01, f"layer {layer_idx}: mean drift exceeds 0.01"
+
+
+def test_sample_mlp_seed_stamps_metadata_without_driving_weights():
+    """Pin the `rng` / `seed` distinction the comment above relies on: `seed` only
+    stamps MLP.seed, and on its own leaves weight sampling unseeded."""
+    assert sample_mlp(8, 2, rng=fnp.random.default_rng(0), seed=99).seed == 99
+
+    a = sample_mlp(8, 2, seed=99)
+    b = sample_mlp(8, 2, seed=99)
+    assert float(fnp.max(fnp.abs(a.weights[0] - b.weights[0]))) != 0.0, (
+        "seed= alone should not make weights reproducible — that is rng='s job"
+    )

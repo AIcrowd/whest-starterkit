@@ -1,18 +1,35 @@
-# Ship Weights and Multi-File Submissions
+# Ship weights and multi-file submissions
 
 > [← Documentation](../README.md)
 
 ## When to use this page
 
-Use this page when you want to pre-compute something offline (e.g. a calibration
-scalar, a learned projection matrix, a lookup table) and load it inside
-`setup()` — or when your estimator spans more than one Python module.
+Use this page when you want to pre-compute something offline (for example, a
+calibration scalar, a learned projection matrix, or a lookup table) and load it inside
+`setup()`, or when your estimator spans more than one Python module.
+
+> **Where the Phase 2 rules put this.** Shipping **data** (weights, lookup
+> tables, precomputed artifacts) is explicitly permitted, and it costs less
+> than it did in Phase 1: with `C_m = F_m`, everything you compute before
+> you package adds nothing to your score. Shipping **code** is what the rules
+> restrict. Vendored numpy/scipy/BLAS, compiled kernels of any kind, and anything
+> reached through `ctypes`/`cffi` are prohibited outright, and a submission
+> carrying them is disqualifiable rather than merely broken; see
+> [Allowed Code](../concepts/allowed-code.md) for the full rule.
+>
+> The Sponsor also reserves the discretion to decline to treat a bundled file
+> as data. A file that is really a program (bytecode, a serialized kernel, an
+> instruction table your estimator dispatches through) can be ruled out on
+> those grounds whatever extension it arrives with. Arrays of numbers your
+> estimator does arithmetic on are what this page is about; if your artifact
+> is something else, ask [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com) before you build a
+> submission around it.
 
 ---
 
 ## (a) Splitting code across modules
 
-To ship more than one file, package the **folder** — point `--estimator` at the
+To ship more than one file, package the **folder**. Point `--estimator` at the
 directory, not at `estimator.py`:
 
 ```bash
@@ -35,19 +52,31 @@ my-submission/
 writing, and warns if a `.py` file isn't reachable by import from `estimator.py`
 (likely a scratch file you forgot to exclude).
 
-> ⚠ Packaging the file alone — `whest package --estimator estimator.py` — ships
-> **only `estimator.py`**; `helper.py` and `weights.npz` would be left out. For a
-> multi-file submission, always point `--estimator` at the folder.
+> ⚠ Packaging the file alone (`whest package --estimator estimator.py`) ships
+> **only that file**, renamed to `estimator.py` inside the archive whatever you
+> called it locally. Since whestbench 0.16.0, if `estimator.py` imports a
+> sibling module the command **refuses** rather than producing an archive that
+> would `ImportError` on the grader:
+>
+> ```
+> ⚠ Single-file submission: only estimator.py will be submitted. 2 items beside it will NOT be included: helper.py, weights.npz.
+> Error [package:PACKAGING_VALIDATION_ERROR]: estimator.py imports helper, which lives beside it and will NOT be bundled ...
+> ```
+>
+> Data files like `weights.npz` are only *named* in that warning, not protected
+> by it. They are dropped. For anything multi-file, point `--estimator` at the
+> folder.
 
 ---
 
 ## (b) Authoring weights offline with `flopscope.Module`
 
-flopscope only loads **pickle-free** array weights: `fnp.load` and
-`flopscope.Module` both use `np.load(allow_pickle=False)`, so a pickled model
-(`torch.save`, `joblib`, `pickle`) will **not** load on the grader. Author your
-weights as a `flopscope.Module` — public array attributes are saved and restored
-automatically:
+flopscope only loads **pickle-free** array data. Locally `fnp.load` (and
+`flopscope.Module`, which goes through it) calls `np.load(allow_pickle=False)`;
+on the grader flopscope-client parses the `.npy`/`.npz` with its own codec and
+cannot unpickle at all. Either way a pickled model (`torch.save`, `joblib`,
+`pickle`) will **not** load. Author your weights as a `flopscope.Module`;
+flopscope saves and restores public array attributes automatically:
 
 ```python
 import flopscope
@@ -55,32 +84,33 @@ import flopscope.numpy as fnp
 
 class Weights(flopscope.Module):
     def __init__(self) -> None:
-        self.scale = fnp.ones(())     # public array attribute → saved & restored
+        self.scale = fnp.zeros((), dtype=fnp.float32)  # public array attribute → saved & restored
 
-# Offline compute is free — only predict()-time FLOPs count toward your score.
+# Offline compute is free — only predict()-time FLOPs count toward your score,
+# and in Phase 2 those FLOPs are the whole of it: C_m = F_m.
 w = Weights()
 w.scale = fnp.asarray(2.0)            # replace with your real precomputation
 w.save("weights.npz")                 # plain .npz, no pickle
 ```
 
-`.save()` writes a plain `.npz`; nested `Module`s and lists/tuples/dicts of arrays
-are flattened automatically. (For a single bare array you can also `np.savez` /
+`.save()` writes a plain `.npz` and flattens nested `Module`s and lists, tuples,
+and dicts of arrays automatically. (For a single bare array you can also `np.savez` /
 `fnp.load` directly, but `Module` keeps multi-array weights structured and reloads
-them into a typed object.) For the save call itself, do it offline with plain `numpy` (`np.savez`): inside `predict()`, `fnp.save`/`fnp.savez` bill an egress cost since flopscope 0.9 (≈4 FLOPs per element × dtype rate, plus small headers), while `fnp.load` stays free.
+them into a typed object.) Make the save call offline with plain `numpy` (`np.savez`): inside `predict()`, `fnp.save`/`fnp.savez` bill an egress cost since flopscope 0.9 (≈4 FLOPs per element × dtype rate, plus small headers), while `fnp.load` stays free.
 
-**Designing the weights themselves** — which operations are free vs FLOP-counted,
-and the full `fnp` module surface (array creation, RNG, reductions, matmul,
-einsum) — is covered in the [Flopscope Primer](../reference/flopscope-primer.md)
-and [Code Patterns](../reference/code-patterns.md).
+The [Flopscope Primer](../reference/flopscope-primer.md) and
+[Code Patterns](../reference/code-patterns.md) cover **designing the weights
+themselves**: which operations are free vs FLOP-counted, and the full `fnp`
+module surface (array creation, RNG, reductions, matmul, einsum).
 
 ---
 
 ## (c) Loading in `setup()` via `submission_dir`
 
-`context.submission_dir` is set by the runner to the folder containing your
-`estimator.py` — both locally (`whest validate` / `whest run`) and on the
+The runner sets `context.submission_dir` to the folder containing your
+`estimator.py`, both locally (`whest validate` / `whest run`) and on the
 grader (the extracted submission root).  Always guard against `None` before
-constructing a `Path` from it — it is `None` outside the runner context:
+constructing a `Path` from it; it is `None` outside the runner context:
 
 ```python
 from pathlib import Path
@@ -90,7 +120,7 @@ from whestbench import BaseEstimator, SetupContext
 
 class Weights(flopscope.Module):
     def __init__(self) -> None:
-        self.scale = fnp.ones(())
+        self.scale = fnp.zeros((), dtype=fnp.float32)
 
 class Estimator(BaseEstimator):
     def setup(self, context: SetupContext) -> None:
@@ -101,11 +131,13 @@ class Estimator(BaseEstimator):
                 self._weights = Weights.from_file(str(weights_path))  # 0 FLOPs
 ```
 
-`from_file` (and `fnp.load`) cost **0 FLOPs** — loading data does not count
-against your budget. **Pass a `str` path, not a `Path`** — the grader's
+`fnp.load` costs **0 FLOPs**, and `from_file` adds only whatever your `__init__`
+bills; it re-runs the constructor before restoring state, so keep that
+constructor to `fnp.zeros`. Reading the file itself never counts against your
+budget. **Pass a `str` path, not a `Path`**: the grader's
 `flopscope-client` requires a string filename. (The full flopscope in your local
 venv also accepts a `Path`, so a `Path` appears to work under `whest validate` but
-fails on the grader — always wrap with `str(...)`.)
+fails on the grader; always wrap with `str(...)`.)
 
 See the full worked example at [`examples/04_shipped_weights.py`](../../examples/04_shipped_weights.py).
 
@@ -120,6 +152,11 @@ See the full worked example at [`examples/04_shipped_weights.py`](../../examples
 | Total submission size | 50 MiB (the CLI error reports this as ~52 MB) |
 | Total file count | 50 files |
 
+Width 1024 makes that first cap tighter than it looks: one `(1024, 1024)`
+float32 matrix is 4 MiB, so a dozen of them is the whole allowance. Ship the
+smallest sufficient artifact (a projection basis, a rank-*k* factor, a
+calibration table) rather than a full-rank matrix per layer.
+
 If your folder contains large scratch files, cached datasets, or other
 artefacts you don't want to ship, list them in `.whestignore` next to
 `estimator.py` (same glob syntax as `.gitignore`):
@@ -132,9 +169,10 @@ debug_weights.pkl
 ```
 
 `whest init` creates a starter `.whestignore` for you. The built-in ignore list
-already excludes common non-submission artefacts (`.git/`, `__pycache__/`,
-`*.pyc`, etc.) and **all credential files** (`.env`, `*.pem`, `*.key`, private
-keys) for security, so you only need to add project-specific entries.
+already excludes common non-submission artefacts such as `.git/`,
+`__pycache__/`, and `*.pyc`, plus **all credential files** (`.env`, `*.pem`,
+`*.key`, private keys) for security, so you only need to add project-specific
+entries.
 
 ---
 
@@ -144,50 +182,61 @@ Folder mode gives you **full visibility** before anything ships: `whest package`
 lists every file and asks you to confirm:
 
 ```
-Packaging folder ./ → submission-20260610-120000.tar.gz
+Packaging folder /home/you/my-submission/ → submission-20260610-120000.tar.gz
 Everything in this folder will be submitted, except .gitignore / .whestignore
 matches and credential files (excluded for security).
 Submitting 3 files (42.3 KB):
   estimator.py  (1.2 KB)
-  helper.py     (0.9 KB)
-  weights.npz   (40.2 KB)
+  helper.py  (0.9 KB)
+  weights.npz  (40.2 KB)
 Submit all 3 files (42.3 KB)? [y/N]
 ```
 
 Skip the prompt in CI with `--yes` / `-y`:
 
 ```bash
-whest package --estimator . --yes
+uv run whest package --estimator . --yes
 ```
 
-To preview **without** building the archive or uploading anything:
+To preview and self-check without writing an archive into your folder or
+uploading anything:
 
 ```bash
-whest submit --estimator . --dry-run
+uv run whest submit --estimator . --dry-run
 ```
 
-This shows the full file list, sizes, and versions, then stops.
+It packages into a temporary directory, runs the same `validate-package`
+integrity check `whest submit` runs before upload, prints the file list, sizes,
+the resolved `flopscope==` / `whestbench==` versions, and the archive size it
+would have uploaded, then discards it.
 
 ---
 
 ## (f) Grader timing note
 
-The grader runs two clocks, and they are separate. Your module import plus
-`setup()` share a hard **30 s** budget; each `predict()` call then gets its own
-hard **60 s**. Setup doesn't eat into predict's window and can't borrow from it.
+The grader applies two separate time limits. Your module import plus
+`setup()` share a hard **5 s** budget, spent **once per worker process, not
+once per submission**. Several workers serve one submission (roughly 5-15
+setup runs in practice), and since whestbench 0.16.0 the grader replaces a
+worker that dies mid-suite, which re-runs your `setup()` and re-spends the 5 s.
+Each `predict()` call then gets its own hard **120 s**. The setup limit and the
+`predict()` limit are independent of each other.
 
-Setup's cost is not billed — not to the FLOP budget, not to
-`residual_wall_time_s`. What it does cost is repetition: `setup()` runs once
-per worker process, roughly 5-15 times per submission, so anything slow in
-there you pay for again on every worker. And overrunning the 30 s fails the
-whole submission with `SETUP_TIMEOUT`, not just one MLP.
+Setup's cost is not billed: not to the FLOP budget, not to
+`residual_wall_time_s`. The limit is short and strict. Five seconds
+covers a file read and an unpack, and nothing more; overrunning them fails the
+**whole submission** with `SETUP_TIMEOUT`, not one MLP, and takes one of that
+day's ten submission slots with it. Time your `setup()` on a cold cache before
+you ship, not after. And because setup can run many times, an expensive setup
+costs that time on every worker. That is a second reason to load rather than
+compute.
 
 So keep `setup()` to cheap operations: load files, unpack arrays, set up data
 structures. Do not train a model in `setup()`.
 
-The right pattern is to do all heavy computation **offline** (before you
-package), save the result to a file, and load it in `setup()`. That load is
-fast, pickle-free, and costs 0 FLOPs.
+Do all heavy computation **offline** (before you package), save the result to a
+file, and load it in `setup()`. That load is fast, pickle-free, and costs
+0 FLOPs.
 
 ---
 

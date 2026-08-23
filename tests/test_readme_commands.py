@@ -1,7 +1,7 @@
 """Drift gate: every fenced bash block in README.md tagged ```bash-test must run cleanly.
 
 Tag a fenced block with ```bash-test (instead of plain ```bash) to opt it into CI.
-This excludes blocks like `git clone`, `gh release`, etc. that can't run in CI.
+This excludes blocks that cannot run in CI, such as `git clone` and `gh release`.
 """
 
 from __future__ import annotations

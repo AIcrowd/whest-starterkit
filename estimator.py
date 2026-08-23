@@ -1,7 +1,7 @@
 """Your estimator. Edit `predict()`. Run `python estimator.py` to iterate.
 
-Stage 1 of the WhestBench ladder: just `flopscope` and the local engine. No CLI
-knowledge required. Once `predict()` returns something interesting, climb to
+Stage 1 of the WhestBench ladder: only `flopscope` and the local engine. No CLI
+knowledge required. Once `predict()` returns something interesting, move on to
 Stage 2: `whest validate --estimator estimator.py`.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import sys
 from pathlib import Path
 
 import flopscope.numpy as fnp
@@ -31,6 +32,10 @@ def _load_baseline(name: str) -> type[BaseEstimator]:
             spec = importlib.util.spec_from_file_location(candidate.stem, candidate)
             assert spec and spec.loader
             module = importlib.util.module_from_spec(spec)
+            # Register before exec_module: without this the class's __module__ has
+            # no entry in sys.modules, so inspect.getsourcefile() raises TypeError
+            # and the local engine reports "<unknown>" instead of the real file.
+            sys.modules[candidate.stem] = module
             spec.loader.exec_module(module)
             return module.Estimator
     raise SystemExit(
@@ -45,10 +50,10 @@ if __name__ == "__main__":
         "--baseline",
         default=None,
         help="Compare your estimator against an example: 'random', 'mean_propagation', "
-        "or 'covariance_propagation'.",
+        "'covariance_propagation', or 'shipped_weights'.",
     )
-    parser.add_argument("--width", type=int, default=256)
-    parser.add_argument("--depth", type=int, default=32)  # phase-1 competition shape (warmup was 8)
+    parser.add_argument("--width", type=int, default=1024)
+    parser.add_argument("--depth", type=int, default=16)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
@@ -57,9 +62,9 @@ if __name__ == "__main__":
     mlp = build_mlp(width=args.width, depth=args.depth, seed=args.seed)
 
     print("--- Your estimator ---")
-    compare_against_monte_carlo(Estimator(), mlp)
+    compare_against_monte_carlo(Estimator(), mlp, seed=args.seed)
 
     if args.baseline:
         baseline_cls = _load_baseline(args.baseline)
         print(f"\n--- Baseline: {args.baseline} ---")
-        compare_against_monte_carlo(baseline_cls(), mlp)
+        compare_against_monte_carlo(baseline_cls(), mlp, seed=args.seed)
