@@ -163,7 +163,7 @@ Past Stage 1, the documentation has six sections. Pick whichever matches your ta
 - [Problem Setup](docs/concepts/problem-setup.md) — MLP architecture, He init, the research question, further reading.
 - [Scoring Model](docs/concepts/scoring-model.md) — Pipeline diagram, `adjusted_final_layer_score` / `all_layers_mse` formulas, calibration table.
 - [Ground Truth](docs/concepts/ground-truth.md) — How the evaluator computes reference values via Monte Carlo.
-- [Allowed Code](docs/concepts/allowed-code.md) — What a submission may use, the prohibition list, the data-file carve-out, and how the rule is enforced (retrospectively, so a graded submission can still be invalidated).
+- [Allowed Code](docs/concepts/allowed-code.md) — What a submission may use, the prohibition list, the data-file carve-out, and how the rule is enforced.
 
 </details>
 

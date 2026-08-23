@@ -71,8 +71,8 @@ these checks; each one maps to a single command or a one-line confirmation.
 Phase 2 states this as a rule, not as a limitation of the sandbox: a
 submission may use the **flopscope client API** and the **pure-Python
 standard library**, and nothing else. Breaching it is disqualifiable, not
-merely broken, and enforcement is retrospective: a submission can be
-invalidated after it has been scored. Read the list once even if your
+merely broken, and review continues after grading, so a submission that
+does not conform is invalidated once identified. Read the list once even if your
 estimator is fifty lines of `fnp`; the full rule is in
 [Allowed Code](../concepts/allowed-code.md).
 
