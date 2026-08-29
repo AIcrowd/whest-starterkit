@@ -9,8 +9,8 @@ description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "flopscope>=0.12.0,<0.13.0",
-    "whestbench>=0.16.0,<0.17.0",
+    "flopscope>=0.12.1,<0.13.0",
+    "whestbench>=0.16.1,<0.17.0",
 ]
 
 # These two pins are the Phase 2 pair: whestbench 0.16.0 with flopscope 0.12.0.
