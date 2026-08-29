@@ -56,8 +56,8 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   relative to 0.11.0, but none that these examples use: `matmul`, tagged `einsum`,
   `as_symmetric`/`is_symmetric`, `fill_diagonal`, `stats.norm.*` and `astype` bill identically
   under both, so every FLOP figure in `docs/` is unchanged (`tests/test_flopscope_cost_docs.py`
-  is the gate). The evaluator is still on `whestbench@v0.15.0` + `flopscope[server]==0.11.0`;
-  its open PR #265 moves it to this pair.
+  is the gate). The evaluator has since moved to `whestbench@v0.16.0` +
+  `flopscope[server]==0.12.0`.
 - **harness (whestbench 0.16.0)**: the local CLI now defaults to the graded round, so local
   numbers are the grader's numbers. New/changed on `whest run`: `--setup-timeout SECONDS`
   (new; default 5.0, and breaching it fails the *whole* submission, so rehearse it),

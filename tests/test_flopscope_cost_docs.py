@@ -4,10 +4,10 @@ and docs/reference/code-patterns.md state in prose.
 If a flopscope upgrade breaks one of these, the corresponding doc sentence is
 stale — fix both together.
 
-Numbers verified under flopscope 0.12.0 — the version this kit pins (see
-pyproject.toml). The evaluator pins `flopscope[server]==0.11.0`, so the kit
-currently leads the grader by one minor. That is safe for this file: every figure
-here is identical under 0.11.0 and 0.12.0, which is deliberate rather than lucky.
+Numbers verified under flopscope 0.12.1 — the version this kit pins (see
+pyproject.toml). The evaluator pins `flopscope[server]==0.12.0`, so the kit
+currently leads the grader by one patch. That is safe for this file: every figure
+here is identical under 0.12.0 and 0.12.1, which is deliberate rather than lucky.
 See the pin note in pyproject.toml for why the kit does not take the newest
 release, and treat that note as the single source of truth for which pair the
 grader charges.
