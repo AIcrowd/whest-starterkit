@@ -56,8 +56,8 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   relative to 0.11.0, but none that these examples use: `matmul`, tagged `einsum`,
   `as_symmetric`/`is_symmetric`, `fill_diagonal`, `stats.norm.*` and `astype` bill identically
   under both, so every FLOP figure in `docs/` is unchanged (`tests/test_flopscope_cost_docs.py`
-  is the gate). The evaluator is still on `whestbench@v0.15.0` + `flopscope[server]==0.11.0`;
-  its open PR #265 moves it to this pair.
+  is the gate). The evaluator has since moved to `whestbench@v0.16.0` +
+  `flopscope[server]==0.12.0`.
 - **harness (whestbench 0.16.0)**: the local CLI now defaults to the graded round, so local
   numbers are the grader's numbers. New/changed on `whest run`: `--setup-timeout SECONDS`
   (new; default 5.0, and breaching it fails the *whole* submission, so rehearse it),
@@ -70,6 +70,17 @@ what has landed on `main` since the last dated entry. Read it before you tune an
   are float32 on every construction path.
 - **local_engine**: re-default `compare_against_monte_carlo` to the real Phase 2 budget —
   `estimator_budget=2**41`, and a `5e12` sampling budget applied per sample-count row.
+- **meter (flopscope 0.12.1), scoring-affecting in one narrow case**: the pinned floor moves
+  to `flopscope>=0.12.1` and `whestbench>=0.16.1`. A symmetry tag now describes the buffer it
+  is attached to: `flops.as_symmetric()` validates within a tolerance, and it now makes the
+  data exactly match the claim before tagging, copying each orbit's first entry over the
+  orbit. Data that is already exactly symmetric — an identity, or a covariance built as
+  `X.T @ X` — is untouched and costs the same, which is nearly every use. `flops.symmetrize()`
+  gains `mode="canonical-copy"` beside the unchanged default, and it stays available for
+  symmetry groups too large for the default to enumerate. **What moves a FLOP figure:**
+  `fnp.full` and `fnp.full_like` no longer infer a symmetry from shape when `fill_value` is
+  an array rather than a scalar, so results built that way are priced as the dense arrays
+  they are. A scalar fill is unaffected at every shape.
 
 ### Docs
 

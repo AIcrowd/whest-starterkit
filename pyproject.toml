@@ -9,11 +9,11 @@ description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "flopscope>=0.12.0,<0.13.0",
-    "whestbench>=0.16.0,<0.17.0",
+    "flopscope>=0.12.1,<0.13.0",
+    "whestbench>=0.16.1,<0.17.0",
 ]
 
-# These two pins are the Phase 2 pair: whestbench 0.16.0 with flopscope 0.12.0.
+# These two pins are the Phase 2 pair: whestbench 0.16.1 with flopscope 0.12.1.
 #
 # 0.16.0 is the first whestbench release whose *defaults* are the graded round —
 # 1024x16, a 2**41 per-MLP budget, a 120 s predict cap, a 5 s setup() cap, and a gated
@@ -24,12 +24,12 @@ dependencies = [
 #
 # The usual order is: whestbench cuts a release naming a flopscope minor, the grader
 # re-pins to that pair, then the kit follows — the kit should never report FLOP counts a
-# submission is not scored on. The grader's move to this pair is in progress at the time
-# of writing, so for a short window the kit leads it. That is safe here only because the
-# meter itself does not move between the two: flopscope 0.12.0 reprices ~40 operations
-# relative to 0.11.0, and none of them are operations these examples use (matmul, tagged
-# einsum, stats.norm, astype, pointwise), so every FLOP figure in docs/ is identical
-# under both. tests/test_flopscope_cost_docs.py is the gate that keeps that true — if it
+# submission is not scored on. The grader is on whestbench v0.16.0 with
+# flopscope[server]==0.12.0, so this kit leads it by one patch on each. That is safe here
+# because the meter does not move between the two on anything these examples do: the only
+# price 0.12.1 changes is full/full_like given a non-scalar fill_value, which loses a
+# symmetry the shape alone had implied. Nothing in docs/ builds an array that way, so every
+# FLOP figure is identical under 0.12.0 and 0.12.1. tests/test_flopscope_cost_docs.py is the gate that keeps that true — if it
 # ever fails, this comment is the thing to re-read before changing a number.
 #
 # whestbench enforces the relationship from its side:

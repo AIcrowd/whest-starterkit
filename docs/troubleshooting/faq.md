@@ -256,8 +256,8 @@ NumPy cannot run is no longer billed before it raises. flopscope ships 0.12.0 as
 a new version opening a new phase, so nothing already scored was repriced.
 
 **This kit pins the meter it is built against, which is not always the newest release.**
-The kit resolves **flopscope 0.12.0** with **whestbench 0.16.0**: whestbench 0.16.0
-declares `flopscope>=0.12.0,<0.13.0`, so the two are an atomic pair rather than
+The kit resolves **flopscope 0.12.1** with **whestbench 0.16.1**: whestbench 0.16.1
+declares `flopscope>=0.12.1,<0.13.0`, so the two are an atomic pair rather than
 independent choices. The three repos move as one unit, in this order: whestbench cuts
 a release naming a flopscope minor, the evaluator re-pins to that pair, and the kit
 follows. While a move is in progress the kit and the grader can sit one minor apart, and
