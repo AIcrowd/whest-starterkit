@@ -29,10 +29,14 @@ The published Public Release dataset is at [`aicrowd/arc-whestbench-public-2026`
 > 16 × 1024 × 1024 float32 (64 MiB) against Phase 1's 32 × 256 × 256 (8 MiB), so
 > every split grew with it:
 >
-> | Split | MLPs | Phase 1 (`@v1-phase1`) | Phase 2 (`@v2-phase2`) |
+> | Split | MLPs | Phase 1 Parquet (`@v1-phase1`) | Phase 2 Parquet (`@v2-phase2`) |
 > |---|---:|---:|---:|
 > | `mini` | 100 | 0.86 GB | **7.03 GB** |
 > | `full` | 1000 | 8.59 GB | **69.96 GB** |
+>
+> Phase 2 also publishes prepared Arrow copies: about **6.72 GB** for `mini`
+> and **67.25 GB** for `full`. `whest run` normally downloads those instead
+> (see the prepared-Arrow fast path below).
 >
 > Downloads are cached after the first call, so the cost is one-time per
 > revision. But `full` is a 70 GB commitment. Start with `mini`, which is the default
@@ -96,18 +100,21 @@ Weights are **float32** as stored (the stored feature is `Array3D(shape=(16, 102
 
 The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), so re-downloads dedupe at the chunk level and parallel multi-shard fetches are fast. For maximum download throughput on a fast connection, set `HF_XET_HIGH_PERFORMANCE=1` in your environment before the load.
 
-> **Prepared-Arrow fast path (not published for `v2-phase2`).** When a dataset's
-> `metadata.json` declares a `prepared_splits` block, `whestbench.load_dataset`
+> **Prepared-Arrow fast path.** The `v2-phase2` release's
+> [`metadata.json`](https://huggingface.co/datasets/aicrowd/arc-whestbench-public-2026/blob/aa99830fdc09fad15407b10e8e3459d3e18bba0a/metadata.json)
+> declares prepared `mini` and `full` splits. For non-streaming loads,
+> `whestbench.load_dataset`
 > downloads only the `prepared/<split>/` Arrow subtree and memory-maps it with
 > `datasets.Dataset.load_from_disk()`, skipping the parquet→arrow conversion that
-> the bare `datasets.load_dataset(...)` path runs on first use. The `v1-phase1`
-> and `v1-warmup` revisions ship one; `@v2-phase2` does not, so every Phase 2
-> load today takes the parquet path. Nothing to configure either way; it falls
-> back silently.
+> the bare `datasets.load_dataset(...)` path runs on first use. Nothing to
+> configure: when no prepared split is declared, or loading it fails, the
+> loader falls back to Parquet.
 
 > **Prefetch without a local copy.** With no `--output`, `whest dataset download`
-> fetches into the Hugging Face hub cache only. A later
-> `whest run --dataset hf://…` is then a pure cache hit. Pass `--output DIR`
+> fetches into the Hugging Face hub cache only. In whestbench 0.16.1,
+> `--split` selects Parquet files; it does not prefetch the prepared Arrow
+> subtree that a later `whest run --dataset hf://…` normally loads.
+> Pass `--output DIR`
 > when you additionally want the files materialised into a directory.
 >
 > ```bash
@@ -116,9 +123,9 @@ The dataset is stored on HF Hub via [Xet](https://huggingface.co/docs/hub/xet), 
 > ```
 >
 > **Pass `--split`.** Without it this fetches the whole repo at that revision:
-> both splits, ~77 GB (7.03 GB `mini` + 69.96 GB `full`). `--split mini` gets the
-> 7 GB one plus `metadata.json` / `README.md`; pass `--split full` deliberately
-> when you actually want the 70 GB one.
+> both splits in both formats, ~151 GB (~77 GB Parquet + ~74 GB prepared Arrow).
+> `--split mini` gets the 7 GB Parquet split plus metadata; pass `--split full`
+> deliberately when you actually want the 70 GB Parquet split.
 
 ## 🛠 Bake your own (rare)
 
