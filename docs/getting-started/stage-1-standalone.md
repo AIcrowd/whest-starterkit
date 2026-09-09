@@ -20,13 +20,16 @@ You should see a table like:
 --- Your estimator ---
 MLP: width=1024 depth=16 seed=0  (MC sampling seed=0)
 
+Each row compares the same estimator prediction against an independent MC reference.
+The MSE includes reference sampling noise; it is not the sampler's error against ground truth.
+
  n_samples |    sampling_flops | estimator_flops | all_layers_mse | final_layer_mse
 -----------------------------------------------------------------------------------
-        10 |       336,439,296 |               0 |       0.744041 |        1.065473
-       100 |     3,363,803,136 |               0 |       0.744617 |        1.123959
-     1,000 |    33,637,441,536 |               0 |       0.745814 |        1.131387
-    10,000 |   336,373,825,536 |               0 |       0.746173 |        1.131690
-   100,000 | 3,363,737,665,536 |               0 |       0.745660 |        1.130490
+        10 |       336,439,296 |               0 |       0.756302 |         1.10035
+       100 |     3,363,803,136 |               0 |        0.73602 |         1.11441
+     1,000 |    33,637,441,536 |               0 |       0.740319 |         1.12288
+    10,000 |   336,373,825,536 |               0 |        0.74489 |         1.12936
+   100,000 | 3,363,737,665,536 |               0 |       0.745042 |         1.12934
 ```
 
 Two MSE columns. `final_layer_mse`, the right-hand one, is what the grader
@@ -34,14 +37,15 @@ ranks you on; `all_layers_mse` is whestbench's secondary metric, and it is
 less strict.
 
 The stub `predict()` returns all zeros, so `estimator_flops` is `0` and both
-columns plateau at the variance of the true outputs. Once you put real math in
-`predict()`, the MSE should shrink roughly as `1/n_samples` (a 10x increase in
-samples lowers MSE about 10x, not about 3x, because MSE is a squared error)
-until it flattens out at your estimator's own error. That plateau is the number
-you are trying to lower; the rows before it show the Monte-Carlo reference
-converging. To see this, run `--baseline mean_propagation`: `all_layers_mse`
-runs 0.020202, 0.001866, 0.000398, 0.000195, 0.000171 — a 10.8x drop over the
-first decade, then flattening as bias dominates.
+columns approach the average squared true activation means. The estimator runs
+once: increasing `n_samples` improves the **reference**, not your prediction.
+Each row uses fresh inputs, so adjacent MSE values can fluctuate. In expectation,
+reference sampling noise contributes a term proportional to `1/n_samples`,
+leaving your estimator's own error as the reference converges. That limiting
+error is what you are trying to lower. To see the trend, run
+`--baseline mean_propagation`: `all_layers_mse` runs 0.022622, 0.00221052,
+0.000416999, 0.000189649, 0.000169955 — about a 10.2x drop over the first
+decade, then flattening as estimator error dominates.
 
 ## Edit `predict()`
 
@@ -61,9 +65,9 @@ On the default MLP, `n_samples=100,000` row:
 
 | Estimator | `final_layer_mse` (ranked) | `all_layers_mse` | Status |
 |---|---|---|---|
-| Zeros template (default) | 1.130490 | 0.745660 | floor; natural variance of the activations |
-| `--baseline mean_propagation` | 0.000300 | 0.000171 | ~3,800x better on the ranked metric; first-order analytical |
-| `--baseline covariance_propagation` | 0.000004 | 0.000004 | ~72x better than mean; tracks neuron correlations |
+| Zeros template (default) | 1.12934 | 0.745042 | baseline; average squared activation means |
+| `--baseline mean_propagation` | 0.000302775 | 0.000169955 | ~3,700x better on the ranked metric; first-order analytical |
+| `--baseline covariance_propagation` | 5.84779e-06 | 4.5582e-06 | ~52x better than mean; tracks neuron correlations |
 
 You're ready for Stage 2 once your estimator's MSE is below
 the zeros floor and `estimator_flops` stays under the per-MLP budget.
