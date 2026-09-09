@@ -21,6 +21,11 @@ Constraints: `width >= 1`, `depth >= 1`. Otherwise raises `ValueError`.
 
 Forwards `n_samples` independent N(0, 1) inputs through `mlp.weights` and returns the per-layer mean post-activation. Shape: `(mlp.depth, mlp.width)`.
 
+The reference RNG uses `SeedSequence(seed, spawn_key=(1, n_samples))`. Repeating
+the same `(seed, n_samples)` reproduces the same inputs. Different sample counts
+use separate streams, and the reference does not reuse an estimator's documented
+`default_rng(mlp.seed)` stream. The returned means still have finite-sample noise.
+
 ```python
 from local_engine import monte_carlo_layer_means
 truth = monte_carlo_layer_means(mlp, n_samples=10_000, seed=0)
@@ -44,20 +49,22 @@ compare_against_monte_carlo(
 | `sample_counts` | `(10, 100, 1_000, 10_000, 100_000)` | The full five-row sweep takes about 3 s at the Phase 2 shape. |
 | `estimator_budget` | `2**41` = `2,199,023,255,552` | The Phase 2 per-MLP budget, so Stage 1 rehearses against the real cap. |
 | `sampling_budget` | `int(5e12)` | Applied **per row** — each sample count runs in its own `BudgetContext` — so it has to clear the largest single row (3,363,737,665,536 FLOPs at `n_samples=100_000`), not the sum of the sweep. |
-| `seed` | `0` | Seeds the Monte-Carlo input draws. |
+| `seed` | `0` | Seeds estimator setup and the separate Monte-Carlo reference stream for each sample count. |
 
 Runs your estimator once, then sweeps Monte Carlo at each `sample_counts` value, printing a convergence table:
 
 ```
- n_samples | sampling_flops | estimator_flops |        MSE
------------------------------------------------------------
-        10 |    336,439,296 |         131,072 |   <your MSE>
+ n_samples | sampling_flops | estimator_flops | all_layers_mse | final_layer_mse
+--------------------------------------------------------------------------------
+        10 |    336,439,296 |         131,072 |      <all MSE> |     <final MSE>
        ...
 ```
 
 The FLOP columns are the measured costs at `width=1024, depth=16` with
 [`examples/01_random.py`](../../examples/01_random.py) as the estimator; the
-MSE column is whatever your own estimator achieves. `estimator_flops` is
+MSE columns compare your fixed prediction with each independent noisy reference.
+Small errors are displayed with six significant digits, using scientific notation
+when needed to avoid rounding nonzero results to zero. `estimator_flops` is
 constant down the column, because your estimator runs once, before the sweep.
 
 **Preflight check:** before the MC sweep, the function checks that `estimator.predict(mlp, budget)` returns a `flopscope.numpy.ndarray` of shape `(depth, width)`. On failure it prints a one-line diagnostic pointing at [estimator-contract.md](estimator-contract.md) and raises `SystemExit(2)` — no numpy traceback. It does **not** check dtype: an integer-dtype return of the right shape passes here *and* passes `whest run`, so cast to `fnp.float32` yourself.
