@@ -6,10 +6,17 @@
 
 Read this page before you reach for anything that is not flopscope or the standard library: a bundled wheel, a compiled kernel, a thread pool, a technique that keeps your own code running while a flopscope op is in flight. This is a rule of the round, not a style guide. Code outside it is not "priced differently"; it is disqualifiable, and the check can run long after your submission has been graded and ranked.
 
+The [official Challenge Rules](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/challenge_rules)
+are the source of truth for competition eligibility. This page summarizes their
+Phase 2 requirements; FlopScope pricing documentation does not override them.
+
 ## 📌 TL;DR
 
 - A submission may use exactly three things: **the grader's Python interpreter**, **the flopscope client API**, and **the pure-Python standard library**.
 - Everything on the [prohibition list](#what-is-prohibited) is excluded: vendored numpy/scipy/BLAS, compiled kernels, FFI, concurrency, compute that overlaps a metered op, and anything that touches the flopscope client, transport, or accounting.
+- **Metered does not automatically mean permitted.** Packing independent values into
+  one machine element to reduce the billed work is not allowed in Phase 2, even
+  when every operation runs through FlopScope. See [Fair accounting and packing](#fair-accounting-and-packing).
 - **Data files remain permitted.** Shipping weights, lookup tables, and precomputed artifacts is explicitly allowed. See [Ship Weights](../how-to/ship-weights.md).
 - **Residual wall time is for plumbing, not for computation.** It is not priced in Phase 2 (`C_m = F_m`); it is hard-capped at **400 ms per MLP**. Meaningful computation there is a breach of this rule, not a cheap trade. Pricing is exactly what Phase 1 did, and dropping it is a direct consequence of this rule ([why](../reference/rounds.md#why-phase-2-does-not-price-residual-time)).
 - **Every submission is reviewed.** Automated checks run first, flagged submissions go through agent-assisted validation, and a person reviews anything still unresolved. Review continues after grading, and a submission that does not conform is invalidated once identified.
@@ -18,7 +25,34 @@ Read this page before you reach for anything that is not flopscope or the standa
 
 The challenge measures one thing: how accurately you can predict per-neuron means, and how little compute you spend doing it. That measurement only means something if every FLOP a submission spends is visible to the meter. flopscope counts array work analytically, so two submissions running the same algorithm bill the same amount no matter whose machine they land on. Arithmetic that reaches the CPU by some other path (a bundled BLAS, a compiled kernel, a thread you spawned) does the same work and is charged nothing for it. That is not a clever optimization inside the rules; it is arithmetic that leaves the measurement, and it makes your score incomparable with everyone else's.
 
-So the allowed surface is deliberately small, and the boundary is drawn at "can the meter see it", not at "is it fast".
+The allowed execution surface is deliberately small. Using that surface is
+necessary, but submissions must also satisfy the fair-accounting requirement below.
+
+## Fair accounting and packing
+
+Under the official Rules, a submission's score benefit must derive from its
+estimation method. The Sponsor may invalidate, re-score, or disqualify submissions
+whose benefit instead derives from how computation is accounted, including during
+or after grading and during prize review.
+
+**Do not pack several independent values into one machine element to obtain an
+accounting advantage.** This includes packing booleans into a wider integer for
+bitwise operations that process those booleans together.
+The operation processes multiple logical values while the meter charges for fewer
+machine elements. Charging the packing, computation, and unpacking operations
+does not make that approach permitted in Phase 2.
+
+This restriction concerns packing independent values to reduce the accounted work.
+Choosing a lower-precision dtype or quantizing values is not, by itself, this
+packing technique; those choices still have to satisfy the Rules. Neither the
+availability of integer or bitwise operations nor the shared 1.0 rate for
+`int8`, `int16`, and `int32` grants permission to use packed computation.
+
+Earlier FlopScope documentation described packing as "not banned and not judged"
+and small sub-32-bit packing gains as "in-bounds". That wording does not describe
+Phase 2 eligibility. The official Rules govern if library documentation conflicts
+with them. A successful local run or leaderboard score is not an eligibility
+ruling; ask the organizers about uncertain techniques using [Questions](#questions).
 
 ## What you may use
 
