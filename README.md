@@ -139,6 +139,11 @@ warnings, see [docs/reference/whest-doctor.md](docs/reference/whest-doctor.md).
 
 For other symptoms, see [Troubleshooting](docs/troubleshooting/).
 
+**Phase 2 fair accounting:** the [official Challenge Rules](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/challenge_rules)
+govern eligibility. Packing independent values into one machine element to reduce
+billed work is not permitted, even when all operations are metered. See
+[Fair accounting and packing](docs/concepts/allowed-code.md#fair-accounting-and-packing).
+
 Send rules questions, a FLOP price that looks wrong, or a residual-cap exception request to
 [arc-whestbench@aicrowd.com](mailto:arc-whestbench@aicrowd.com).
 

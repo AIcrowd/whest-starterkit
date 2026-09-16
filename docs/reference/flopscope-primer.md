@@ -97,9 +97,17 @@ The weight and rate tables above are a summary. The audited, authoritative
 per-op reference (including complex factors, accumulator-widening rules for
 integer reductions, and per-family formulas) is flopscope's
 [cost model reference](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/).
-`ctx.summary()` on your own run is always ground truth.
+`ctx.summary()` reports the FLOPs metered on your run; it does not determine
+competition eligibility.
 `tests/test_flopscope_cost_docs.py` in this kit pins the claims made on this
 page so a future flopscope bump flags them.
+
+**Phase 2 eligibility:** the [official Challenge Rules](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/challenge_rules)
+govern which techniques are permitted. Packing independent values into one machine
+element to reduce the billed work is not allowed, even when all operations are
+metered. The shared rate for `int8`, `int16`, and `int32` is a billing policy, not
+permission to pack them. Earlier library guidance calling such gains "in-bounds"
+does not apply to Phase 2. See [Fair accounting and packing](../concepts/allowed-code.md#fair-accounting-and-packing).
 
 ## Array creation
 

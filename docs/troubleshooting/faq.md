@@ -2,6 +2,19 @@
 
 > [← Documentation](../README.md)
 
+## Is bit packing allowed if all operations are metered?
+
+No. In Phase 2, packing independent values into a single machine element to gain
+an accounting advantage is not permitted. The Rules give the example of packing
+booleans into wider integers and operating on them with bitwise operations.
+Paying for the packing and unpacking does not change the policy.
+
+The [official Challenge Rules](https://www.aicrowd.com/challenges/arc-white-box-estimation-challenge-2026/challenge_rules)
+govern eligibility, including where earlier FlopScope documentation calls packing
+"in-bounds". Ordinary quantization or choosing a lower-precision dtype is not by
+itself this packing technique. See [Fair accounting and packing](../concepts/allowed-code.md#fair-accounting-and-packing)
+for the distinction and how to ask about a specific approach.
+
 ## Can I use numpy directly?
 
 No. Plain `import numpy` is **not available** in the grader sandbox (by design). All array math goes through flopscope (`import flopscope as flops` and `import flopscope.numpy as fnp`), which wraps numpy with analytical FLOP counting. Your score depends on the FLOP cost of your operations, and only flopscope tracks those costs, so flopscope is both the only array path and the only one that counts.
