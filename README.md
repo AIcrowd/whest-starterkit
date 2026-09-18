@@ -47,7 +47,7 @@ cd whest-starterkit
 uv sync && uv run python estimator.py
 ```
 
-That run printed a Monte-Carlo convergence table: `n_samples`, the FLOPs the sampler spent, the FLOPs **your** `predict()` spent, then `all_layers_mse` and `final_layer_mse`. The leaderboard ranks the latter. Both compare your prediction against a fresh Monte-Carlo estimate at that sample count, not against ground truth, so read down the column: `n=10` is mostly sampling noise, and only the bottom row is a reliable measure of your estimator. (The grader compares against baked N=1e9 ground truth instead.) To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
+That run printed a Monte-Carlo convergence table: `n_samples`, the FLOPs the sampler spent, the FLOPs **your** `predict()` spent, then `all_layers_mse` and `final_layer_mse`. The leaderboard ranks the latter. Both compare your fixed prediction against a fresh Monte-Carlo estimate at that sample count, not against ground truth. Each reference uses a deterministic stream separated from the estimator's `default_rng(mlp.seed)` and from other sample counts. Read down the column: `n=10` is mostly sampling noise, and larger reference counts reduce that noise but do not eliminate it. These are not measurements of the sampler's error against ground truth. (The grader compares against baked N=1e9 ground truth instead.) To experiment, edit `predict()` in [estimator.py](estimator.py) and re-run.
 
 Compare against a bundled baseline:
 
