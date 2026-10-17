@@ -13,7 +13,7 @@ stray float64 array can upgrade an expression to the 2× rate, matmuls included.
 Unary `dtype=`/`signature=`/`sig=` selects the executed loop, and a wider `out=`
 destination contributes independently. For example, four float32 values passed
 to `exp(signature="d->d")` cost 128 FLOPs instead of 64. See the
-[0.12.3 upgrade notes](../reference/flopscope-primer.md#billing-and-symmetry-changes-in-0123). `fnp.zeros()`/`fnp.ones()`/`fnp.eye()`/RNG draws all default to float64
+[0.12.3 upgrade notes](https://aicrowd.github.io/whestbench/docs/reference/flopscope-primer/#billing-and-symmetry-changes-in-0123). `fnp.zeros()`/`fnp.ones()`/`fnp.eye()`/RNG draws all default to float64
 when you don't pass `dtype=`. This is usually the largest single reduction
 available on your FLOP total: pass `dtype=fnp.float32` when you create arrays
 and don't need the extra precision.
