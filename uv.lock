@@ -1767,7 +1767,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "flopscope", specifier = ">=0.12.3,<0.13.0" },
-    { name = "whestbench", specifier = ">=0.16.1,<0.17.0" },
+    { name = "whestbench", specifier = ">=0.16.2,<0.17.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1778,7 +1778,7 @@ dev = [
 
 [[package]]
 name = "whestbench"
-version = "0.16.1"
+version = "0.16.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -1795,9 +1795,9 @@ dependencies = [
     { name = "toml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/00/6858e08bd1e2f93b9c8b225264fd1345a7235d7fc6b399c3ceff94080cc5/whestbench-0.16.1.tar.gz", hash = "sha256:fb5bb24b97d882cb67533aa8726b5b0d314944158f8fde2931f0aeb20c802d3f", size = 1865085, upload-time = "2026-08-29T04:31:56.604Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/40/db95385093b18aab6fbfec181336376b2d0817f7c6443bd413bc688eabf8/whestbench-0.16.2.tar.gz", hash = "sha256:52cf086e9033686ea3f1f5fc9149326a90d9e8a2d3f677b17aeaf1e0f351a078", size = 1870087, upload-time = "2026-10-17T07:06:31.516Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/93/2a94ae80662841cc69a4176620fe92e8dda0ca1f57123947759034f14941/whestbench-0.16.1-py3-none-any.whl", hash = "sha256:1a8e2620880221eb357056b0fdd65425b026dab222657f54ee202bd75dab987e", size = 211494, upload-time = "2026-08-29T04:31:55.031Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/bf/6fbf30f82cc97465abfb41ee1f32a0f3ef67aaae1bedc5e87dd7b888335b/whestbench-0.16.2-py3-none-any.whl", hash = "sha256:c028f0721c49c6beeabd6103f86cbe56c6ab2f6ff176248ed0d0f79855e2c0ed", size = 211675, upload-time = "2026-10-17T07:06:29.937Z" },
 ]
 
 [[package]]

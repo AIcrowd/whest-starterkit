@@ -10,18 +10,17 @@ requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
     "flopscope>=0.12.3,<0.13.0",
-    "whestbench>=0.16.1,<0.17.0",
+    "whestbench>=0.16.2,<0.17.0",
 ]
 
-# Phase 2 uses flopscope 0.12.3 with the published whestbench 0.16.1 harness.
+# This kit uses flopscope 0.12.3 with the published whestbench 0.16.2 harness.
 # 0.12.2 corrects broadcast/dtype billing and symmetry discounts; 0.12.3 adds
 # rank-dependent work to truncated SVD. The explicit floor upgrades existing
 # environments when participants run `uv sync`, rather than retaining 0.12.1.
 #
-# Keep the flopscope range identical to whestbench's pyproject.toml. The harness
-# floor stays at the latest published release so this kit remains installable.
-# After whestbench releases its matching dependency-floor update, raise the kit's
-# whestbench floor and refresh uv.lock together.
+# Keep the flopscope range identical to whestbench's pyproject.toml and the harness
+# floor at the latest published release. Refresh the floors and uv.lock together
+# after future harness/meter releases.
 #
 # tests/test_flopscope_cost_docs.py checks documented operation prices and the
 # bundled examples' exact totals against this meter. Run it after every upgrade.

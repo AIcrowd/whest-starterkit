@@ -282,7 +282,7 @@ This is a per-call safety guardrail measured in wall-clock seconds, not the FLOP
 
 The local runners default to the grader's 120 s cap. Confirm what you ran under in `run_config.wall_time_limit_s` in the JSON report, and pass `--wall-time-limit` only when you want a tighter local cap.
 
-There is one exception on **whestbench 0.14.0 or older**: those versions give up after 30 seconds under `--runner subprocess`, well short of the real limit, so a `predict()` taking longer than 30 seconds fails locally even though it would pass on the grader. This kit now pins whestbench 0.16.0, where the subprocess runner waits for the full wall limit plus a grace margin, so a local subprocess `PREDICT_TIMEOUT` again means what a graded one does. If you are on an older kit, run `uv sync` before trusting a timeout near 30 seconds.
+There is one exception on **whestbench 0.14.0 or older**: those versions give up after 30 seconds under `--runner subprocess`, well short of the real limit, so a `predict()` taking longer than 30 seconds fails locally even though it would pass on the grader. This kit now requires whestbench 0.16.2 or newer, where the subprocess runner waits for the full wall limit plus a grace margin, so a local subprocess `PREDICT_TIMEOUT` again means what a graded one does. If you are on an older kit, run `uv sync` before trusting a timeout near 30 seconds.
 
 Fix now: check for infinite loops or extremely expensive operations. If you are close to the limit, treat that as a warning: the cap is per MLP, and a call that fits on one run can overrun on the next.
 
