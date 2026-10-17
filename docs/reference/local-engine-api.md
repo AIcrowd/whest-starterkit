@@ -66,7 +66,7 @@ Returns `None` — this is a print helper for stage-1 dev loops.
 
 ## Monte-Carlo cost at the Phase 2 shape
 
-Measured at `width=1024, depth=16` under the flopscope version this kit pins (`>=0.12.0,<0.13.0`). These totals are unchanged from 0.11.0: none of the ~40 operations 0.12.0 repriced appear in this path, which is what `tests/test_flopscope_cost_docs.py` pins:
+Originally measured at `width=1024, depth=16` under flopscope 0.12.0; wall times describe that run. The kit now requires `>=0.12.3,<0.13.0`. The sampling path retains its earlier pricing; whestbench's `tests/test_torch_flop_synthesis.py` verifies its per-operation counts against the meter:
 
 | `n_samples` | sampling FLOPs | wall time |
 |---|---|---|
