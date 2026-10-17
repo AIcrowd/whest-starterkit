@@ -256,7 +256,7 @@ multiplies only, `ix_` moved from free to billed, and non-numeric dtypes
 `UnsupportedDtypeError` anywhere they reach a metered op. Convert those with plain
 `numpy` before handing data to flopscope.
 
-Most recently, 0.16.0 adopted flopscope 0.12, with roughly forty operations repriced
+Whestbench 0.16.0 adopted flopscope 0.12.0, with roughly forty operations repriced
 in both directions. Costing more: `nan*` reductions now pay for the NaN-scan pass
 they always ran (integer and boolean input exempt, and `nanmax`/`nanmin` exempt),
 six boolean-answering ops that compute in a promoted float dtype (`signbit`,
@@ -268,20 +268,23 @@ costs nothing, `ldexp` is priced on its mantissa loop, and a dtype combination
 NumPy cannot run is no longer billed before it raises. flopscope ships 0.12.0 as
 a new version opening a new phase, so nothing already scored was repriced.
 
-**This kit pins the meter it is built against, which is not always the newest release.**
-The kit resolves **flopscope 0.12.1** with **whestbench 0.16.1**: whestbench 0.16.1
-declares `flopscope>=0.12.1,<0.13.0`, so the two are an atomic pair rather than
-independent choices. The three repos move as one unit, in this order: whestbench cuts
-a release naming a flopscope minor, the evaluator re-pins to that pair, and the kit
-follows. While a move is in progress the kit and the grader can sit one minor apart, and
-FLOP counts you measure locally may not be the ones your submission is scored under.
-`pyproject.toml` records which step the kit is on; read the comment at the top of it
-before trusting a local total to match the leaderboard.
+**Update the meter before comparing local results with the leaderboard.**
+The kit now locks **flopscope 0.12.3** with **whestbench 0.16.1**, the latest
+published harness. Its explicit `flopscope>=0.12.3,<0.13.0` dependency prevents
+`uv sync` from retaining the older 0.12.1 meter.
+
+Flopscope 0.12.2 corrects broadcast and dtype billing, histogram/FFT/covariance
+charges, and symmetry tracking. Version 0.12.3 adds rank-dependent work to
+truncated SVD. Calls affected by these fixes can cost more; check the
+[0.12.2 release notes](https://github.com/AIcrowd/flopscope/releases/tag/v0.12.2)
+and [0.12.3 release notes](https://github.com/AIcrowd/flopscope/releases/tag/v0.12.3)
+for the affected paths. The bundled examples' documented FLOP totals remain
+covered by `tests/test_flopscope_cost_docs.py`.
 
 Whenever the meter moves, `F_m` (and therefore `C_m` and the multiplier) can
 change for identical code. Leaderboard scores are re-evaluated under the new
-meter; local scores taken under an older kit are not comparable. Re-run
-`uv sync` and re-measure rather than trusting a number you recorded earlier. If
+meter; local scores taken under an older kit are not comparable. Pull the latest starter kit, run
+`uv sync`, and re-measure rather than trusting a number you recorded earlier. If
 the number you are comparing against predates Phase 2, the shape and the cost
 model moved too. [Competition Rounds](../reference/rounds.md) lays every round
 side by side and gives the flags that reproduce an earlier one.

@@ -4,13 +4,10 @@ and docs/reference/code-patterns.md state in prose.
 If a flopscope upgrade breaks one of these, the corresponding doc sentence is
 stale — fix both together.
 
-Numbers verified under flopscope 0.12.1 — the version this kit pins (see
-pyproject.toml). The evaluator pins `flopscope[server]==0.12.0`, so the kit
-currently leads the grader by one patch. That is safe for this file: every figure
-here is identical under 0.12.0 and 0.12.1, which is deliberate rather than lucky.
-See the pin note in pyproject.toml for why the kit does not take the newest
-release, and treat that note as the single source of truth for which pair the
-grader charges.
+Numbers verified under flopscope 0.12.3, the version recorded in uv.lock.
+The dependency floor in pyproject.toml requires this meter or a later compatible
+patch. Run this gate after each upgrade: billing corrections can change local
+FLOP counts even when the estimator code is unchanged.
 """
 
 from __future__ import annotations
@@ -76,7 +73,7 @@ def test_deduct_requires_dtypes_and_applies_rate():
 
     Real signature: deduct(op_name, *, flop_cost, subscripts, shapes,
     dtypes, complex_factor_override=None) — unchanged from 0.10.0 through
-    0.12.0.
+    0.12.3.
     """
     with flops.BudgetContext(flop_budget=10**9, quiet=True) as ctx:
         with pytest.raises(TypeError):

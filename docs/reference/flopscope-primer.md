@@ -70,7 +70,7 @@ charged = flop_cost × weight × dtype_rate × complex_factor
 
 - `flop_cost` — the op's shape-derived count (for example, `M·N·(2K−1)` for a `(M,K) @ (K,N)` matmul: K multiplies + K−1 adds per output element).
 - `weight` — the op's tier, one of **{0, 1, 4, 16}**.
-- `dtype_rate` — **1.0 for 32-bit-or-smaller dtypes, 2.0 for float64/int64, up to 4.0 for float128**. The billing dtype follows NumPy promotion over the operands, so one stray float64 vector makes the whole expression bill 2×.
+- `dtype_rate` — **1.0 for 32-bit-or-smaller dtypes, 2.0 for float64/int64, up to 4.0 for float128**. The billing dtype follows the executed NumPy loop, including explicit `dtype=` or `signature=` and wider output destinations; a float64 loop bills at twice the float32 rate.
 - `complex_factor` — real-FLOP equivalents for complex dtypes (for example, complex multiply = 6).
 
 | Tier | Operations | Cost at float32 |
@@ -85,6 +85,10 @@ charged = flop_cost × weight × dtype_rate × complex_factor
 | **16× per element** | Transcendentals: `fnp.exp`, `fnp.log`, trig, and **`x ** y` power — including `x ** 2`** | 16·N |
 | **Matmul** | `@`, `fnp.matmul`, `fnp.einsum` | `M·N·(2K−1)` for `(M,K) @ (K,N)` |
 | **Random samplers** | `rng.standard_normal(...)` 16/element at float32 (32 at the float64 default), `rng.uniform(...)` 6/element (always float64 — no `dtype=` arg; calibrated float32 base rate 3) | calibrated per method |
+
+The reduction figures describe ordinary calls without an externally supplied
+`mean=`; the full model accounts for reduced axes, supplied means, and
+broadcasting.
 
 **In practice:**
 - Matmul still dominates: `(100,100) @ (100,100)` in float32 costs ~2M FLOPs (`M·N·(2K−1)` = 1,990,000).
@@ -108,6 +112,42 @@ element to reduce the billed work is not allowed, even when all operations are
 metered. The shared rate for `int8`, `int16`, and `int32` is a billing policy, not
 permission to pack them. Earlier library guidance calling such gains "in-bounds"
 does not apply to Phase 2. See [Fair accounting and packing](../concepts/allowed-code.md#fair-accounting-and-packing).
+
+### Billing and symmetry changes in 0.12.3
+
+Use flopscope 0.12.3 when remeasuring Phase 2 candidates. It includes the
+[0.12.2 corrections](https://github.com/AIcrowd/flopscope/releases/tag/v0.12.2)
+and the [0.12.3 truncated-SVD model](https://github.com/AIcrowd/flopscope/releases/tag/v0.12.3):
+
+- **Broadcast work:** affected operations bill the shape they actually compute,
+  including an enlarged `out=`/`where=` destination, `var`/`std` with an enlarging
+  `mean=`, polynomial evaluation, and array tolerances in closeness tests. A small
+  input does not imply a small bill when broadcasting expands the computation.
+- **Unary dtype selection:** `dtype=`, `signature=`/`sig=`, and wider `out=` buffers
+  can raise the bill above the input dtype's rate. For four float32 elements,
+  ordinary `exp(x)` costs 64 FLOPs; `exp(x, signature="d->d")` costs 128.
+- **Composite operations:** histogram edge construction and density normalization,
+  per-axis histogram searches, length-one FFT stages, and `polyfit` covariance
+  output now include work that was omitted. Follow the release notes for the
+  affected forms rather than assigning a flat per-element price.
+- **Symmetry:** `einsum(..., symmetry=...)` canonicalizes a validated result before
+  attaching its tag; values accepted within tolerance can therefore change to
+  make the declared symmetry exact. Positional output writes and shuffles
+  invalidate stale tags, while scans and reordered outputs retain only the
+  symmetry their axes support. Revalidate after modifying a tagged buffer.
+- **Truncated SVD:** pricing includes rank-dependent quadratic and cubic work,
+  capped at the corresponding full economy-decomposition price. Low-rank calls
+  can retain a discount; near-full-rank calls can cost the full amount. Use
+  `flops.accounting.svd_cost(m, n, k=k, with_vectors=compute_uv)` for the current
+  float32 estimate, with matching `full_matrices` for a full decomposition.
+  Truncated pricing is an analytical convention: the backend computes an exact
+  economy SVD and slices the outputs, so a billing discount is not a runtime
+  speed guarantee.
+
+Inspect `ctx.summary()` and the installed flopscope version when comparing old
+and new profiles. The starter kit's mean- and covariance-propagation examples retain
+their documented FLOP totals under 0.12.3; that does not establish that another
+estimator's costs or predictions are unchanged.
 
 ## Array creation
 
@@ -249,8 +289,9 @@ and grounds for disqualification. See
 **Pythonic operators are tracked.** `x @ w` counts the same FLOPs as `fnp.matmul(x, w)`. Use whichever reads better.
 
 **dtype now matters for FLOPs too.** Since flopscope 0.9, float64 operations
-bill 2× float32 (`dtype_rate`). NumPy promotion decides the billing dtype, so
-one float64 operand upgrades the whole expression. Keep estimator state in
+bill 2× float32 (`dtype_rate`). The executed loop determines the billing dtype:
+operand promotion, explicit `dtype=`/`signature=`, and a wider `out=` can all
+raise it. Keep estimator state in
 float32 unless you need the precision; `fnp.zeros(...)` defaults to float64.
 flopscope admits only numeric dtypes: `dtype.kind in "biufc"` (bool,
 signed/unsigned integer, float, complex). Anything else (object, str, bytes,

@@ -30,7 +30,7 @@ For the full flopscope API and cost model, see the [flopscope documentation](htt
 Two consequences:
 
 - `fnp.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs; a matrix-vector product costs `O(n^2)`. The cost is cubic in the width, so at the Phase 2 width of 1024 matrix work dominates everything else. Even in an estimator that only ever does matrix-vector products, `matmul` is 77.42% of the total (see the [worked walkthrough](#worked-walkthrough-mean-propagation-line-by-line) below).
-- Every cost above is also scaled by a `dtype_rate`: 1.0× for 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128). NumPy promotion decides the billing dtype from your operands, so one stray float64 array upgrades the whole expression. See the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs) for the full weight/dtype-rate table.
+- Every cost above is also scaled by a `dtype_rate`: 1.0× for 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128). The executed loop determines the billing dtype: operand promotion, explicit unary `dtype=`/`signature=`/`sig=`, and wider `out=` destinations can all affect the charge. A float64 operand often raises the rate, but an explicitly selected float32 loop can differ from that default. See the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs) for the full weight/dtype-rate table.
 
 ## Check your budget usage
 
@@ -101,7 +101,7 @@ If `budget_exhausted` is `true`, the harness discarded your predictions and you 
 
 ## Worked walkthrough: mean propagation, line by line
 
-The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the competition shape (`width=1024, depth=16`). Numbers are aggregated across all 16 layers; per-layer cost is roughly the row total divided by 16. To reproduce these numbers, call `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.12.0, the version this kit pins; identical under 0.11.0).
+The table below profiles [`examples/02_mean_propagation.py`](../../examples/02_mean_propagation.py) on the competition shape (`width=1024, depth=16`). Numbers are aggregated across all 16 layers; per-layer cost is roughly the row total divided by 16. To reproduce these numbers, call `ctx.summary()` inside a `flopscope.BudgetContext` after a single `predict()` call (profiled under flopscope 0.12.3; exact totals checked by `tests/test_flopscope_cost_docs.py`).
 
 | Operation in `predict()` | Calls | FLOPs (total) | % of `predict()` total |
 |---|---:|---:|---:|
@@ -128,7 +128,7 @@ Three takeaways:
 - **dtype is worth more than any single op here.** This walkthrough profiles the example *as shipped*, which seeds `mu`/`var` at `dtype=fnp.float32`. Leave that off and everything the two arrays touch (the matmuls included) bills at the float64 2× rate. Dropping the `dtype=` seeds alone costs **153,978,880**; dropping them *and* the two `.astype(fnp.float32)` recasts (the fully-float64 estimator) costs **153,913,344**, which is lower only because it no longer pays the 65,536 FLOPs those 32 casts cost, and 77.6% more than as shipped, that is, the float32 seeding is a 43.7% saving, for a final-layer MSE identical to five significant figures. `mlp.weights` is already float32, so the float64 buys nothing. See [Stay in float32](./performance-tips.md#stay-in-float32).
 - **Sqrt, divides, and clamps stay cheap.** Don't restructure your code to avoid them: `sqrt`, `true_divide`, and `maximum` each cost 1,024 FLOPs per call here (1024 elements at the float32 rate), trivial next to the matmuls.
 
-The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum`, plus the per-layer `as_symmetric()` re-validation that keeps its symmetric rate under flopscope ≥ 0.10.0, lands at ~51.7 B FLOPs per `predict()` (51,709,240,799 exactly; 2.351% of the grader budget, profiled the same way under flopscope 0.12.0). That is 597× more expensive than mean propagation, because a full covariance requires more arithmetic than a diagonal variance. It seeds at float32 too; leaving the default would put it at 103,407,495,614, a 99.98% increase, not quite a doubling, because the 32 `stats.norm` calls bill float64 either way.
+The same pattern holds for `examples/03_covariance_propagation.py`, where the `O(width³)` symmetry-aware `einsum`, plus the per-layer `as_symmetric()` re-validation that keeps its symmetric rate under flopscope ≥ 0.10.0, lands at ~51.7 B FLOPs per `predict()` (51,709,240,799 exactly; 2.351% of the grader budget, profiled the same way under flopscope 0.12.3). That is 597× more expensive than mean propagation, because a full covariance requires more arithmetic than a diagonal variance. It seeds at float32 too; leaving the default would put it at 103,407,495,614, a 99.98% increase, not quite a doubling, because the 32 `stats.norm` calls bill float64 either way.
 
 ## Optimization tips
 

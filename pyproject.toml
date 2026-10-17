@@ -9,34 +9,22 @@ description = "Starter kit for the ARC Whitebox Estimation Challenge"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "flopscope>=0.12.1,<0.13.0",
+    "flopscope>=0.12.3,<0.13.0",
     "whestbench>=0.16.1,<0.17.0",
 ]
 
-# These two pins are the Phase 2 pair: whestbench 0.16.1 with flopscope 0.12.1.
+# Phase 2 uses flopscope 0.12.3 with the published whestbench 0.16.1 harness.
+# 0.12.2 corrects broadcast/dtype billing and symmetry discounts; 0.12.3 adds
+# rank-dependent work to truncated SVD. The explicit floor upgrades existing
+# environments when participants run `uv sync`, rather than retaining 0.12.1.
 #
-# 0.16.0 is the first whestbench release whose *defaults* are the graded round —
-# 1024x16, a 2**41 per-MLP budget, a 120 s predict cap, a 5 s setup() cap, and a gated
-# 400 ms residual with lambda = 0. Under 0.15.0 this kit documented those rules while
-# the CLI it installed still enforced Phase 1's, so anyone following the docs was
-# metered against a rulebook the docs did not describe. Closing that gap is why the kit
-# moved.
+# Keep the flopscope range identical to whestbench's pyproject.toml. The harness
+# floor stays at the latest published release so this kit remains installable.
+# After whestbench releases its matching dependency-floor update, raise the kit's
+# whestbench floor and refresh uv.lock together.
 #
-# The usual order is: whestbench cuts a release naming a flopscope minor, the grader
-# re-pins to that pair, then the kit follows — the kit should never report FLOP counts a
-# submission is not scored on. The grader is on whestbench v0.16.0 with
-# flopscope[server]==0.12.0, so this kit leads it by one patch on each. That is safe here
-# because the meter does not move between the two on anything these examples do: the only
-# price 0.12.1 changes is full/full_like given a non-scalar fill_value, which loses a
-# symmetry the shape alone had implied. Nothing in docs/ builds an array that way, so every
-# FLOP figure is identical under 0.12.0 and 0.12.1. tests/test_flopscope_cost_docs.py is the gate that keeps that true — if it
-# ever fails, this comment is the thing to re-read before changing a number.
-#
-# whestbench enforces the relationship from its side:
-# `scripts/bump_starterkit_pin.py --check-deps` fails unless this kit's whestbench floor
-# equals whestbench's own version and the two flopscope specifiers are character-
-# identical. Keep the strings in lockstep with
-# https://github.com/AIcrowd/whestbench/blob/main/pyproject.toml.
+# tests/test_flopscope_cost_docs.py checks documented operation prices and the
+# bundled examples' exact totals against this meter. Run it after every upgrade.
 
 [dependency-groups]
 dev = [

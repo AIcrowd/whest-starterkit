@@ -87,7 +87,7 @@ for the rationale.
 
 ## Operation costs
 
-> **flopscope 0.12 billing model** (the version this kit pins). Costs are
+> **flopscope 0.12.3 billing model** (the version this kit pins). Costs are
 > `flop_cost × weight × dtype_rate` (× a complex factor for complex dtypes).
 > Practical rules: stay in float32 (float64 bills 2×); write `x * x` not
 > `x ** 2` (power is 16-tier); `zeros` and views are free but
@@ -96,8 +96,14 @@ for the rationale.
 > Since 0.11.0 a non-numeric dtype (`object`, `str_`, `bytes_`, `datetime64`,
 > structured) raises `UnsupportedDtypeError` at any metered op, free ones
 > included, so `fnp.array([1.0, None])` and `fnp.zeros(3, dtype=object)` now
-> fail rather than bill; convert with plain `numpy` first. Full audited tables:
+> fail rather than bill. Build numeric arrays from numeric values; the Phase 2
+> sandbox does not provide plain `numpy`. Full audited tables:
 > [flopscope cost model](https://aicrowd.github.io/flopscope/docs/understanding/flop-counting-model/).
+
+The table assumes float32 execution. Element-wise counts use the broadcast
+computation/output shape; explicit dtype or signature choices and wider output
+buffers can increase the charge. See the [0.12.3 billing and symmetry changes](./flopscope-primer.md#billing-and-symmetry-changes-in-0123)
+before reusing an older profile.
 
 | What you want | Code | FLOP cost | Notes |
 |---|---|---|---|
