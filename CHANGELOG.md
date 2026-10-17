@@ -42,6 +42,12 @@ what has landed on `main` since the last dated entry. Read it before you tune an
 
 ### Feat
 
+- **deps**: require `whestbench>=0.16.2,<0.17.0` for the participant harness,
+  retaining `flopscope>=0.12.3,<0.13.0`. The harness now requires the current
+  meter itself, consumes exactly the requested streaming-dataset prefix, and
+  rejects dataset MLPs whose geometry does not match the contest specification.
+  The kit retains the evaluators' flopscope 0.12.3 meter. Pull the kit and run
+  `uv sync`.
 - **docs**: add [Allowed Code](docs/concepts/allowed-code.md) — what a submission may use,
   the prohibition list, the data-file carve-out, what residual time is for, and how the
   rule is enforced.

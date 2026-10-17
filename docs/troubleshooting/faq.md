@@ -269,7 +269,7 @@ NumPy cannot run is no longer billed before it raises. flopscope ships 0.12.0 as
 a new version opening a new phase, so nothing already scored was repriced.
 
 **Update the meter before comparing local results with the leaderboard.**
-The kit now locks **flopscope 0.12.3** with **whestbench 0.16.1**, the latest
+The kit now locks **flopscope 0.12.3** with **whestbench 0.16.2**, the latest
 published harness. Its explicit `flopscope>=0.12.3,<0.13.0` dependency prevents
 `uv sync` from retaining the older 0.12.1 meter.
 
