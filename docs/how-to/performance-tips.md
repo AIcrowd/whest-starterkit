@@ -8,9 +8,12 @@ This page lists concrete patterns for reducing FLOP usage in your estimator.
 
 Since flopscope 0.9, every op's cost is also scaled by a `dtype_rate`: 1.0× for
 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128).
-NumPy promotion decides the billing dtype from your operands, so a single
-stray float64 array upgrades an entire expression to the 2× rate, matmuls
-included. `fnp.zeros()`/`fnp.ones()`/`fnp.eye()`/RNG draws all default to float64
+Without an explicit loop override, NumPy promotion follows the operands, so a
+stray float64 array can upgrade an expression to the 2× rate, matmuls included.
+Unary `dtype=`/`signature=`/`sig=` selects the executed loop, and a wider `out=`
+destination contributes independently. For example, four float32 values passed
+to `exp(signature="d->d")` cost 128 FLOPs instead of 64. See the
+[0.12.3 upgrade notes](../reference/flopscope-primer.md#billing-and-symmetry-changes-in-0123). `fnp.zeros()`/`fnp.ones()`/`fnp.eye()`/RNG draws all default to float64
 when you don't pass `dtype=`. This is usually the largest single reduction
 available on your FLOP total: pass `dtype=fnp.float32` when you create arrays
 and don't need the extra precision.
@@ -60,7 +63,7 @@ phi_alpha = flops.stats.norm.pdf(alpha).astype(fnp.float32)
 Phi_alpha = flops.stats.norm.cdf(alpha).astype(fnp.float32)
 ```
 
-`.astype()` bills 1 FLOP per element at the operand's dtype rate. Here the
+`.astype()` bills 1 FLOP per element at the heavier source/destination dtype rate. Here the
 input is the float64 result of `flops.stats.norm`, so 1024 elements × 2.0 =
 2,048 FLOPs per call at width 1024, against the millions it protects. If you
 suspect a promotion, check `ctx.summary()`: a `float64` row where you expected
@@ -134,7 +137,7 @@ These cost 0 FLOPs in flopscope:
 
 - `fnp.zeros()`, `fnp.empty()`
 - Views: `.T` / `fnp.transpose()`, basic indexing and slicing (`x[0]`, `x[:, 3]`)
-- `fnp.diag()`, `fnp.diagonal()`
+- `fnp.diag(matrix)` extraction, `fnp.diagonal()`
 - `fnp.asarray()` on an existing flopscope array (no copy), `fnp.random.default_rng(seed)` construction
 
 **Since flopscope 0.9, these look free but aren't; they bill 1×/element (2× at float64):** `fnp.ones()`, `fnp.eye()`, `fnp.full()`, `fnp.array()` (and any copying `asarray`), `.copy()`, `.astype()`, `fnp.reshape()`/`.reshape()` (billed even where NumPy itself would return a view), `fnp.concatenate()`, `fnp.stack()`, `tile()`, `repeat()`. Cheap next to a matmul, but no longer zero. Don't reach for them as a "free" replacement for real computation.

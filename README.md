@@ -26,6 +26,11 @@
 
 You are given a randomly-initialized ReLU MLP and a FLOP budget. Predict the per-neuron mean activation under N(0, 1) input, without spending the whole budget on forward passes. Your score is the error on the **final layer only** (`final_layer_mse`, against N=1e9 Monte-Carlo ground truth), multiplied by `max(0.1, C_m / B_m)` — the fraction of the FLOP budget you spent, floored at 10%. Once you are under 10% of budget the multiplier stays at 0.1, so spending less does not change your score and only a lower `final_layer_mse` does; every bundled example is already at that floor. Lower is better.
 
+**Current meter: flopscope 0.12.3.** Pull the latest kit and run `uv sync` before
+comparing candidate submissions. The latest patches correct billing and symmetry
+handling, so an older profile can report a different cost for the same code. See
+the [billing and symmetry changes](docs/reference/flopscope-primer.md#billing-and-symmetry-changes-in-0123).
+
 Every MLP in the suite has width 1024 and depth 16, so `predict()` returns a `(16, 1024)` array, and each MLP carries its own budget of `2**41` FLOPs (roughly 6.5e4 forward passes).
 
 <div align="center">

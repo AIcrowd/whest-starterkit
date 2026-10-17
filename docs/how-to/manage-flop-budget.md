@@ -30,7 +30,7 @@ For the full flopscope API and cost model, see the [flopscope documentation](htt
 Two consequences:
 
 - `fnp.matmul` on `(n, n)` matrices costs `O(n^3)` FLOPs; a matrix-vector product costs `O(n^2)`. The cost is cubic in the width, so at the Phase 2 width of 1024 matrix work dominates everything else. Even in an estimator that only ever does matrix-vector products, `matmul` is 77.42% of the total (see the [worked walkthrough](#worked-walkthrough-mean-propagation-line-by-line) below).
-- Every cost above is also scaled by a `dtype_rate`: 1.0× for 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128). NumPy promotion decides the billing dtype from your operands, so one stray float64 array upgrades the whole expression. See the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs) for the full weight/dtype-rate table.
+- Every cost above is also scaled by a `dtype_rate`: 1.0× for 32-bit-or-smaller dtypes, 2.0× for float64/int64 (up to 4.0× for float128). The executed loop determines the billing dtype: operand promotion, explicit unary `dtype=`/`signature=`/`sig=`, and wider `out=` destinations can all affect the charge. A float64 operand often raises the rate, but an explicitly selected float32 loop can differ from that default. See the [flopscope primer](../reference/flopscope-primer.md#operation-flop-costs) for the full weight/dtype-rate table.
 
 ## Check your budget usage
 
