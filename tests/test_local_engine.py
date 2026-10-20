@@ -79,6 +79,84 @@ def test_monte_carlo_layer_means_is_deterministic():
     assert float(fnp.max(fnp.abs(a - b))) == 0.0
 
 
+def test_mc_reference_sample_counts_do_not_reuse_input_prefixes(monkeypatch):
+    """Increasing the reference count must draw new inputs, not append to old ones."""
+    from local_engine import build_mlp, monte_carlo_layer_means
+
+    inputs = []
+    original_matmul = fnp.matmul
+
+    def record_inputs(x, w):
+        inputs.append(x.copy())
+        return original_matmul(x, w)
+
+    monkeypatch.setattr(fnp, "matmul", record_inputs)
+    mlp = build_mlp(width=4, depth=1, seed=0)
+    monte_carlo_layer_means(mlp, n_samples=8, seed=42)
+    monte_carlo_layer_means(mlp, n_samples=16, seed=42)
+
+    assert len(inputs) == 2
+    assert inputs[0].shape == (8, 4)
+    assert inputs[1].shape == (16, 4)
+    assert float(fnp.max(fnp.abs(inputs[0] - inputs[1][:8]))) > 0.0
+
+
+def test_mc_reference_matches_upstream_sampler_with_same_child_rng():
+    """Stream separation changes the draws, not the numerical sampler algorithm."""
+    from whestbench import sample_layer_statistics
+
+    from local_engine import build_mlp, monte_carlo_layer_means
+
+    mlp = build_mlp(width=4, depth=3, seed=7)
+    count, seed = 31, 42
+    child_rng = fnp.random.default_rng(fnp.random.SeedSequence(seed, spawn_key=(1, count)))
+    upstream_means, _, _ = sample_layer_statistics(mlp, count, rng=child_rng)
+    local_means = monte_carlo_layer_means(mlp, count, seed=seed)
+
+    assert float(fnp.max(fnp.abs(local_means - upstream_means))) < 1e-7
+
+
+@pytest.mark.parametrize("weight", [1.0, 0.01])
+def test_mc_reference_does_not_reuse_estimator_samples(capsys, weight):
+    """A sampled estimator must not compare against its own observations."""
+    import math
+
+    from whestbench import BaseEstimator
+
+    from local_engine import compare_against_monte_carlo, monte_carlo_layer_means
+
+    class SampledEstimator(BaseEstimator):
+        def predict(self, mlp: MLP, budget: int) -> fnp.ndarray:
+            # Follow the documented per-MLP seed contract and MC algorithm.
+            rng = fnp.random.default_rng(mlp.seed)
+            x = rng.standard_normal((1000, mlp.width), dtype=fnp.float32)
+            x = fnp.maximum(x @ mlp.weights[0], 0.0)
+            return fnp.asarray(
+                fnp.mean(fnp.asarray(x, dtype=fnp.float64), axis=0)[None, :],
+                dtype=fnp.float32,
+            )
+
+    mlp = MLP(
+        width=1, depth=1, weights=[fnp.full((1, 1), weight, dtype=fnp.float32)], seed=0
+    )
+    estimator = SampledEstimator()
+    prediction = float(estimator.predict(mlp, 2**41)[0, 0])
+    # E[ReLU(weight * Z)] = weight/sqrt(2*pi) for a positive weight.
+    assert abs(prediction - weight / math.sqrt(2 * math.pi)) > weight * 1e-4
+    reference = float(monte_carlo_layer_means(mlp, n_samples=1000, seed=0)[0, 0])
+    expected_mse = (prediction - reference) ** 2
+    assert expected_mse > 0.0
+    if weight == 0.01:
+        # Fixed six-decimal formatting used to hide small nonzero errors.
+        assert expected_mse < 1e-6
+
+    compare_against_monte_carlo(estimator, mlp, sample_counts=(1000,), seed=0)
+    last_row = capsys.readouterr().out.strip().splitlines()[-1]
+    all_mse, final_mse = [float(cell) for cell in last_row.split("|")[-2:]]
+    assert all_mse == pytest.approx(expected_mse, rel=1e-5, abs=0.0)
+    assert final_mse == pytest.approx(expected_mse, rel=1e-5, abs=0.0)
+
+
 def test_compare_against_mc_preflight_rejects_wrong_shape(capsys):
     """Estimator returning the wrong shape should print a one-line diagnostic
     and SystemExit cleanly, not raise a numpy traceback."""
@@ -152,9 +230,9 @@ def test_compare_against_mc_runs_clean_on_zeros_estimator(capsys):
         # is the ranked `final_layer_mse` quoted in the note under that table. Bands
         # are tight on purpose: a loose cap lets an accuracy regression that leaves
         # the FLOP total untouched sail through CI.
-        ("examples/01_random.py", 0.5246, 0.8432, 0.02),
-        ("examples/02_mean_propagation.py", 0.000171, 0.000300, 0.05),
-        ("examples/03_covariance_propagation.py", 0.0000039, 0.0000042, 0.10),
+        ("examples/01_random.py", 0.524094, 0.842386, 0.02),
+        ("examples/02_mean_propagation.py", 0.000169955, 0.000302775, 0.05),
+        ("examples/03_covariance_propagation.py", 4.5582e-6, 5.84779e-6, 0.10),
     ],
 )
 def test_example_mse_within_table_tolerance(name, expected_all, expected_final, rel):

@@ -71,8 +71,17 @@ def monte_carlo_layer_means(
 
     Returns shape `(depth, width)`, the same shape as `Estimator.predict`, so you
     can subtract the two directly.
+
+    Reference draws are deterministic for a given `(seed, n_samples)`. They use
+    a separate stream from the estimator's `default_rng(mlp.seed)`, and different
+    sample counts use different streams rather than prefixes of one draw.
     """
-    rng = fnp.random.default_rng(seed)
+    # Keep the reference samples independent of the contract's estimator RNG,
+    # default_rng(mlp.seed). Reusing that stream makes a Monte-Carlo estimator
+    # appear exact when its sample count matches a row in the comparison table.
+    # Separate sample counts too: a cheap reference must not be a subset of a
+    # larger reference when these helpers are used to compare two MC estimates.
+    rng = fnp.random.default_rng(fnp.random.SeedSequence(seed, spawn_key=(1, n_samples)))
     width = mlp.width
     x = fnp.array(rng.standard_normal((n_samples, width), dtype=fnp.float32))
     rows = []
@@ -215,6 +224,10 @@ def compare_against_monte_carlo(
         f"MLP: width={mlp.width} depth={mlp.depth} seed={mlp.seed}  "
         f"(MC sampling seed={seed})\n"
     )
+    print(
+        "Each row compares the same estimator prediction against an independent MC reference.\n"
+        "The MSE includes reference sampling noise; it is not the sampler's error against ground truth.\n"
+    )
     print(header)
     print("-" * len(header))
     for n in sample_counts:
@@ -228,8 +241,8 @@ def compare_against_monte_carlo(
                 f"{n:,}",
                 f"{mc_ctx.flops_used:,}",
                 f"{estimator_flops:,}",
-                f"{all_layers_mse:.6f}",
-                f"{final_layer_mse:.6f}",
+                f"{all_layers_mse:.6g}",
+                f"{final_layer_mse:.6g}",
             )
         )
 
